@@ -52,9 +52,12 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+          cache-dependency-path: docs/requirements.txt
 
       - name: Install MkDocs
-        run: pip install mkdocs-material==9.5.49
+        # Version pinned in docs/requirements.txt so a floating dependency
+        # cannot break the docs build on a day nothing here changed.
+        run: pip install -r docs/requirements.txt
 
       - name: Build
         # Not --strict: several pages link to source files outside docs/ (for
