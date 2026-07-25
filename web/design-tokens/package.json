@@ -1,0 +1,19 @@
+{
+  "name": "@ecommerce/design-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Single source of truth for colour, spacing, typography and motion across all five clients",
+  "main": "./dist/tokens.ts",
+  "exports": {
+    ".": "./dist/tokens.ts",
+    "./css": "./dist/tokens.css",
+    "./native": "./dist/tokens.native.ts",
+    "./tokens.json": "./tokens.json"
+  },
+  "files": ["dist", "tokens.json"],
+  "scripts": {
+    "build": "node build.mjs",
+    "prepare": "node build.mjs"
+  }
+}
