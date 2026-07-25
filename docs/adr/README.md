@@ -32,6 +32,7 @@ Use [`0000-template.md`](0000-template.md) for new records.
 | [0013](0013-net10-target-framework.md) | Target .NET 10 (LTS) | Accepted | 1 |
 | [0014](0014-react-and-angular-in-lockstep.md) | Build React and Angular simultaneously against a shared, framework-neutral layer | Accepted | 1 |
 | [0015](0015-manual-mappers-over-automapper.md) | Hand-written mappers instead of AutoMapper | Accepted | 1 |
+| [0016](0016-rabbitmq-behind-ieventbus.md) | RabbitMQ as the broker, behind an `IEventBus` abstraction | Accepted | 1 |
 
 Planned for later phases: permission-based policies over role checks (Phase 2), read-model projection
 strategy for Catalog (Phase 4), resilience policy defaults (Phase 12).
