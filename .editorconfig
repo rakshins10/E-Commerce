@@ -256,10 +256,29 @@ dotnet_naming_rule.async_methods_end_in_async.severity = suggestion
 [*.cs]
 # CA1848 (use LoggerMessage delegates) is right for hot paths but noisy for a
 # teaching repo where readable `_logger.LogInformation("...", x)` is clearer.
+# CA1873 (argument may be expensive to evaluate if logging is disabled) is the
+# same trade-off in a stricter form: it fires on ordinary property chains like
+# `connection.Endpoint.HostName`. Suppressed for the same reason as CA1848 --
+# where a log argument is genuinely expensive, guard it with IsEnabled by hand.
 dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
 # CA1062 -- we rely on nullable reference types instead of runtime null guards
 # on every public parameter.
 dotnet_diagnostic.CA1062.severity = none
+# CA1716 (identifier conflicts with a reserved keyword in another .NET language)
+# and CA1000 (no static members on generic types) are cross-language interop
+# guidelines. Nothing here is consumed from VB or F#, and both rules would cost
+# us clearer names: `Error` is the right name for an error, and
+# `PagedResult<T>.Empty(request)` reads better than a separate static helper
+# class. Suppressed deliberately rather than worked around.
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1000.severity = none
+# CA1711 reserves the `EventHandler` suffix for CLR event-pattern delegates.
+# `IIntegrationEventHandler<T>` is the established name for this concept across
+# the .NET microservices ecosystem (it is the name used in eShopOnContainers and
+# in the Microsoft guide), and renaming it to satisfy a delegate-naming rule
+# would trade a name every reader recognises for one nobody does.
+dotnet_diagnostic.CA1711.severity = none
 # Nullable warnings are errors: NRT discipline is a core part of modern C#.
 dotnet_diagnostic.CS8600.severity = error
 dotnet_diagnostic.CS8602.severity = error
