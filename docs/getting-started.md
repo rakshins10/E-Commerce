@@ -123,6 +123,10 @@ Service HTTP ports are `5001`–`5009`; gRPC is the HTTP port **+100** (`5101`�
 instances are on `15432`–`15440`. The full allocation is in
 [`deploy/.env.example`](../deploy/.env.example) and [architecture.md §9](architecture.md#9-port-allocation).
 
+> **New to Seq, Jaeger, RabbitMQ or Keycloak?** Read
+> [**operations/tooling-guide.md**](operations/tooling-guide.md) — a hands-on introduction to all four
+> assuming no prior knowledge, with exercises you can run against the stack you just started.
+
 ---
 
 ## 4. Everyday commands

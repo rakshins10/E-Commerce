@@ -16,6 +16,7 @@ stale draft.
 | [getting-started.md](getting-started.md) | A clean machine to a running system: tooling and versions, every port, every environment variable, the first-run sequence, how to verify each container is healthy, and a troubleshooting section for the failures that actually happen. |
 | [architecture.md](architecture.md) | The C4 model — system context, containers, and the anatomy of a service. Communication styles and when each is used. The full service catalogue. |
 | [concept-map.md](concept-map.md) | The interview cheat sheet. Every pattern in the system: what it is, why it is here, where it lives, and the interview question it answers. |
+| [operations/tooling-guide.md](operations/tooling-guide.md) | **Never used Seq, Jaeger, RabbitMQ or Keycloak?** Start here. A hands-on introduction to all four, assuming no prior knowledge, with exercises you can run against the live stack. |
 
 ## The domain
 
@@ -76,6 +77,7 @@ See [adr/README.md](adr/README.md) for the full index.
 
 | Page | What it gives you |
 |------|-------------------|
+| [operations/tooling-guide.md](operations/tooling-guide.md) | Hands-on introduction to Seq, Jaeger, RabbitMQ and Keycloak for someone who has not used them before. |
 | [operations/health-checks.md](operations/health-checks.md) | Every health check and what it actually proves — and the liveness/readiness distinction that matters when Kubernetes is layered on. |
 | [operations/observability.md](operations/observability.md) | Structured logging, correlation IDs, and distributed tracing, with a worked example of tracing one order end to end. |
 | [operations/runbook.md](operations/runbook.md) | Common operational tasks: reseeding, replaying a poisoned message, rotating a client secret, draining a queue. |
