@@ -1,0 +1,11 @@
+# Toolchain for building the documentation site (.github/workflows/docs.yml).
+#
+# Pinned rather than floating: an unpinned docs build can start failing on a
+# morning when nothing in this repository changed, which is a confusing way to
+# lose an hour. Same reasoning as global.json for the .NET SDK.
+#
+# Build the site locally with:
+#   pip install -r docs/requirements.txt
+#   mkdocs serve          # then open http://localhost:8000
+
+mkdocs-material==9.5.49
