@@ -1,0 +1,65 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/building-blocks/" />
+  <Folder Name="/src/building-blocks/Auth/">
+    <Project Path="src/building-blocks/Auth/ECommerce.Auth.csproj" />
+  </Folder>
+  <Folder Name="/src/building-blocks/Common/">
+    <Project Path="src/building-blocks/Common/ECommerce.Common.csproj" />
+  </Folder>
+  <Folder Name="/src/building-blocks/EventBus.RabbitMQ/">
+    <Project Path="src/building-blocks/EventBus.RabbitMQ/ECommerce.EventBus.RabbitMQ.csproj" />
+  </Folder>
+  <Folder Name="/src/building-blocks/EventBus/">
+    <Project Path="src/building-blocks/EventBus/ECommerce.EventBus.csproj" />
+  </Folder>
+  <Folder Name="/src/building-blocks/Observability/">
+    <Project Path="src/building-blocks/Observability/ECommerce.Observability.csproj" />
+  </Folder>
+  <Folder Name="/src/gateways/" />
+  <Folder Name="/src/gateways/admin-bff/">
+    <Project Path="src/gateways/admin-bff/ECommerce.AdminBff/ECommerce.AdminBff.csproj" />
+  </Folder>
+  <Folder Name="/src/gateways/mobile-bff/">
+    <Project Path="src/gateways/mobile-bff/ECommerce.MobileBff/ECommerce.MobileBff.csproj" />
+  </Folder>
+  <Folder Name="/src/gateways/storefront-bff/">
+    <Project Path="src/gateways/storefront-bff/ECommerce.StorefrontBff/ECommerce.StorefrontBff.csproj" />
+  </Folder>
+  <Folder Name="/src/services/" />
+  <Folder Name="/src/services/back-office/">
+    <Project Path="src/services/back-office/ECommerce.BackOffice.Api/ECommerce.BackOffice.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/basket/">
+    <Project Path="src/services/basket/ECommerce.Basket.Api/ECommerce.Basket.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/catalog/">
+    <Project Path="src/services/catalog/ECommerce.Catalog.Api/ECommerce.Catalog.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/inventory/">
+    <Project Path="src/services/inventory/ECommerce.Inventory.Api/ECommerce.Inventory.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/notification/">
+    <Project Path="src/services/notification/ECommerce.Notification.Api/ECommerce.Notification.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/ordering-saga/">
+    <Project Path="src/services/ordering-saga/ECommerce.OrderingSaga.Api/ECommerce.OrderingSaga.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/ordering/">
+    <Project Path="src/services/ordering/ECommerce.Ordering.Api/ECommerce.Ordering.Api.csproj" />
+    <Project Path="src/services/ordering/ECommerce.Ordering.Application/ECommerce.Ordering.Application.csproj" />
+    <Project Path="src/services/ordering/ECommerce.Ordering.Domain/ECommerce.Ordering.Domain.csproj" />
+    <Project Path="src/services/ordering/ECommerce.Ordering.Infrastructure/ECommerce.Ordering.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/services/payment/">
+    <Project Path="src/services/payment/ECommerce.Payment.Api/ECommerce.Payment.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/services/user-profile/">
+    <Project Path="src/services/user-profile/ECommerce.UserProfile.Api/ECommerce.UserProfile.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/unit/">
+    <Project Path="tests/unit/ECommerce.Architecture.Tests/ECommerce.Architecture.Tests.csproj" />
+    <Project Path="tests/unit/ECommerce.Common.Tests/ECommerce.Common.Tests.csproj" />
+  </Folder>
+</Solution>

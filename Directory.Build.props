@@ -1,0 +1,65 @@
+<Project>
+
+  <!--
+    Solution-wide MSBuild defaults, inherited by every .csproj beneath this file.
+
+    Why this file exists: with ~40 projects, any setting repeated per-project
+    will eventually drift. Framework version, nullable policy, and warning
+    policy are *decisions* (see docs/adr/0013-net10-target-framework.md), and a
+    decision belongs in exactly one place. Upgrading the whole solution to the
+    next LTS is a one-line change here.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Nullable reference types. Escalated to *errors* in .editorconfig:
+         a warning that everyone ignores is not a safety feature. -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Warnings accumulate into background noise until nobody reads them.
+         Failing the build keeps the signal. Suppress specific diagnostics in
+         .editorconfig with a comment saying why - never by relaxing this. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors></WarningsNotAsErrors>
+
+    <!-- .editorconfig style rules are enforced at build time, not only in the
+         IDE, so the CI format check can never disagree with a local build. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <!-- Deterministic output: the same source produces the same binary. -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Generate the XML doc file so public building-block APIs surface their
+         summaries to consumers. CS1591 (missing XML comment) stays off: we
+         document what is non-obvious, not every property. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!--
+    Projects are named with their full namespace (ECommerce.Ordering.Domain),
+    so the MSBuild defaults for RootNamespace and AssemblyName are already
+    correct. Deliberately not overridden here.
+  -->
+
+
+  <!--
+    Test projects opt out of a few production-hygiene rules. Test method names
+    read better as Given_When_Then than as prose PascalCase, and xUnit fixtures
+    are legitimately public mutable state.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CS1591;CA1707;CA2007</NoWarn>
+  </PropertyGroup>
+
+</Project>
