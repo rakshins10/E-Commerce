@@ -1,0 +1,162 @@
+## ---------------------------------------------------------------------------
+## .NET
+## ---------------------------------------------------------------------------
+bin/
+obj/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+build/
+bld/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+*.userprefs
+project.lock.json
+project.fragment.lock.json
+*.nupkg
+*.snupkg
+.nuget/
+# Local NuGet package restore folder (packages.config era)
+**/packages/*
+!**/packages/build/
+# Roslyn / build server caches
+.vs/
+*.VisualState.xml
+TestResult.xml
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+TestResults/
+BenchmarkDotNet.Artifacts/
+# ASP.NET scaffolding / EF
+ScaffoldingReadMe.txt
+*.mdf
+*.ldf
+*.ndf
+
+## ---------------------------------------------------------------------------
+## Node / JavaScript / TypeScript
+## ---------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+.npm/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+## Vite / React build output
+dist/
+dist-ssr/
+.vite/
+vite.config.*.timestamp-*
+
+## Angular
+.angular/
+/web/**/.angular/
+connect.lock
+libpeerconnection.log
+testem.log
+typings/
+
+## Storybook
+storybook-static/
+
+## Playwright / Cypress
+playwright-report/
+blob-report/
+test-results/
+.playwright/
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
+## ---------------------------------------------------------------------------
+## React Native / Expo
+## ---------------------------------------------------------------------------
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+android/app/build/
+ios/Pods/
+ios/build/
+
+## ---------------------------------------------------------------------------
+## Secrets & local environment  -- NEVER COMMIT THESE
+## ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.local.env
+secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+**/wwwroot/appsettings.local.js
+# Certificates / keys
+*.pfx
+*.pem
+*.crt
+*.cer
+*.der
+!**/testdata/*.pem
+certs/
+.aspnet/https/
+
+## ---------------------------------------------------------------------------
+## IDE & editor
+## ---------------------------------------------------------------------------
+.idea/
+*.sln.iml
+*.iml
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json.example
+.fleet/
+*.swp
+*~
+
+## ---------------------------------------------------------------------------
+## OS
+## ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+## ---------------------------------------------------------------------------
+## Container / infra local state
+## ---------------------------------------------------------------------------
+.docker-data/
+deploy/data/
+*.pid
