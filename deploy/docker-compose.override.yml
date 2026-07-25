@@ -1,0 +1,71 @@
+# =============================================================================
+#  Local development overrides
+# =============================================================================
+#  Compose applies this automatically on top of docker-compose.yml when you run
+#  `docker compose up` from this directory. It holds settings that are correct
+#  for a developer laptop and wrong for anywhere else.
+#
+#  Keeping them separate is what lets the base file stay deployment-shaped: a
+#  CI or staging run uses `docker compose -f docker-compose.yml up` and gets
+#  none of this. See docs/getting-started.md.
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  #  Verbose logging while developing. Overriding the level here rather than in
+  #  appsettings.json means no rebuild is needed to change it, and no debug-level
+  #  configuration can be accidentally committed as the default.
+  # ---------------------------------------------------------------------------
+  catalog-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+      # Detailed EF Core errors include parameter values in exception messages.
+      # Genuinely useful locally, and a data-leak risk anywhere else — which is
+      # precisely why it lives in the override file.
+      Logging__EnableSensitiveDataLogging: "true"
+
+  basket-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  ordering-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+      Logging__EnableSensitiveDataLogging: "true"
+
+  payment-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  inventory-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  notification-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  user-profile-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  back-office-api:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  ordering-saga:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  storefront-bff:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  admin-bff:
+    environment:
+      Serilog__MinimumLevel__Default: Debug
+
+  mobile-bff:
+    environment:
+      Serilog__MinimumLevel__Default: Debug

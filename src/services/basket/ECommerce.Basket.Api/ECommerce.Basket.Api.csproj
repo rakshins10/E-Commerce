@@ -1,3 +1,5 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
-  </Project>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
+  </ItemGroup>
+</Project>

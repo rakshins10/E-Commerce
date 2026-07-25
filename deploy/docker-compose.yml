@@ -1,0 +1,571 @@
+# =============================================================================
+#  E-Commerce - full local stack
+# =============================================================================
+#  Everything runs with one command:
+#
+#      cd deploy && cp .env.example .env && docker compose up -d
+#
+#  Structured so Kubernetes manifests could be layered on later without touching
+#  code: nothing hardcodes a hostname, every setting arrives as an environment
+#  variable, and liveness/readiness are already separate endpoints. See
+#  docs/adr/0002 and docs/architecture.md section 10.
+#
+#  Nine Postgres containers is a *pedagogical* choice - it makes
+#  database-per-service impossible to miss. Production would use one managed
+#  cluster with a database and a dedicated login per service, which preserves
+#  data sovereignty at a fraction of the cost. See docs/adr/0003.
+# =============================================================================
+
+name: ${COMPOSE_PROJECT_NAME:-ecommerce}
+
+# -----------------------------------------------------------------------------
+#  Reusable fragments. YAML anchors, not Compose features: they are expanded by
+#  the parser, so `docker compose config` shows the fully resolved result.
+# -----------------------------------------------------------------------------
+x-postgres-common: &postgres-common
+  image: ${POSTGRES_IMAGE:-postgres:18-alpine}
+  restart: unless-stopped
+  environment:
+    POSTGRES_USER: ${POSTGRES_USER}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Deterministic collation. Without this the collation follows the host
+    # locale, and index ordering then differs between a developer's machine and
+    # CI - which produces test failures that reproduce nowhere.
+    POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+  healthcheck:
+    # pg_isready, not a TCP port check: Postgres accepts connections for several
+    # seconds before it is actually ready to serve queries, so a port check
+    # reports healthy too early and dependents fail their first query.
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+    interval: 5s
+    timeout: 3s
+    retries: 20
+    start_period: 10s
+  networks: [backend]
+
+x-dotnet-common: &dotnet-common
+  restart: unless-stopped
+  networks: [backend]
+  environment: &dotnet-env
+    ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+    ASPNETCORE_HTTP_PORTS: 8080
+    # Inside the compose network services address each other by service name.
+    Observability__SeqUrl: http://seq:5341
+    Observability__OtlpEndpoint: http://jaeger:4317
+    EventBus__HostName: rabbitmq
+    EventBus__Port: 5672
+    EventBus__UserName: ${RABBITMQ_USER}
+    EventBus__Password: ${RABBITMQ_PASSWORD}
+    EventBus__VirtualHost: ${RABBITMQ_VHOST:-/}
+    # The issuer must be the URL the BROWSER used, not the internal hostname:
+    # the `iss` claim in a token minted for a browser says localhost, so a
+    # service validating against http://keycloak:8080 rejects every token. This
+    # is the single most common Keycloak-in-Docker failure.
+    # See docs/getting-started.md#troubleshooting.
+    Auth__Issuer: ${KEYCLOAK_ISSUER}
+    Auth__MetadataAddress: http://keycloak:8080/realms/${KEYCLOAK_REALM}/.well-known/openid-configuration
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/live || exit 1"]
+    interval: 10s
+    timeout: 3s
+    retries: 12
+    start_period: 20s
+
+x-dotnet-build: &dotnet-build
+  context: ..
+  dockerfile: src/Dockerfile
+
+# -----------------------------------------------------------------------------
+#  Networks
+# -----------------------------------------------------------------------------
+#  Two networks so that databases and the broker are NOT reachable from the
+#  frontend network. Only the BFFs and Keycloak bridge both. Defence in depth:
+#  a compromised web container cannot open a socket to Postgres.
+# -----------------------------------------------------------------------------
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
+
+# -----------------------------------------------------------------------------
+#  Volumes
+# -----------------------------------------------------------------------------
+#  NOTE: Postgres 18 images changed the data-directory convention. The mount
+#  must be at /var/lib/postgresql (the image places data in a
+#  major-version-specific subdirectory beneath it), NOT at
+#  /var/lib/postgresql/data as it was for 17 and earlier. Mounting the old path
+#  makes the container refuse to start with a "PostgreSQL data in (unused
+#  mount/volume)" error. See https://github.com/docker-library/postgres/pull/1259
+# -----------------------------------------------------------------------------
+volumes:
+  keycloak-db-data:
+  catalog-db-data:
+  ordering-db-data:
+  userprofile-db-data:
+  inventory-db-data:
+  payment-db-data:
+  backoffice-db-data:
+  saga-db-data:
+  notification-db-data:
+  redis-data:
+  mongo-data:
+  rabbitmq-data:
+  seq-data:
+
+services:
+
+  # ===========================================================================
+  #  Identity
+  # ===========================================================================
+  keycloak-db:
+    <<: *postgres-common
+    container_name: ecom-keycloak-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: keycloak
+    volumes: [keycloak-db-data:/var/lib/postgresql]
+    ports: ["${KEYCLOAK_DB_PORT:-15432}:5432"]
+
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:-quay.io/keycloak/keycloak:26.4}
+    container_name: ecom-keycloak
+    restart: unless-stopped
+    # `start-dev` is development-only: it disables HTTPS enforcement and uses a
+    # relaxed hostname policy. Production uses `start` with a real certificate
+    # and KC_HOSTNAME_STRICT=true.
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Pinning the hostname makes the issuer identical whether the token is
+      # requested by a browser or by a service - see the Auth__Issuer note above.
+      KC_HOSTNAME: http://${PUBLIC_HOST:-localhost}:${KEYCLOAK_PORT:-8080}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    volumes:
+      # Realm-as-code: clients, roles, composite roles, groups and seed users are
+      # imported on first start. No click-ops. Populated in Phase 2.
+      - ../identity/keycloak:/opt/keycloak/data/import:ro
+    ports: ["${KEYCLOAK_PORT:-8080}:8080"]
+    depends_on:
+      keycloak-db: { condition: service_healthy }
+    healthcheck:
+      # Keycloak 26 serves health on the management port (9000) and ships no
+      # curl, so this probes with bash's /dev/tcp redirection instead.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q 'UP'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+    networks: [backend, frontend]
+
+  # ===========================================================================
+  #  Per-service databases - data sovereignty (docs/architecture.md section 7)
+  # ===========================================================================
+  catalog-db:
+    <<: *postgres-common
+    container_name: ecom-catalog-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: catalog
+    volumes: [catalog-db-data:/var/lib/postgresql]
+    ports: ["${CATALOG_DB_PORT:-15433}:5432"]
+
+  ordering-db:
+    <<: *postgres-common
+    container_name: ecom-ordering-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ordering
+    volumes: [ordering-db-data:/var/lib/postgresql]
+    ports: ["${ORDERING_DB_PORT:-15434}:5432"]
+
+  userprofile-db:
+    <<: *postgres-common
+    container_name: ecom-userprofile-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: userprofile
+    volumes: [userprofile-db-data:/var/lib/postgresql]
+    ports: ["${USERPROFILE_DB_PORT:-15435}:5432"]
+
+  inventory-db:
+    <<: *postgres-common
+    container_name: ecom-inventory-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: inventory
+    volumes: [inventory-db-data:/var/lib/postgresql]
+    ports: ["${INVENTORY_DB_PORT:-15436}:5432"]
+
+  payment-db:
+    <<: *postgres-common
+    container_name: ecom-payment-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: payment
+    volumes: [payment-db-data:/var/lib/postgresql]
+    ports: ["${PAYMENT_DB_PORT:-15437}:5432"]
+
+  backoffice-db:
+    <<: *postgres-common
+    container_name: ecom-backoffice-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: backoffice
+    volumes: [backoffice-db-data:/var/lib/postgresql]
+    ports: ["${BACKOFFICE_DB_PORT:-15438}:5432"]
+
+  saga-db:
+    <<: *postgres-common
+    container_name: ecom-saga-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: saga
+    volumes: [saga-db-data:/var/lib/postgresql]
+    ports: ["${SAGA_DB_PORT:-15439}:5432"]
+
+  notification-db:
+    <<: *postgres-common
+    container_name: ecom-notification-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: notification
+    volumes: [notification-db-data:/var/lib/postgresql]
+    ports: ["${NOTIFICATION_DB_PORT:-15440}:5432"]
+
+  # ===========================================================================
+  #  Other stores
+  # ===========================================================================
+  redis:
+    image: ${REDIS_IMAGE:-redis:8-alpine}
+    container_name: ecom-redis
+    restart: unless-stopped
+    # Basket data is deliberately disposable, so persistence stays off: an
+    # abandoned cart *should* expire. See docs/adr/0003.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", ""]
+    ports: ["${REDIS_PORT:-6379}:6379"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+
+  mongo:
+    image: ${MONGO_IMAGE:-mongo:8}
+    container_name: ecom-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    ports: ["${MONGO_PORT:-27017}:27017"]
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks: [backend]
+
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:-rabbitmq:4-management-alpine}
+    container_name: ecom-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      # Management UI. Worth opening during a demo: queue depth and dead-letter
+      # counts make the event flow visible rather than theoretical.
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+    networks: [backend]
+
+  # ===========================================================================
+  #  Observability
+  # ===========================================================================
+  seq:
+    image: ${SEQ_IMAGE:-datalust/seq:latest}
+    container_name: ecom-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      # Seq refuses to start without an explicit authentication decision - it
+      # will not silently default to open. Local development opts out so the UI
+      # opens without a login and a demo needs no credential handover.
+      # Anything beyond localhost must set SEQ_FIRSTRUN_ADMINPASSWORDHASH
+      # instead (generate with: docker run --rm datalust/seq config hash <pw>).
+      SEQ_FIRSTRUN_NOAUTHENTICATION: ${SEQ_FIRSTRUN_NOAUTHENTICATION:-true}
+    ports:
+      - "${SEQ_UI_PORT:-8081}:80"
+      - "${SEQ_INGEST_PORT:-5341}:5341"
+    volumes: [seq-data:/data]
+    healthcheck:
+      # The Seq image ships curl but not wget.
+      test: ["CMD-SHELL", "curl -fsS http://localhost/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks: [backend, frontend]
+
+  jaeger:
+    image: ${JAEGER_IMAGE:-jaegertracing/all-in-one:latest}
+    container_name: ecom-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "${OTLP_GRPC_PORT:-4317}:4317"
+      - "${OTLP_HTTP_PORT:-4318}:4318"
+    networks: [backend, frontend]
+
+  # ===========================================================================
+  #  Microservices
+  # ===========================================================================
+  #  Each depends only on the infrastructure it actually uses. Note that no
+  #  service depends on another service: that is the point of asynchronous
+  #  integration - startup order between services must not matter.
+  # ===========================================================================
+  catalog-api:
+    <<: *dotnet-common
+    container_name: ecom-catalog-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/catalog/ECommerce.Catalog.Api/ECommerce.Catalog.Api.csproj
+        ASSEMBLY_NAME: ECommerce.Catalog.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__CatalogDb: Host=catalog-db;Database=catalog;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__CatalogReadDb: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017
+    ports: ["${CATALOG_HTTP_PORT:-5001}:8080", "${CATALOG_GRPC_PORT:-5101}:8081"]
+    depends_on:
+      catalog-db: { condition: service_healthy }
+      mongo: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  basket-api:
+    <<: *dotnet-common
+    container_name: ecom-basket-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/basket/ECommerce.Basket.Api/ECommerce.Basket.Api.csproj
+        ASSEMBLY_NAME: ECommerce.Basket.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD}
+    ports: ["${BASKET_HTTP_PORT:-5002}:8080", "${BASKET_GRPC_PORT:-5102}:8081"]
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  ordering-api:
+    <<: *dotnet-common
+    container_name: ecom-ordering-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/ordering/ECommerce.Ordering.Api/ECommerce.Ordering.Api.csproj
+        ASSEMBLY_NAME: ECommerce.Ordering.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__OrderingDb: Host=ordering-db;Database=ordering;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports: ["${ORDERING_HTTP_PORT:-5003}:8080", "${ORDERING_GRPC_PORT:-5103}:8081"]
+    depends_on:
+      ordering-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  payment-api:
+    <<: *dotnet-common
+    container_name: ecom-payment-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/payment/ECommerce.Payment.Api/ECommerce.Payment.Api.csproj
+        ASSEMBLY_NAME: ECommerce.Payment.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__PaymentDb: Host=payment-db;Database=payment;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Payment__SimulatorMode: ${PAYMENT_SIMULATOR_MODE:-amount-threshold}
+      Payment__DeclineAbove: ${PAYMENT_SIMULATOR_DECLINE_ABOVE:-5000}
+    ports: ["${PAYMENT_HTTP_PORT:-5004}:8080"]
+    depends_on:
+      payment-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  inventory-api:
+    <<: *dotnet-common
+    container_name: ecom-inventory-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/inventory/ECommerce.Inventory.Api/ECommerce.Inventory.Api.csproj
+        ASSEMBLY_NAME: ECommerce.Inventory.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__InventoryDb: Host=inventory-db;Database=inventory;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports: ["${INVENTORY_HTTP_PORT:-5005}:8080", "${INVENTORY_GRPC_PORT:-5105}:8081"]
+    depends_on:
+      inventory-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  notification-api:
+    <<: *dotnet-common
+    container_name: ecom-notification-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/notification/ECommerce.Notification.Api/ECommerce.Notification.Api.csproj
+        ASSEMBLY_NAME: ECommerce.Notification.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__NotificationDb: Host=notification-db;Database=notification;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports: ["${NOTIFICATION_HTTP_PORT:-5006}:8080"]
+    depends_on:
+      notification-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  user-profile-api:
+    <<: *dotnet-common
+    container_name: ecom-user-profile-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/user-profile/ECommerce.UserProfile.Api/ECommerce.UserProfile.Api.csproj
+        ASSEMBLY_NAME: ECommerce.UserProfile.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__UserProfileDb: Host=userprofile-db;Database=userprofile;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports: ["${USERPROFILE_HTTP_PORT:-5007}:8080", "${USERPROFILE_GRPC_PORT:-5107}:8081"]
+    depends_on:
+      userprofile-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  back-office-api:
+    <<: *dotnet-common
+    container_name: ecom-back-office-api
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/back-office/ECommerce.BackOffice.Api/ECommerce.BackOffice.Api.csproj
+        ASSEMBLY_NAME: ECommerce.BackOffice.Api
+    environment:
+      <<: *dotnet-env
+      # Audit log only. Back-office stores no business data - everything else is
+      # delegated to the owning service or to Keycloak.
+      ConnectionStrings__AuditDb: Host=backoffice-db;Database=backoffice;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      Keycloak__AdminBaseUrl: http://keycloak:8080
+      Keycloak__Realm: ${KEYCLOAK_REALM}
+      Keycloak__ClientSecret: ${BACKOFFICE_SERVICE_CLIENT_SECRET}
+    ports: ["${BACKOFFICE_HTTP_PORT:-5008}:8080"]
+    depends_on:
+      backoffice-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  ordering-saga:
+    <<: *dotnet-common
+    container_name: ecom-ordering-saga
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/services/ordering-saga/ECommerce.OrderingSaga.Api/ECommerce.OrderingSaga.Api.csproj
+        ASSEMBLY_NAME: ECommerce.OrderingSaga.Api
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__SagaDb: Host=saga-db;Database=saga;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+    ports: ["${SAGA_HTTP_PORT:-5009}:8080"]
+    depends_on:
+      saga-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  # ===========================================================================
+  #  Gateways / BFFs - one per client experience (docs/adr/0006)
+  # ===========================================================================
+  #  These bridge both networks: reachable by browsers, and able to reach
+  #  services. They are the only .NET containers on the frontend network.
+  # ===========================================================================
+  storefront-bff:
+    <<: *dotnet-common
+    container_name: ecom-storefront-bff
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/gateways/storefront-bff/ECommerce.StorefrontBff/ECommerce.StorefrontBff.csproj
+        ASSEMBLY_NAME: ECommerce.StorefrontBff
+    environment:
+      <<: *dotnet-env
+      Services__Catalog: http://catalog-api:8080
+      Services__Basket: http://basket-api:8080
+      Services__Ordering: http://ordering-api:8080
+      Services__UserProfile: http://user-profile-api:8080
+      Keycloak__ClientSecret: ${STOREFRONT_BFF_CLIENT_SECRET}
+    ports: ["${STOREFRONT_BFF_PORT:-6001}:8080"]
+    networks: [backend, frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }
+
+  admin-bff:
+    <<: *dotnet-common
+    container_name: ecom-admin-bff
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/gateways/admin-bff/ECommerce.AdminBff/ECommerce.AdminBff.csproj
+        ASSEMBLY_NAME: ECommerce.AdminBff
+    environment:
+      <<: *dotnet-env
+      Services__BackOffice: http://back-office-api:8080
+      Keycloak__ClientSecret: ${ADMIN_BFF_CLIENT_SECRET}
+    ports: ["${ADMIN_BFF_PORT:-6002}:8080"]
+    networks: [backend, frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }
+
+  mobile-bff:
+    <<: *dotnet-common
+    container_name: ecom-mobile-bff
+    build:
+      <<: *dotnet-build
+      args:
+        PROJECT_PATH: src/gateways/mobile-bff/ECommerce.MobileBff/ECommerce.MobileBff.csproj
+        ASSEMBLY_NAME: ECommerce.MobileBff
+    environment:
+      <<: *dotnet-env
+      Services__Catalog: http://catalog-api:8080
+      Services__Basket: http://basket-api:8080
+      Services__Ordering: http://ordering-api:8080
+      Services__UserProfile: http://user-profile-api:8080
+      Keycloak__ClientSecret: ${MOBILE_BFF_CLIENT_SECRET}
+    ports: ["${MOBILE_BFF_PORT:-6003}:8080"]
+    networks: [backend, frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }

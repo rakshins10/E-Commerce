@@ -120,7 +120,7 @@ The saga persists its state per order (current step, timestamps, outcomes) in it
 - makes "which orders are stuck?" an ordinary SQL query;
 - lets a restarted saga resume rather than lose in-flight processes;
 - gives the admin order-timeline screen its data source
-  ([docs/frontend/admin](../frontend/admin/)).
+  ([docs/frontend/admin](../frontend/README.md)).
 
 **Timeouts are first-class.** Each step has a deadline; a step exceeding it is treated as failed and
 compensation runs. Without this, a lost reply strands an order forever — the single most common saga bug.
@@ -162,4 +162,4 @@ workflow engine (Option C) becomes correct. The state machine's shape should sur
 - [.NET microservices guide — saga pattern](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/)
 - [microservices.io — Saga](https://microservices.io/patterns/data/saga.html)
 - [ADR-0010](0010-transactional-outbox.md) — the delivery guarantee this depends on
-- [diagrams/sequence-checkout.md](../diagrams/sequence-checkout.md) — every path, including compensation
+- [diagrams/sequence-checkout.md](../diagrams/README.md) — every path, including compensation

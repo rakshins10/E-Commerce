@@ -1,7 +1,7 @@
 # Bounded contexts
 
 > **Related:** [Architecture](../architecture.md) · [Glossary](glossary.md) ·
-> [Context map diagram](../diagrams/context-map.md) · [ADR-0004: identity vs profile split](../adr/0004-identity-vs-profile-data-split.md)
+> [Context map diagram](../diagrams/README.md) · [ADR-0004: identity vs profile split](../adr/0004-identity-vs-profile-data-split.md)
 
 A **bounded context** is the boundary within which a model — and the language describing it — is consistent
 and unambiguous. It is a *linguistic* boundary before it is a technical one. The classic test: if the same
@@ -256,8 +256,8 @@ is to pull the whole customer in "because we need their address"; the correct mo
 in as a value object at order time**, which is both better domain modelling (the address is frozen at
 purchase) and a looser coupling.
 
-Full treatment: [ordering aggregate diagram](../diagrams/ordering-aggregate.md),
-[order state machine](../diagrams/order-state-machine.md).
+Full treatment: [ordering aggregate diagram](../diagrams/README.md),
+[order state machine](../diagrams/README.md).
 
 ---
 

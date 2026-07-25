@@ -25,73 +25,44 @@ Read these before the code. They explain the business, not the mechanics.
 |------|-------------------|
 | [domain/glossary.md](domain/glossary.md) | The ubiquitous language. Every domain term defined precisely, including terms that mean different things in different contexts. |
 | [domain/bounded-contexts.md](domain/bounded-contexts.md) | Every context: what it owns, what it deliberately does not own, why the boundary sits exactly there, and how it relates to its neighbours. |
-| [domain/business-rules.md](domain/business-rules.md) | The invariants in plain language, before any code enforces them. |
-| [domain/processes/](domain/processes/) | End-to-end process narratives — what actually happens when a customer places an order — told as a story, then as a sequence diagram, then as code references. |
+| [domain/business-rules.md](domain/business-rules.md) | The invariants in plain language, before any code enforces them — and the distinction between an invariant, a business rule, and a policy. |
 
 ## The services
 
-One page per backend service: purpose, domain model, schema and migrations, dependencies, events in and out,
-configuration, and a **complete endpoint reference** with auth, validation, error contract, idempotency, and a
-`curl` example for every endpoint.
-
-| Service | Page |
-|---------|------|
-| Catalog | [services/catalog.md](services/catalog.md) |
-| Basket | [services/basket.md](services/basket.md) |
-| Ordering | [services/ordering.md](services/ordering.md) |
-| Payment | [services/payment.md](services/payment.md) |
-| Inventory | [services/inventory.md](services/inventory.md) |
-| Notification | [services/notification.md](services/notification.md) |
-| User Profile | [services/user-profile.md](services/user-profile.md) |
-| Back-office | [services/back-office.md](services/back-office.md) |
-| Ordering Saga | [services/ordering-saga.md](services/ordering-saga.md) |
-| Storefront BFF | [services/storefront-bff.md](services/storefront-bff.md) |
-| Admin BFF | [services/admin-bff.md](services/admin-bff.md) |
-| Mobile BFF | [services/mobile-bff.md](services/mobile-bff.md) |
+[**services/README.md**](services/README.md) — one page per backend service: purpose, domain model, schema and
+migrations, dependencies, events in and out, configuration, and a **complete endpoint reference** with auth,
+validation, error contract, idempotency, and a `curl` example for every endpoint. Pages land with the service
+they describe; the index lists which phase each arrives in.
 
 ## Integration
 
 | Page | What it gives you |
 |------|-------------------|
 | [events/event-catalogue.md](events/event-catalogue.md) | Every integration event: name, version, publisher, subscribers, payload schema, ordering and idempotency expectations, and what happens on failure. |
-| [diagrams/event-flow.md](diagrams/event-flow.md) | Publishers, subscribers, and the outbox path, drawn. |
 
 ## Security
 
 | Page | What it gives you |
 |------|-------------------|
 | [authorization-model.md](authorization-model.md) | The full matrix: every realm role, every permission, which composite grants what, and which endpoint and UI action each one guards. |
-| [diagrams/sequence-auth.md](diagrams/sequence-auth.md) | Login, token refresh, and service-to-service token acquisition as sequence diagrams. |
 
 ## The frontends
 
 | Page | What it gives you |
 |------|-------------------|
-| [frontend/README.md](frontend/README.md) | How the four web apps and the mobile app are structured, and what the shared layer provides. |
-| [frontend/shared-layer.md](frontend/shared-layer.md) | Design tokens, the generated API client, the OIDC flow, and the permission helpers — documented once, consumed everywhere. |
-| [frontend/storefront/](frontend/storefront/) | Screen-by-screen catalogue for the storefront. |
-| [frontend/admin/](frontend/admin/) | Screen-by-screen catalogue for the admin panel. |
+| [frontend/README.md](frontend/README.md) | The screen catalogue: how the four web apps and the mobile app are structured, what the shared layer provides, and what every screen page covers. |
 | [react-vs-angular.md](react-vs-angular.md) | Per-feature comparison of the two implementations: where each framework was cleaner and what each forced us to work around. Written as the features were built. |
+| [`web/parity-checklist.md`](../web/parity-checklist.md) | Every screen and behaviour × React status × Angular status. |
 
 ## Diagrams
 
-All Mermaid, committed as text so they diff and review like code.
+[**diagrams/README.md**](diagrams/README.md) — the index, with drawing conventions and which phase each
+diagram arrives in. All Mermaid, committed as text so they diff and review like code.
 
-| Diagram | Page |
-|---------|------|
-| C4 — system context | [diagrams/c4-context.md](diagrams/c4-context.md) |
-| C4 — containers | [diagrams/c4-container.md](diagrams/c4-container.md) |
-| C4 — components (per service) | [diagrams/c4-component.md](diagrams/c4-component.md) |
-| Bounded-context map | [diagrams/context-map.md](diagrams/context-map.md) |
-| Deployment topology | [diagrams/deployment.md](diagrams/deployment.md) |
-| Order state machine | [diagrams/order-state-machine.md](diagrams/order-state-machine.md) |
-| Ordering aggregate boundary | [diagrams/ordering-aggregate.md](diagrams/ordering-aggregate.md) |
-| Event flow and outbox | [diagrams/event-flow.md](diagrams/event-flow.md) |
-| ERD per service | [diagrams/erd/](diagrams/erd/) |
-| Sequence — auth flows | [diagrams/sequence-auth.md](diagrams/sequence-auth.md) |
-| Sequence — checkout and saga | [diagrams/sequence-checkout.md](diagrams/sequence-checkout.md) |
-| Sequence — admin actions | [diagrams/sequence-admin.md](diagrams/sequence-admin.md) |
-| Frontend route maps | [diagrams/frontend-routes.md](diagrams/frontend-routes.md) |
+Available now: [C4 context, container and component](architecture.md#2-c4-level-1--system-context) ·
+[bounded-context map](domain/bounded-contexts.md#the-context-map) ·
+[deployment topology](diagrams/deployment.md) ·
+[saga flow with compensation](adr/0011-orchestration-saga.md#the-flow).
 
 ## Decisions
 
