@@ -1,0 +1,555 @@
+{
+  "realm": "ecommerce",
+  "displayName": "E-Commerce",
+  "enabled": true,
+
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "editUsernameAllowed": false,
+
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "failureFactor": 10,
+
+  "sslRequired": "none",
+
+  "roles": {
+    "client": {
+      "ecommerce-api": [
+        { "name": "catalog:read", "description": "View products, categories and brands" },
+        { "name": "catalog:write", "description": "Create and edit products, categories and brands" },
+        { "name": "catalog:delete", "description": "Delete catalog entries" },
+        { "name": "price:override", "description": "Set a price outside the normal pricing rules" },
+
+        { "name": "order:read", "description": "View ANY order (staff)" },
+        { "name": "order:read:own", "description": "View only orders you placed yourself" },
+        { "name": "order:write", "description": "Place an order and change its status" },
+        { "name": "order:cancel", "description": "Cancel an order" },
+        { "name": "order:refund", "description": "Refund a paid order" },
+
+        { "name": "inventory:read", "description": "View stock levels" },
+        { "name": "inventory:adjust", "description": "Adjust stock levels" },
+
+        { "name": "user:read", "description": "Search and view users" },
+        { "name": "user:manage", "description": "Enable, disable and reset users" },
+        { "name": "user:roles:manage", "description": "Assign roles and groups to users" },
+
+        { "name": "profile:read:own", "description": "View your own profile" },
+        { "name": "profile:write:own", "description": "Edit your own profile, addresses and preferences" },
+
+        { "name": "audit:read", "description": "Read the administrative audit log" },
+        { "name": "dashboard:read", "description": "View sales and order KPIs" }
+      ]
+    },
+
+    "realm": [
+      {
+        "name": "customer",
+        "description": "A shopper. Can browse, buy, and manage only their own data.",
+        "composite": true,
+        "composites": {
+          "client": {
+            "ecommerce-api": [
+              "catalog:read",
+              "order:read:own",
+              "order:write",
+              "profile:read:own",
+              "profile:write:own"
+            ]
+          }
+        }
+      },
+      {
+        "name": "support-agent",
+        "description": "Helpdesk. Read-only across orders and users - deliberately cannot change anything.",
+        "composite": true,
+        "composites": {
+          "client": {
+            "ecommerce-api": ["catalog:read", "order:read", "inventory:read", "user:read"]
+          }
+        }
+      },
+      {
+        "name": "catalog-manager",
+        "description": "Merchandising. Owns products and pricing; has no access to orders or users.",
+        "composite": true,
+        "composites": {
+          "client": {
+            "ecommerce-api": [
+              "catalog:read",
+              "catalog:write",
+              "catalog:delete",
+              "price:override",
+              "inventory:read"
+            ]
+          }
+        }
+      },
+      {
+        "name": "order-manager",
+        "description": "Fulfilment. Owns orders, refunds and stock adjustments; cannot edit the catalog.",
+        "composite": true,
+        "composites": {
+          "client": {
+            "ecommerce-api": [
+              "catalog:read",
+              "order:read",
+              "order:write",
+              "order:cancel",
+              "order:refund",
+              "inventory:read",
+              "inventory:adjust"
+            ]
+          }
+        }
+      },
+      {
+        "name": "admin",
+        "description": "Full access. A nested composite of the three staff roles plus user administration.",
+        "composite": true,
+        "composites": {
+          "realm": ["support-agent", "catalog-manager", "order-manager"],
+          "client": {
+            "ecommerce-api": ["user:manage", "user:roles:manage", "audit:read", "dashboard:read"]
+          }
+        }
+      }
+    ]
+  },
+
+  "defaultRole": {
+    "name": "default-roles-ecommerce",
+    "description": "Roles every user receives automatically, including self-registered shoppers",
+    "composite": true,
+    "clientRole": false,
+    "composites": {
+      "realm": ["customer", "offline_access", "uma_authorization"]
+    }
+  },
+
+  "groups": [
+    {
+      "name": "customers",
+      "path": "/customers",
+      "realmRoles": ["customer"]
+    },
+    {
+      "name": "staff",
+      "path": "/staff",
+      "subGroups": [
+        { "name": "support", "path": "/staff/support", "realmRoles": ["support-agent"] },
+        { "name": "merchandising", "path": "/staff/merchandising", "realmRoles": ["catalog-manager"] },
+        { "name": "fulfilment", "path": "/staff/fulfilment", "realmRoles": ["order-manager"] },
+        { "name": "administrators", "path": "/staff/administrators", "realmRoles": ["admin"] }
+      ]
+    }
+  ],
+
+  "clients": [
+    {
+      "clientId": "ecommerce-api",
+      "name": "E-Commerce API (resource server)",
+      "description": "Owns the permission roles and is the audience every service validates. Not an application anyone logs into.",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "serviceAccountsEnabled": false
+    },
+
+    {
+      "clientId": "storefront-react",
+      "name": "Storefront (React)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "http://localhost:3000",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "ecommerce-api",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "ecommerce-api",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "storefront-angular",
+      "name": "Storefront (Angular)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "http://localhost:4200",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:4200/*"],
+      "webOrigins": ["http://localhost:4200"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4200/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        },
+        {
+          "name": "permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "ecommerce-api",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "admin-react",
+      "name": "Admin panel (React)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "http://localhost:3001",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:3001/*"],
+      "webOrigins": ["http://localhost:3001"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3001/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        },
+        {
+          "name": "permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "ecommerce-api",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "admin-angular",
+      "name": "Admin panel (Angular)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "http://localhost:4201",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost:4201/*"],
+      "webOrigins": ["http://localhost:4201"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4201/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        },
+        {
+          "name": "permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "ecommerce-api",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "mobile",
+      "name": "Mobile app (Expo)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["ecommerce://auth/*", "exp://localhost:8081/*", "http://localhost:8081/*"],
+      "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        },
+        {
+          "name": "permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "ecommerce-api",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+
+    {
+      "clientId": "storefront-bff",
+      "name": "Storefront BFF",
+      "description": "Confidential client. Runs on a server, so it can hold a secret.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev_only_storefront_bff_secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        }
+      ]
+    },
+
+    {
+      "clientId": "admin-bff",
+      "name": "Admin BFF",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev_only_admin_bff_secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        }
+      ]
+    },
+
+    {
+      "clientId": "mobile-bff",
+      "name": "Mobile BFF",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev_only_mobile_bff_secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        }
+      ]
+    },
+
+    {
+      "clientId": "back-office-service",
+      "name": "Back-office service",
+      "description": "Calls the Keycloak Admin REST API for user management via its service account.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev_only_backoffice_svc_secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    },
+
+    {
+      "clientId": "ordering-saga-service",
+      "name": "Ordering saga service",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev_only_saga_svc_secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    },
+
+    {
+      "clientId": "test-harness",
+      "name": "Test harness (automated tests only)",
+      "description": "TEST ONLY. The only client with direct access grants enabled, so tests can obtain a real token without driving a browser. Isolated here so no real client needs the deprecated password grant. See docs/authorization-model.md.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "dev_only_test_harness_secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": { "included.client.audience": "ecommerce-api", "access.token.claim": "true" }
+        },
+        {
+          "name": "permissions",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "ecommerce-api",
+            "claim.name": "permissions",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "customer",
+      "email": "customer@demo.local",
+      "firstName": "Chloe",
+      "lastName": "Customer",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+      "realmRoles": ["customer"],
+      "groups": ["/customers"]
+    },
+    {
+      "username": "support",
+      "email": "support@demo.local",
+      "firstName": "Sam",
+      "lastName": "Support",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+      "realmRoles": ["support-agent"],
+      "groups": ["/staff/support"]
+    },
+    {
+      "username": "catalogmgr",
+      "email": "catalog@demo.local",
+      "firstName": "Casey",
+      "lastName": "Catalog",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+      "realmRoles": ["catalog-manager"],
+      "groups": ["/staff/merchandising"]
+    },
+    {
+      "username": "ordermgr",
+      "email": "orders@demo.local",
+      "firstName": "Omar",
+      "lastName": "Orders",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+      "realmRoles": ["order-manager"],
+      "groups": ["/staff/fulfilment"]
+    },
+    {
+      "username": "administrator",
+      "email": "admin@demo.local",
+      "firstName": "Ada",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+      "realmRoles": ["admin"],
+      "groups": ["/staff/administrators"]
+    },
+    {
+      "username": "blocked",
+      "email": "blocked@demo.local",
+      "firstName": "Ben",
+      "lastName": "Blocked",
+      "enabled": false,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Passw0rd!", "temporary": false }],
+      "realmRoles": ["customer"],
+      "groups": ["/customers"]
+    }
+  ]
+}

@@ -58,6 +58,9 @@
     <Project Path="src/services/user-profile/ECommerce.UserProfile.Api/ECommerce.UserProfile.Api.csproj" />
   </Folder>
   <Folder Name="/tests/" />
+  <Folder Name="/tests/integration/">
+    <Project Path="tests/integration/ECommerce.Auth.IntegrationTests/ECommerce.Auth.IntegrationTests.csproj" />
+  </Folder>
   <Folder Name="/tests/unit/">
     <Project Path="tests/unit/ECommerce.Architecture.Tests/ECommerce.Architecture.Tests.csproj" />
     <Project Path="tests/unit/ECommerce.Common.Tests/ECommerce.Common.Tests.csproj" />

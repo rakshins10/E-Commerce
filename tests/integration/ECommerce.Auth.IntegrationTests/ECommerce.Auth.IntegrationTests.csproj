@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Authorization tests against a REAL Keycloak in a throwaway container, using
+    the same realm-export.json that docker compose imports.
+
+    Why not fabricate a JWT with a test signing key? Because that would prove
+    nothing about the parts most likely to be wrong: issuer validation, audience
+    validation, JWKS retrieval, and whether the composite roles in the realm
+    actually produce the permission claims the code expects. A hand-forged token
+    tests the test's own assumptions.
+
+    See tests/README.md and docs/authorization-model.md.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Testcontainers.Keycloak" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\building-blocks\Auth\ECommerce.Auth.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
