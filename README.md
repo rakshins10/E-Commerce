@@ -229,8 +229,17 @@ Documentation is a first-class deliverable, written in the same PR as the code i
 committed as Mermaid source, never binary images, so they diff and review like code.
 Start at **[`docs/README.md`](docs/README.md)** — every topic is reachable in two clicks.
 
+> **🟢 New to microservices?** Start with
+> [**`docs/concepts-explained.md`**](docs/concepts-explained.md) — every concept in this system explained in
+> plain English with everyday analogies, assuming no prior knowledge. What a BFF is, what a saga is, what
+> CQRS means, why services never share a database. Then
+> [**`docs/operations/tooling-guide.md`**](docs/operations/tooling-guide.md) for hands-on use of Seq, Jaeger,
+> RabbitMQ and Keycloak.
+
 | Document | What it covers |
 |----------|----------------|
+| [`docs/concepts-explained.md`](docs/concepts-explained.md) | **Start here if the terms are new.** Every concept in plain English — microservices, bounded contexts, BFF, saga, CQRS, DDD, outbox, idempotency, OAuth2/JWT/PKCE, circuit breakers, containers |
+| [`docs/operations/tooling-guide.md`](docs/operations/tooling-guide.md) | Hands-on introduction to Seq, Jaeger, RabbitMQ and Keycloak for someone who has never used them |
 | [`docs/getting-started.md`](docs/getting-started.md) | Clean-machine setup: tooling, ports, env vars, first run, verification, troubleshooting |
 | [`docs/architecture.md`](docs/architecture.md) | C4 context/container/component, topology, communication styles |
 | [`docs/domain/`](docs/domain/) | Ubiquitous-language glossary, per-context pages, business rules, process narratives |

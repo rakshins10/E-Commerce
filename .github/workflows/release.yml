@@ -1,0 +1,207 @@
+# =============================================================================
+#  Release — build and publish container images to GitHub Container Registry
+# =============================================================================
+#  Runs on every push to main and on every version tag. Produces one published,
+#  multi-architecture image per service in ghcr.io/<owner>/e-commerce-<service>.
+#
+#  Why publish images at all when `docker compose up` builds locally? Because
+#  building on the machine that runs it is a development convenience, not a
+#  deployment strategy. A real deployment pulls a *specific, immutable, already
+#  tested* image. Building on the target means the artefact you tested is not
+#  the artefact you shipped -- a dependency could resolve differently, and you
+#  would never know.
+#
+#  See docs/operations/deployment.md.
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a half-finished publish
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # ---------------------------------------------------------------------------
+  #  One job per service, in parallel
+  # ---------------------------------------------------------------------------
+  publish:
+    name: publish ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      # Required to push to GHCR. Scoped to exactly what is needed rather than
+      # write-all -- the workflow token is a credential like any other.
+      packages: write
+      # Lets the build attach a provenance attestation, so a consumer can verify
+      # which commit and which workflow produced the image.
+      attestations: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: catalog-api,      project: src/services/catalog/ECommerce.Catalog.Api/ECommerce.Catalog.Api.csproj,                   assembly: ECommerce.Catalog.Api }
+          - { service: basket-api,       project: src/services/basket/ECommerce.Basket.Api/ECommerce.Basket.Api.csproj,                      assembly: ECommerce.Basket.Api }
+          - { service: ordering-api,     project: src/services/ordering/ECommerce.Ordering.Api/ECommerce.Ordering.Api.csproj,                assembly: ECommerce.Ordering.Api }
+          - { service: payment-api,      project: src/services/payment/ECommerce.Payment.Api/ECommerce.Payment.Api.csproj,                   assembly: ECommerce.Payment.Api }
+          - { service: inventory-api,    project: src/services/inventory/ECommerce.Inventory.Api/ECommerce.Inventory.Api.csproj,             assembly: ECommerce.Inventory.Api }
+          - { service: notification-api, project: src/services/notification/ECommerce.Notification.Api/ECommerce.Notification.Api.csproj,    assembly: ECommerce.Notification.Api }
+          - { service: user-profile-api, project: src/services/user-profile/ECommerce.UserProfile.Api/ECommerce.UserProfile.Api.csproj,      assembly: ECommerce.UserProfile.Api }
+          - { service: back-office-api,  project: src/services/back-office/ECommerce.BackOffice.Api/ECommerce.BackOffice.Api.csproj,         assembly: ECommerce.BackOffice.Api }
+          - { service: ordering-saga,    project: src/services/ordering-saga/ECommerce.OrderingSaga.Api/ECommerce.OrderingSaga.Api.csproj,   assembly: ECommerce.OrderingSaga.Api }
+          - { service: storefront-bff,   project: src/gateways/storefront-bff/ECommerce.StorefrontBff/ECommerce.StorefrontBff.csproj,        assembly: ECommerce.StorefrontBff }
+          - { service: admin-bff,        project: src/gateways/admin-bff/ECommerce.AdminBff/ECommerce.AdminBff.csproj,                       assembly: ECommerce.AdminBff }
+          - { service: mobile-bff,       project: src/gateways/mobile-bff/ECommerce.MobileBff/ECommerce.MobileBff.csproj,                    assembly: ECommerce.MobileBff }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        # Needed for multi-architecture builds and for the GitHub Actions layer
+        # cache below.
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # The automatically-provided workflow token. No secret to manage, and
+          # nothing to rotate -- it is minted per run and expires with it.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          # Several tags per image, each for a different consumer:
+          #   sha-<commit>  immutable, and the only one safe to deploy
+          #   1.2.3 / 1.2   semantic versions, from a v* tag
+          #   latest        convenience for local use only
+          #
+          # `latest` is deliberately NOT a deployment target. It is a moving
+          # pointer, so "what is running in production?" becomes unanswerable
+          # and a rollback has nothing to roll back to. Deploy the digest or the
+          # sha tag.
+          tags: |
+            type=sha,format=long,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.service }}
+            org.opencontainers.image.description=E-Commerce reference platform - ${{ matrix.service }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/Dockerfile
+          build-args: |
+            PROJECT_PATH=${{ matrix.project }}
+            ASSEMBLY_NAME=${{ matrix.assembly }}
+          # amd64 and arm64 so the images run on Apple Silicon and on Graviton
+          # as well as on ordinary x86 servers.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache shared across runs, scoped per service so twelve
+          # parallel builds do not evict each other.
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          provenance: true
+          sbom: true
+
+      - name: Attest provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  # ---------------------------------------------------------------------------
+  #  Scan the published images for known vulnerabilities
+  # ---------------------------------------------------------------------------
+  #  NuGet audit at build time covers our own dependencies. It says nothing
+  #  about the base image -- an OS-level CVE in the .NET runtime image would
+  #  ship silently. This catches that.
+  # ---------------------------------------------------------------------------
+  scan:
+    name: scan images
+    runs-on: ubuntu-latest
+    needs: publish
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [catalog-api, ordering-api, storefront-bff, admin-bff]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:sha-${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+          severity: CRITICAL,HIGH
+          # Report rather than fail: a base-image CVE with no patch available
+          # yet should be visible without blocking every merge. It surfaces in
+          # the Security tab, where it can be triaged.
+          exit-code: '0'
+
+      - name: Upload to the Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+
+  # ---------------------------------------------------------------------------
+  #  Summary
+  # ---------------------------------------------------------------------------
+  summary:
+    name: release summary
+    runs-on: ubuntu-latest
+    needs: [publish, scan]
+    if: always()
+    steps:
+      - name: Write the job summary
+        run: |
+          {
+            echo "## Images published"
+            echo
+            echo "Registry: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-<service>\`"
+            echo
+            echo "Immutable tag for this build: \`sha-${{ github.sha }}\`"
+            echo
+            echo "Pull one with:"
+            echo '```bash'
+            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-catalog-api:sha-${{ github.sha }}"
+            echo '```'
+            echo
+            echo "Deploy the \`sha-\` tag or the digest, never \`latest\` — see docs/operations/deployment.md."
+          } >> "$GITHUB_STEP_SUMMARY"

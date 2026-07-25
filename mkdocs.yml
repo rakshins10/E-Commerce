@@ -1,0 +1,143 @@
+# =============================================================================
+#  Documentation site
+# =============================================================================
+#  Renders docs/ as a browsable site published to GitHub Pages.
+#
+#  Why bother, when the Markdown is already readable on GitHub? Because the
+#  documentation is a first-class deliverable here, and Markdown on GitHub gives
+#  you no search across pages, no navigation sidebar, and no rendered Mermaid in
+#  some contexts. A reader trying to learn the system from docs/ alone -- which
+#  is the stated goal -- needs those.
+#
+#  Built and deployed by .github/workflows/docs.yml.
+# =============================================================================
+
+site_name: E-Commerce — .NET Microservices Reference
+site_description: >-
+  A production-grade reference platform demonstrating every architectural concept in Microsoft's
+  .NET Microservices guide, with the reasoning behind each decision written down.
+site_url: https://rakshins10.github.io/E-Commerce/
+repo_url: https://github.com/rakshins10/E-Commerce
+repo_name: rakshins10/E-Commerce
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  # Renders ```mermaid blocks natively. This is why diagrams are committed as
+  # Mermaid text rather than images -- they diff like code AND render like
+  # pictures. See docs/diagrams/README.md.
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+
+# Explicit navigation rather than automatic, so the reading order is a
+# deliberate teaching sequence: concepts before architecture before code.
+nav:
+  - Home: README.md
+
+  - Start here:
+      - Concepts in plain English: concepts-explained.md
+      - Getting started: getting-started.md
+      - Tooling guide: operations/tooling-guide.md
+
+  - Architecture:
+      - Overview: architecture.md
+      - Concept map: concept-map.md
+      - Deployment topology: diagrams/deployment.md
+      - Diagram index: diagrams/README.md
+
+  - The domain:
+      - Bounded contexts: domain/bounded-contexts.md
+      - Glossary: domain/glossary.md
+      - Business rules: domain/business-rules.md
+
+  - Services:
+      - Overview: services/README.md
+
+  - Integration:
+      - Event catalogue: events/event-catalogue.md
+
+  - Security:
+      - Authorization model: authorization-model.md
+
+  - Frontend:
+      - Overview: frontend/README.md
+      - React vs Angular: react-vs-angular.md
+
+  - Operations:
+      - Tooling guide: operations/tooling-guide.md
+      - Health checks: operations/health-checks.md
+      - Observability: operations/observability.md
+      - Deployment: operations/deployment.md
+      - Runbook: operations/runbook.md
+
+  - Decisions:
+      - Index: adr/README.md
+      - 0001 Record decisions: adr/0001-record-architecture-decisions.md
+      - 0002 Microservices vs monolith: adr/0002-microservices-over-modular-monolith.md
+      - 0003 PostgreSQL & polyglot persistence: adr/0003-postgresql-and-polyglot-persistence.md
+      - 0004 Identity vs profile split: adr/0004-identity-vs-profile-data-split.md
+      - 0005 Keycloak as IdP: adr/0005-keycloak-as-identity-provider.md
+      - 0006 YARP & BFF per client: adr/0006-yarp-gateway-and-bff-per-client.md
+      - 0007 gRPC internally: adr/0007-grpc-for-internal-sync-calls.md
+      - 0008 Monorepo: adr/0008-monorepo.md
+      - 0009 Secrets management: adr/0009-secrets-management.md
+      - 0010 Transactional outbox: adr/0010-transactional-outbox.md
+      - 0011 Orchestration saga: adr/0011-orchestration-saga.md
+      - 0012 CQRS with MediatR: adr/0012-cqrs-with-mediatr.md
+      - 0013 .NET 10: adr/0013-net10-target-framework.md
+      - 0014 React & Angular lockstep: adr/0014-react-and-angular-in-lockstep.md
+      - 0015 Manual mappers: adr/0015-manual-mappers-over-automapper.md
+      - 0016 RabbitMQ behind IEventBus: adr/0016-rabbitmq-behind-ieventbus.md
+      - Template: adr/0000-template.md

@@ -4,8 +4,12 @@ Everything about this system is reachable from here in two clicks. Documentation
 request as the code it describes — if you find a page that disagrees with the code, that is a bug, not a
 stale draft.
 
-**New here?** Read in this order: [Getting started](getting-started.md) → [Architecture](architecture.md) →
-[Bounded contexts](domain/bounded-contexts.md) → [Concept map](concept-map.md).
+**Never worked with microservices?** Read [**concepts-explained.md**](concepts-explained.md) first — every
+idea in this system in plain English, no jargon assumed. Then [tooling guide](operations/tooling-guide.md).
+
+**Already comfortable with the terms?** Read in this order: [Getting started](getting-started.md) →
+[Architecture](architecture.md) → [Bounded contexts](domain/bounded-contexts.md) →
+[Concept map](concept-map.md).
 
 ---
 
@@ -13,6 +17,7 @@ stale draft.
 
 | Page | What it gives you |
 |------|-------------------|
+| [concepts-explained.md](concepts-explained.md) | **Every concept in plain English**, assuming no prior knowledge — microservices, bounded contexts, BFF, message brokers, eventual consistency, idempotency, outbox, saga, DDD, CQRS, OAuth2/OIDC/JWT/PKCE, circuit breakers, health checks, containers. Everyday analogies, then what it means here, then where the code is. |
 | [getting-started.md](getting-started.md) | A clean machine to a running system: tooling and versions, every port, every environment variable, the first-run sequence, how to verify each container is healthy, and a troubleshooting section for the failures that actually happen. |
 | [architecture.md](architecture.md) | The C4 model — system context, containers, and the anatomy of a service. Communication styles and when each is used. The full service catalogue. |
 | [concept-map.md](concept-map.md) | The interview cheat sheet. Every pattern in the system: what it is, why it is here, where it lives, and the interview question it answers. |
