@@ -102,6 +102,65 @@ public sealed class OrderQueries(IDbConnection connection)
         return new PagedResult<OrderSummaryDto>(items, pagination.Page, pagination.PageSize, total);
     }
 
+    /// <summary>
+    /// Every order, newest first. Staff only.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately a separate method from <see cref="GetMyOrdersAsync"/> rather than the same one with
+    /// a nullable filter. Reading "all orders" and reading "my orders" are different capabilities, and
+    /// keeping them as different methods means an endpoint cannot accidentally pass null and widen its
+    /// own scope.
+    /// </remarks>
+    public async Task<PagedResult<OrderSummaryDto>> GetAllOrdersAsync(
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        PageRequest pagination = new PageRequest(page, pageSize).Normalise();
+
+        const string sql = """
+            SELECT COUNT(*)::int FROM orders;
+
+            SELECT o.id                                        AS Id,
+                   o.order_number                              AS OrderNumber,
+                   o.status                                    AS Status,
+                   o.currency                                  AS Currency,
+                   o.placed_at                                 AS PlacedAt,
+                   COALESCE(SUM(i.unit_price * i.quantity), 0) AS Total,
+                   COALESCE(SUM(i.quantity), 0)::int           AS TotalUnits
+            FROM   orders o
+            LEFT   JOIN order_items i ON i.order_id = o.id
+            GROUP  BY o.id, o.order_number, o.status, o.currency, o.placed_at
+            ORDER  BY o.placed_at DESC, o.id DESC
+            LIMIT  @PageSize OFFSET @Offset;
+            """;
+
+        var command = new CommandDefinition(
+            sql,
+            new { pagination.PageSize, Offset = pagination.Skip },
+            cancellationToken: cancellationToken);
+
+        using SqlMapper.GridReader reader =
+            await connection.QueryMultipleAsync(command).ConfigureAwait(false);
+
+        int total = await reader.ReadSingleAsync<int>().ConfigureAwait(false);
+        IEnumerable<OrderSummaryRow> rows = await reader.ReadAsync<OrderSummaryRow>().ConfigureAwait(false);
+
+        IReadOnlyList<OrderSummaryDto> items = rows.Select(row => new OrderSummaryDto
+        {
+            Id = row.Id,
+            OrderNumber = row.OrderNumber,
+            Status = OrderStatusNames.ToName(row.Status),
+            Total = row.Total,
+            Currency = row.Currency,
+            TotalUnits = row.TotalUnits,
+            PlacedAt = row.PlacedAt,
+            CanBeCancelled = OrderStatusNames.CanBeCancelled(row.Status),
+        }).ToArray();
+
+        return new PagedResult<OrderSummaryDto>(items, pagination.Page, pagination.PageSize, total);
+    }
+
     /// <summary>One order in full, including its lines.</summary>
     /// <remarks>
     /// <paramref name="buyerId"/> is applied in the WHERE clause rather than checked after loading.

@@ -133,11 +133,11 @@ export function createAdminApi(getAccessToken: () => string | null) {
 
     getAuditLog: (limit = 50) => client.get<AuditEntry[]>(`/api/admin/audit?limit=${limit}`),
 
-    // Staff read ANY order, so this is the same endpoint the storefront uses — the difference is the
-    // permission in the token, which drops the buyer filter server-side rather than in the client.
+    // The STAFF endpoint, not /me. /me is always filtered to the caller's own `sub`, so an
+    // administrator hitting it would see their own shopping rather than the shop's orders.
     getOrders: (page = 1, pageSize = 25) =>
       client.get<{ items: AdminOrderSummary[]; totalCount: number; totalPages: number; page: number }>(
-        `/api/orders/me?page=${page}&pageSize=${pageSize}`,
+        `/api/orders?page=${page}&pageSize=${pageSize}`,
       ),
 
     getOrder: (orderId: string) => client.get<AdminOrder>(`/api/orders/${orderId}`),

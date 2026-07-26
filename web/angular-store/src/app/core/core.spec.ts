@@ -21,18 +21,19 @@ import {
  * Unit tests for this app's own copy of the supporting modules.
  *
  * ---
- * **Why this file is duplicated in `react-store`.**
+ * **Why this file is duplicated in the other three applications.**
  *
- * Since [ADR-0018](../../../../../docs/adr/0018-self-contained-frontends.md) each app
+ * There are now FOUR copies of `permissions` and `formatting` - one per application. Since
+ * [ADR-0018](../../../../../docs/adr/0018-self-contained-frontends.md) each app
  * owns its own `permissions` and `formatting`, so a fix applied to one copy can
- * silently miss the other. The [e2e suite](../../../../../tests/e2e/) catches drift
+ * silently miss the other three. The [e2e suite](../../../../../tests/e2e/) catches drift
  * that is *visible on screen*; this catches drift that is not — a currency
  * separator, a permission helper's treatment of an empty list, an off-by-one in
  * `truncate`.
  *
- * The assertions below are **identical in both apps on purpose**. If one copy
- * changes behaviour, exactly one of the two suites goes red, and the diff points
- * straight at the divergence.
+ * The assertions below are **identical in all four apps on purpose**. If one copy changes
+ * behaviour, exactly one of the four suites goes red, and the diff points straight at the
+ * divergence.
  */
 
 const customer: AuthenticatedUser = {

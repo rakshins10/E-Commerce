@@ -8,6 +8,8 @@
     "test": "playwright test",
     "test:react": "cross-env E2E_TARGET=react E2E_BASE_URL=http://localhost:3000 playwright test",
     "test:angular": "cross-env E2E_TARGET=angular E2E_BASE_URL=http://localhost:4200 playwright test",
+    "test:react:admin": "cross-env E2E_SURFACE=admin E2E_TARGET=react E2E_BASE_URL=http://localhost:3001 playwright test",
+    "test:angular:admin": "cross-env E2E_SURFACE=admin E2E_TARGET=angular E2E_BASE_URL=http://localhost:4201 playwright test",
     "report": "playwright show-report"
   },
   "devDependencies": {

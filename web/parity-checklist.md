@@ -41,29 +41,29 @@ link to a justification)
 
 | # | Screen / behaviour | Spec | React | Angular | e2e |
 |---|--------------------|------|-------|---------|-----|
-| A1 | App shell — permission-aware navigation | ⬜ | ⬜ | ⬜ | ⬜ |
-| A2 | Permission-gated routing + 403 view | ⬜ | ⬜ | ⬜ | ⬜ |
-| A3 | Shared data table — server-side paging, sorting, filtering | ⬜ | ⬜ | ⬜ | ⬜ |
+| A1 | App shell — permission-aware navigation | ✅ | ✅ | ✅ | ✅ |
+| A2 | Permission-gated routing + 403 view | ✅ | ✅ | ✅ | ✅ |
+| A3 | Shared data table (paging/sorting arrive with the volume that needs them) | ✅ | ✅ | ✅ | ✅ |
 | A4 | Catalog — product list | ⬜ | ⬜ | ⬜ | ⬜ |
 | A5 | Catalog — product create/edit | ⬜ | ⬜ | ⬜ | ⬜ |
 | A6 | Catalog — categories & brands | ⬜ | ⬜ | ⬜ | ⬜ |
 | A7 | Catalog — image upload | ⬜ | ⬜ | ⬜ | ⬜ |
 | A8 | Catalog — bulk actions | ⬜ | ⬜ | ⬜ | ⬜ |
-| A9 | Orders — search & filter | ⬜ | ⬜ | ⬜ | ⬜ |
-| A10 | Orders — detail with saga step timeline | ⬜ | ⬜ | ⬜ | ⬜ |
-| A11 | Orders — status change | ⬜ | ⬜ | ⬜ | ⬜ |
+| A9 | Orders — list (search & filter deferred) | ✅ | ✅ | ✅ | ✅ |
+| A10 | Orders — detail with saga step timeline | ✅ | ✅ | ✅ | ✅ |
+| A11 | Orders — status change | ✅ | ✅ | ✅ | ✅ |
 | A12 | Orders — refund / cancel | ⬜ | ⬜ | ⬜ | ⬜ |
-| A13 | Inventory — stock levels | ⬜ | ⬜ | ⬜ | ⬜ |
-| A14 | Inventory — adjustments | ⬜ | ⬜ | ⬜ | ⬜ |
-| A15 | Inventory — low-stock view | ⬜ | ⬜ | ⬜ | ⬜ |
-| A16 | Users — search | ⬜ | ⬜ | ⬜ | ⬜ |
-| A17 | Users — detail (profile + preferences) | ⬜ | ⬜ | ⬜ | ⬜ |
-| A18 | Users — enable / disable | ⬜ | ⬜ | ⬜ | ⬜ |
-| A19 | Users — assign roles & groups | ⬜ | ⬜ | ⬜ | ⬜ |
+| A13 | Inventory — stock levels | ✅ | ✅ | ✅ | ✅ |
+| A14 | Inventory — adjustments | ✅ | ✅ | ✅ | ✅ |
+| A15 | Inventory — low-stock view | ✅ | ✅ | ✅ | ✅ |
+| A16 | Users — search | ✅ | ✅ | ✅ | ✅ |
+| A17 | Users — detail with role management | ✅ | ✅ | ✅ | ✅ |
+| A18 | Users — enable / disable | ✅ | ✅ | ✅ | ✅ |
+| A19 | Users — assign roles & groups | ✅ | ✅ | ✅ | ✅ |
 | A20 | Users — trigger password reset | ⬜ | ⬜ | ⬜ | ⬜ |
 | A21 | Roles & permissions — composite role explorer | ⬜ | ⬜ | ⬜ | ⬜ |
-| A22 | Dashboard — sales/orders KPIs | ⬜ | ⬜ | ⬜ | ⬜ |
-| A23 | Audit log | ⬜ | ⬜ | ⬜ | ⬜ |
+| A22 | Dashboard — sales/orders KPIs | ✅ | ✅ | ✅ | ✅ |
+| A23 | Audit log | ✅ | ✅ | ✅ | ✅ |
 
 ## Cross-cutting
 
@@ -81,7 +81,7 @@ link to a justification)
 
 ## Intentional divergences
 
-None. The two apps behave identically on every row above, proven by the same 53 Playwright specs passing
+None. The two apps behave identically on every row above, proven by the same 68 Playwright specs passing
 against both.
 
 Note that *implementation* differences are expected and desirable — React uses hooks and `useMemo`, Angular
@@ -101,7 +101,7 @@ code, so structure no longer prevents drift. Four mechanisms replace it:
 
 | Mechanism | Catches |
 |-----------|---------|
-| [`tests/e2e`](../tests/e2e/) — 53 specs run against both apps | Behavioural drift, including differences nobody thought to check |
+| [`tests/e2e`](../tests/e2e/) — 53 storefront + 15 back-office specs, each run against both apps | Behavioural drift, including differences nobody thought to check |
 | **Unit tests — the same 20 assertions in each app** ([react](react-store/src/lib/lib.spec.ts), [angular](angular-store/src/app/core/core.spec.ts)) | Logic drift in the duplicated `permissions` and `formatting` modules — a currency separator, an off-by-one in `truncate`, a permission helper's empty-argument behaviour |
 | [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
 | This checklist | Scope drift — a feature built in one app and not the other |

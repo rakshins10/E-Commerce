@@ -49,11 +49,11 @@ export class AdminApi {
     totalPages: number;
     page: number;
   }> {
-    // Staff read ANY order, so this is the same endpoint the storefront uses - the difference is the
-    // permission in the token, which drops the buyer filter server-side rather than in the client.
+    // The STAFF endpoint, not /me. /me is always filtered to the caller's own `sub`, so an
+    // administrator hitting it would see their own shopping rather than the shop's orders.
     return firstValueFrom(
       this.http.get<{ items: AdminOrderSummary[]; totalCount: number; totalPages: number; page: number }>(
-        `${this.baseUrl}/api/orders/me?page=${page}&pageSize=${pageSize}`,
+        `${this.baseUrl}/api/orders?page=${page}&pageSize=${pageSize}`,
       ),
     );
   }

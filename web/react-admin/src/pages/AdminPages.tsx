@@ -469,7 +469,11 @@ export function UsersPage() {
   });
 
   const columns: Column<AdminUser>[] = [
-    { header: 'Username', isRowHeader: true, render: (row) => row.username },
+    {
+      header: 'Username',
+      isRowHeader: true,
+      render: (row) => <Link to={`/users/${row.id}`}>{row.username}</Link>,
+    },
     { header: 'Email', render: (row) => row.email ?? '—' },
     {
       header: 'Status',
