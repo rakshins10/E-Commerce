@@ -488,3 +488,90 @@ body {
 .centred-block {
   text-align: center;
 }
+
+/* ---------------------------------------------------------------------------
+   Phase 6 - basket, checkout and orders
+   --------------------------------------------------------------------------- */
+
+/* Tables are used for tabular data - basket lines, order lines, order history.
+   A grid of divs looks the same and tells a screen reader nothing about which
+   column a cell belongs to. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-3) var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+}
+
+.table thead th {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Wide tables scroll inside their own container rather than making the whole
+   page scroll sideways, which is unusable on a phone. */
+.card:has(> .table) {
+  overflow-x: auto;
+}
+
+.input--narrow {
+  width: 5rem;
+}
+
+.small {
+  font-size: var(--font-size-sm);
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* An ordered list, so the sequence is announced. Styled horizontally where there
+   is room and vertically on a narrow screen. */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.timeline__step {
+  flex: 1 1 8rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* Completed steps are marked by colour AND by the visually-hidden "completed"
+   text in the markup. Colour alone would fail WCAG 1.4.1 - it is not available
+   to a colour-blind or non-sighted user. */
+.timeline__step.is-done {
+  border-color: var(--color-brand-600);
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+  font-weight: 600;
+}

@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angu
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 
+import { Auth } from '../auth/auth';
+import { BasketService } from '../core/basket';
 import { CatalogService, stockLevel, type ProductDetail } from '../core/catalog';
 import { formatMoney } from '../core/formatting';
 
@@ -75,9 +77,27 @@ import { formatMoney } from '../core/formatting';
             <!-- Disabled rather than hidden: a missing button looks like a
                  broken page, a disabled one with a reason explains itself. -->
             <div>
-              <button type="button" class="btn btn--primary" disabled title="Basket arrives in Phase 6">
-                Add to basket
+              <button
+                type="button"
+                class="btn btn--primary"
+                [disabled]="p.stockOnHand === 0 || adding()"
+                [title]="p.stockOnHand === 0 ? 'Out of stock' : ''"
+                (click)="addToBasket(p)"
+              >
+                {{ adding() ? 'Adding…' : 'Add to basket' }}
               </button>
+
+              @if (added()) {
+                <!-- role="status" so a screen reader announces it. A visual-only confirmation leaves
+                     a non-sighted customer with no evidence the click did anything. -->
+                <p class="muted" role="status">
+                  Added to your basket. <a routerLink="/basket">View basket</a>
+                </p>
+              }
+
+              @if (addError()) {
+                <p class="muted" role="alert">{{ addError() }}</p>
+              }
             </div>
           </div>
         </div>
@@ -87,6 +107,12 @@ import { formatMoney } from '../core/formatting';
 })
 export class ProductDetailPage {
   private readonly catalog = inject(CatalogService);
+  private readonly baskets = inject(BasketService);
+  private readonly auth = inject(Auth);
+
+  protected readonly adding = signal(false);
+  protected readonly added = signal(false);
+  protected readonly addError = signal<string | null>(null);
 
   /** Bound straight from the route by withComponentInputBinding(). */
   readonly id = input.required<string>();
@@ -131,5 +157,39 @@ export class ProductDetailPage {
 
   protected stock(product: ProductDetail) {
     return stockLevel(product.stockOnHand);
+  }
+
+  /**
+   * Adds one of this product to the basket.
+   *
+   * The price sent here is what the customer is looking at, and the server treats it as display
+   * information only - every line is re-priced from the catalogue at checkout.
+   */
+  protected async addToBasket(product: ProductDetail): Promise<void> {
+    if (!this.auth.isAuthenticated()) {
+      this.auth.signIn();
+      return;
+    }
+
+    this.adding.set(true);
+    this.addError.set(null);
+
+    try {
+      await this.baskets.add({
+        productId: product.id,
+        sku: product.sku,
+        productName: product.name,
+        imageUrl: product.imageUrl,
+        unitPrice: product.price,
+        currency: product.currency,
+        quantity: 1,
+      });
+
+      this.added.set(true);
+    } catch (cause) {
+      this.addError.set(cause instanceof Error ? cause.message : 'Could not add to your basket.');
+    } finally {
+      this.adding.set(false);
+    }
   }
 }

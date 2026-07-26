@@ -454,3 +454,158 @@ better; Angular's box is fuller and more consistent.** A React app that adds Tan
 Form matches Angular on both axes — but that is two library choices, two upgrade paths and two sets of
 conventions the team has to agree on, and the app that skips them is measurably worse. Angular's answer is
 already in the framework, already typed, and identical in every codebase you will ever join.
+
+---
+
+## Phase 6 — basket, checkout and orders
+
+The first screens with **optimistic updates**, and the phase where the comparison stops being about syntax
+and starts being about which framework has already solved the problem for you.
+
+Feature-identical in both: a basket with quantity editing, a checkout form, order history, and an order
+detail page with a status timeline. 13 new e2e specs; 49 now pass against each app, twice in a row.
+
+### Optimistic updates: React wins, and the gap is the widest yet
+
+Changing a basket quantity is a click a customer repeats several times, and waiting for a round trip after
+each one feels broken. Both apps update immediately and reconcile afterwards. Here is what that costs.
+
+React, with TanStack Query:
+
+```tsx
+const setQuantity = useMutation({
+  mutationFn: ({ productId, quantity }) => api.setQuantity(productId, quantity),
+
+  onMutate: async ({ productId, quantity }) => {
+    await queryClient.cancelQueries({ queryKey: ['basket'] });   // <- the line nobody writes by hand
+    const previous = queryClient.getQueryData<Basket>(['basket']);
+    queryClient.setQueryData<Basket>(['basket'], (c) => recalculate(c, productId, quantity));
+    return { previous };
+  },
+
+  onError: (_e, _v, context) => queryClient.setQueryData(['basket'], context.previous),
+  onSuccess: (updated) => queryClient.setQueryData(['basket'], updated),
+});
+```
+
+Angular, by hand:
+
+```ts
+async setQuantity(productId: string, quantity: number): Promise<void> {
+  const previous = this.basket();
+  if (previous) this.basket.set(recalculate(previous, productId, quantity));
+
+  try {
+    this.basket.set(await firstValueFrom(this.http.put<Basket>(url, { quantity })));
+  } catch (error) {
+    this.basket.set(previous);   // rollback, written out
+    throw error;
+  }
+}
+```
+
+The Angular version is shorter and easier to read. It is also **missing something**: `cancelQueries`.
+Without it, a refetch that started before the change can land after it and overwrite the optimistic value
+with the stale one. Angular has no equivalent because it has no request cache to cancel — so the bug is not
+present here, but neither is the machinery that would prevent it once a second component starts reading the
+same data.
+
+That is the honest shape of it: **Angular's version is simpler because it is doing less**, and the "less"
+is the part that becomes necessary as the app grows.
+
+| | React (TanStack Query) | Angular (signals) |
+|---|---|---|
+| Optimistic write | `onMutate` | manual |
+| Rollback on failure | `onError` + context | manual `try`/`catch` |
+| Cancel in-flight refetches | `cancelQueries` | n/a — no cache |
+| Per-mutation `isPending` | free | one shared `saving()` signal |
+| Lines for the quantity update | ~18 | ~14, but with fewer guarantees |
+
+The per-mutation pending state matters more than it sounds. Angular's page owns one `saving()` signal for
+*all* operations, so removing one line disables every other button on the page. Fixing that properly means
+a signal per operation — which is exactly the bookkeeping TanStack Query does for you.
+
+### Route parameters: Angular wins clearly
+
+```ts
+readonly id = input.required<string>();          // Angular - typed, bound by the router
+readonly placed = input<string | undefined>();   // query params too, same mechanism
+```
+
+```tsx
+const { id } = useParams<{ id: string }>();      // React - `string | undefined`, always
+const [searchParams] = useSearchParams();
+const justPlaced = searchParams.get('placed') === '1';
+```
+
+Angular's is typed, needs no import, and updates automatically. React's `id` is `string | undefined`
+forever, so every use is `id!` or a guard — and `useParams` has no idea what the route actually declared.
+
+**The trap that cost time here.** A required signal input is **not populated until after the constructor
+runs**, so reading `this.id()` there throws `NG0950`. The catch block reported it to the customer as "order
+not found", hiding the real cause entirely — the page looked like a data problem and was a lifecycle
+problem. The fix is a `queueMicrotask`, and the lesson is that Angular's lifecycle has more moving parts
+than React's "the function body runs on every render".
+
+### Forms again: Angular still wins
+
+Checkout has six address fields. React derives "can submit" from four hand-written checks:
+
+```tsx
+const canSubmit =
+  address.recipient.trim() !== '' && address.line1.trim() !== '' &&
+  address.city.trim() !== '' && address.postcode.trim() !== '';
+```
+
+Angular declares the validators once as data and asks `form.invalid`. Add a seventh field and the React
+version needs someone to remember to extend that expression; the Angular version needs nothing.
+
+### Control flow in templates
+
+Angular's `@if` / `@for` / `@else if` read well at this size, and `@for (…; track …)` makes the key
+mandatory rather than a lint rule. React's `{condition && <X/>}` is fine until a nested ternary appears —
+and the JSX fragment requirement bit once here: three `<NavLink>`s inside an `&&` is a compile error
+without a `<>` wrapper, which has no counterpart in Angular at all.
+
+Against that, React's **early returns narrow types**. After four `if (…) return`, `query.data` is non-null
+and the happy path needs no optional chaining. Angular's template has `order()!` in a dozen places.
+
+### The bugs this phase found, and where they were
+
+Worth listing, because the pattern is now consistent across six phases:
+
+| Bug | Layer |
+|-----|-------|
+| PostgreSQL folding `"Id"` to `id` | Backend |
+| Dapper not translating `snake_case` — silent zeros | Backend |
+| Outbox serialising camelCase, deserialising PascalCase | Backend |
+| Staff 403 on `/orders/me` | Permission model |
+| Angular reading a required input too early | **Frontend** |
+| Tests depending on each other running in order | Test suite |
+
+One frontend bug in six phases, and it was a lifecycle detail rather than anything about React or Angular
+as *frameworks*. **Framework choice remains the most-debated and least-consequential decision on the
+list.**
+
+### Running total after Phase 6
+
+| Dimension | Winner |
+|-----------|--------|
+| **Server state, caching, request lifecycle** | **React** — and it is not close |
+| **Optimistic updates and rollback** | **React** |
+| **Mutations — per-call pending/error state** | **React** |
+| **Forms — typed, validated, in the box** | **Angular** — and it is not close |
+| **Route parameter binding** | **Angular** |
+| Deriving state without dependency arrays | Angular |
+| Template readability at scale | Angular |
+| Type narrowing on the happy path | React |
+| Framework plumbing (DI, routing, auth) | Angular |
+| Bundle size | Angular (97 kB vs 113 kB gzipped) |
+| Lifecycle predictability | React |
+
+The summary has not moved since Phase 5, and Phase 6 sharpened it into something worth saying in an
+interview: **React's ecosystem has solved server state better than anything in Angular's box, and
+Angular's box has solved forms and routing better than anything React ships.** A team that adds TanStack
+Query and React Hook Form gets the best of both — at the price of two library choices, two upgrade paths
+and two sets of conventions to agree on. A team on Angular gets a good answer to both without deciding
+anything, and pays for it in bundle size and lifecycle subtlety.

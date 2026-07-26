@@ -24,8 +24,8 @@ OpenAPI is generated from the code; the written reference is kept in step with i
 | Catalog | [`catalog.md`](catalog.md) | Phase 4 ✅ |
 | Storefront BFF | [`storefront-bff.md`](storefront-bff.md) | Phase 4 ✅ |
 | User Profile | [`user-profile.md`](user-profile.md) | Phase 5 ✅ |
-| Basket | `basket.md` | Phase 6 |
-| Ordering | `ordering.md` | Phase 6 |
+| Basket | [`basket.md`](basket.md) | Phase 6 ✅ |
+| Ordering | [`ordering.md`](ordering.md) | Phase 6 ✅ |
 | Payment | `payment.md` | Phase 7 |
 | Inventory | `inventory.md` | Phase 7 |
 | Notification | `notification.md` | Phase 7 |

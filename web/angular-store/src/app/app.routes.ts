@@ -28,6 +28,26 @@ export const routes: Routes = [
     title: 'Product',
   },
   {
+    path: 'basket',
+    loadComponent: () => import('./pages/basket').then((m) => m.BasketPage),
+    title: 'Your basket',
+  },
+  {
+    path: 'checkout',
+    loadComponent: () => import('./pages/checkout').then((m) => m.CheckoutPage),
+    title: 'Checkout',
+  },
+  {
+    path: 'orders',
+    loadComponent: () => import('./pages/orders').then((m) => m.OrdersPage),
+    title: 'Your orders',
+  },
+  {
+    path: 'orders/:id',
+    loadComponent: () => import('./pages/orders').then((m) => m.OrderDetailPage),
+    title: 'Order',
+  },
+  {
     path: 'account',
     loadComponent: () => import('./pages/account').then((m) => m.AccountPage),
     title: 'My account',

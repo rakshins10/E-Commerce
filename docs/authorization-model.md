@@ -78,6 +78,8 @@ marking a permission that **cannot be decided from the token alone** — see §7
 | `user:read` | Search and view users |
 | `user:manage` | Enable, disable, reset password |
 | `user:roles:manage` | Assign roles and groups |
+| `basket:read:own` | View your own basket |
+| `basket:write:own` | Change your own basket |
 | `profile:read:own` | View your own profile |
 | `profile:write:own` | Edit your own profile, addresses, preferences |
 | `audit:read` | Read the administrative audit log |
@@ -109,13 +111,15 @@ directly.
 | `user:read` | | ✅ | | | ✅ |
 | `user:manage` | | | | | ✅ |
 | `user:roles:manage` | | | | | ✅ |
+| `basket:read:own` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `basket:write:own` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `profile:read:own` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `profile:write:own` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `audit:read` | | | | | ✅ |
 | `dashboard:read` | | | | | ✅ |
-| **Total** | **5** | **6** | **7** | **9** | **17** |
+| **Total** | **7** | **8** | **9** | **11** | **19** |
 
-Four deliberate properties of this table:
+Five deliberate properties of this table:
 
 **Support is read-only.** `support-agent` can see orders and users and change nothing. A helpdesk needs to
 answer questions, not to act — and separating `order:read` from `order:refund` is exactly what makes that
@@ -131,16 +135,33 @@ applied to job function, and it is asserted in
 `catalog-manager` next month **automatically reaches admin**, with no edit to admin at all. That is the
 maintainability payoff of composites, and a test asserts it.
 
-**`profile:*:own` is on every role, because every role is held by a person.** This was originally granted to
-`customer` alone, and the Phase 5 e2e suite caught it: signing in as `ordermgr` and opening My Account
-returned `403 Forbidden`. The tempting fix is to change the test. The correct fix was to change the model —
-a warehouse supervisor still has a display name, a delivery address and a marketing preference, and "staff
-accounts have no profile" is not a rule anyone actually wanted. Note the distinction from `order:read:own`,
-which stays customer-only: staff read orders through `order:read`, which is a *different* permission with a
-different scope, so there is nothing for them to gain from the `:own` variant.
+**`profile:*:own` and `basket:*:own` are on every role, because every role is held by a person.** Profile
+was originally granted to `customer` alone, and the Phase 5 e2e suite caught it: signing in as `ordermgr`
+and opening My Account returned `403 Forbidden`. The tempting fix is to change the test. The correct fix
+was to change the model — a warehouse supervisor still has a display name, a delivery address and a
+marketing preference, and "staff accounts have no profile" is not a rule anyone actually wanted. Basket
+followed the same rule from the start.
 
-> The general lesson: a permission that reads *"…your own X"* usually belongs to **everyone who logs in**,
-> not to one role. Permissions that grant power over *other people's* data are the ones to scope by job.
+> The general lesson: a permission that reads *"…your own X"* belongs to **everyone who logs in**, not to
+> one role, because holding it grants access to exactly one thing — the caller's own. Permissions that
+> grant power over *other people's* data are the ones to scope by job.
+
+**`order:read:own` is the one that stays customer-only, and it needed a different fix.** It is not on
+staff roles because staff read orders through `order:read` — the right to read *any* order — which is a
+genuinely different scope rather than the same thing under another name. But that left a gap Phase 6 found:
+a member of staff who buys something from their own shop got `403` on **their own** order history.
+
+The wrong fix would have been to grant `order:read:own` to everyone, which would blur two permissions that
+mean different things. The right fix was at the endpoint:
+
+```csharp
+group.MapGet("/me", GetMyOrders)
+    .RequireAnyPermission(Permissions.Order.Read, Permissions.Order.ReadOwn);
+```
+
+`/orders/me` is always filtered to the caller's `sub` server-side, so someone allowed to read *any* order
+can self-evidently read their own. **Either permission opens the door; which one you hold decides what the
+query returns.** That keeps the two permissions meaning exactly what their names say.
 
 ---
 
@@ -306,13 +327,23 @@ method body.
 | `DELETE /profile/me/addresses/{id}` | `profile:write:own` | **`sub`** | 5 ✅ |
 | `POST /profile/me/addresses/{id}/default-shipping` | `profile:write:own` | **`sub`** | 5 ✅ |
 | `POST /profile/me/addresses/{id}/default-billing` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `GET /basket/me` | `basket:read:own` | **`sub`** | 6 ✅ |
+| `POST /basket/me/items` | `basket:write:own` | **`sub`** | 6 ✅ |
+| `PUT /basket/me/items/{id}` | `basket:write:own` | **`sub`** | 6 ✅ |
+| `DELETE /basket/me/items/{id}` | `basket:write:own` | **`sub`** | 6 ✅ |
+| `DELETE /basket/me` | `basket:write:own` | **`sub`** | 6 ✅ |
 | `POST /catalog/products` | `catalog:write` | — | 9 |
 | `PUT /catalog/products/{id}` | `catalog:write` | — | 9 |
 | `DELETE /catalog/products/{id}` | `catalog:delete` | — | 9 |
 | `PUT /catalog/products/{id}/price` | `price:override` | — | 9 |
-| `GET /orders/{id}` | `order:read` OR `order:read:own` | **owner** | 6 |
-| `POST /orders` | `order:write` | — | 6 |
-| `POST /orders/{id}/cancel` | `order:cancel` | owner or staff | 6 |
+| `POST /orders` | `order:write` | — | 6 ✅ |
+| `GET /orders/me` | `order:read` OR `order:read:own` | **`sub`** | 6 ✅ |
+| `GET /orders/{id}` | `order:read` OR `order:read:own` | **owner** | 6 ✅ |
+| `POST /orders/{id}/cancel` | `order:cancel` OR `order:read:own` | owner or staff | 6 ✅ |
+| `POST /orders/{id}/confirm-stock` | `inventory:adjust` | — | 6 ✅ |
+| `POST /orders/{id}/pay` | `order:write` | — | 6 ✅ |
+| `POST /orders/{id}/ship` | `order:cancel` | — | 6 ✅ |
+| `POST /orders/{id}/deliver` | `order:cancel` | — | 6 ✅ |
 | `POST /orders/{id}/refund` | `order:refund` | — | 7 |
 | `GET /inventory` | `inventory:read` | — | 7 |
 | `POST /inventory/{sku}/adjust` | `inventory:adjust` | — | 7 |

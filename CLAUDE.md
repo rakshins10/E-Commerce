@@ -61,7 +61,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 3 | **Both** storefront shells with OIDC login; self-contained frontends (ADR-0018) | ✅ merged |
 | 4 | Catalog + Storefront BFF + browse/search/detail — **both frameworks** | ✅ merged |
 | 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ 34 e2e specs green on both |
-| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ⬜ |
+| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ✅ 49 e2e specs green on both |
 | 7 | Payment + Inventory + Notification + Saga | ⬜ |
 | 8 | Back-office + Admin BFF + **both** admin shells | ⬜ |
 
@@ -152,6 +152,12 @@ run against two independent implementations.
 | **A snake_case naming convention breaks owned types** | `OwnsOne` mapping fails — the shadow key must match the owner's PK column | Only apply the convention where hand-written SQL needs it (Catalog); not in EF-only services |
 | **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing — you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
 | **Playwright `getByLabel` is a substring match** | `getByLabel('Email')` also matches "Email me about my orders" | Pass `{ exact: true }` |
+| **PostgreSQL folds unquoted identifiers to lowercase** | Hand-written SQL fails with `column o.id does not exist` while EF is perfectly happy - EF quotes everything it generates | Name EVERY column explicitly, including keys: `.HasColumnName("id")` |
+| **Dapper matches column names exactly** | No snake_case translation. An unaliased query silently leaves properties at their DEFAULTS - a wrong value, not an error | Alias every column: `SELECT o.order_number AS OrderNumber` |
+| **A required Angular signal input is empty in the constructor** | `NG0950`, usually swallowed by a catch and reported as "not found" | `queueMicrotask(() => void this.load())` - see `pages/orders.ts` |
+| **Angular `(change)` fires on blur; React `onChange` fires on input** | The same Playwright `fill()` passes on one app and hangs on the other | Use `(input)` in Angular so both behave identically |
+| **`ConnectionMultiplexer` must be a SINGLETON** | One socket per request, pool exhaustion under load, Redis looks slow | `AddSingleton<IConnectionMultiplexer>` - it multiplexes internally |
+| **The outbox writer and publisher must share JsonSerializerOptions** | Events commit fine and never publish; no request ever errors, so nothing surfaces except a rising `attempts` count | `OutboxSerialization.Options` - used by both halves |
 | **Playwright `check()` asserts once, without retrying** | `Clicking the checkbox did not change its state` on CI while passing 96/96 locally - a controlled input can be briefly out of step with the DOM mid-re-render | `click()` then `expect(...).toBeChecked()`, which retries. Use the idempotent `setChecked` helper in `account.spec.ts` for specs that mutate persistent state |
 | **A spec that mutates state must not assume its starting state** | Passes on a clean database, fails on the second run | Make it idempotent - read the current state and act only if it differs. Run the suite **twice** before trusting it |
 | **Vitest does not type-check** | esbuild strips types, so a test calling a function with the wrong argument shape passes | React's `npm run build` (`tsc -b`) covers specs; Angular's `ng test` type-checks them itself. Run the build, not just the tests |
@@ -206,11 +212,14 @@ All password `Passw0rd!`. Keycloak admin: `admin` / `dev_only_kc_admin_pw` at ht
 
 | User | Role | Perms |
 |------|------|:---:|
-| `customer` | `customer` | 5 |
-| `support` | `support-agent` | 6 |
-| `catalogmgr` | `catalog-manager` | 7 |
-| `ordermgr` | `order-manager` | 9 |
-| `administrator` | `admin` | 17 |
+| `customer` | `customer` | 7 |
+| `support` | `support-agent` | 8 |
+| `catalogmgr` | `catalog-manager` | 9 |
+| `ordermgr` | `order-manager` | 11 |
+| `administrator` | `admin` | 19 |
+
+Only `customer`, `ordermgr` and `administrator` hold `order:write`, so the others **cannot check out**.
+That is deliberate least privilege, and it is why the checkout e2e block runs serially.
 | `blocked` | `customer` | disabled — cannot log in |
 
 ---

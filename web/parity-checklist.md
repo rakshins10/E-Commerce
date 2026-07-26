@@ -23,12 +23,12 @@ link to a justification)
 | S5 | Product list — browse | ✅ | ✅ | ✅ | ✅ |
 | S6 | Search & filter (URL-driven, shareable) | ✅ | ✅ | ✅ | ✅ |
 | S7 | Product detail | ✅ | ✅ | ✅ | ✅ |
-| S8 | Basket — view, update quantity, remove | ⬜ | ⬜ | ⬜ | ⬜ |
-| S9 | Basket — optimistic add-to-basket | ⬜ | ⬜ | ⬜ | ⬜ |
-| S10 | Checkout — address & payment | ⬜ | ⬜ | ⬜ | ⬜ |
-| S11 | Order confirmation | ⬜ | ⬜ | ⬜ | ⬜ |
-| S12 | Order history | ⬜ | ⬜ | ⬜ | ⬜ |
-| S13 | Order detail with status timeline | ⬜ | ⬜ | ⬜ | ⬜ |
+| S8 | Basket — view, update quantity, remove | ✅ | ✅ | ✅ | ✅ |
+| S9 | Basket — optimistic add-to-basket | ✅ | ✅ | ✅ | ✅ |
+| S10 | Checkout — address (payment arrives in Phase 7) | ✅ | ✅ | ✅ | ✅ |
+| S11 | Order confirmation | ✅ | ✅ | ✅ | ✅ |
+| S12 | Order history | ✅ | ✅ | ✅ | ✅ |
+| S13 | Order detail with status timeline | ✅ | ✅ | ✅ | ✅ |
 | S14 | My Account — profile | ✅ | ✅ | ✅ | ✅ |
 | S15 | My Account — addresses | ✅ | ✅ | ✅ | ✅ |
 | S16 | My Account — preferences (locale, currency, theme, opt-ins) | ✅ | ✅ | ✅ | ✅ |
@@ -81,7 +81,7 @@ link to a justification)
 
 ## Intentional divergences
 
-None. The two apps behave identically on every row above, proven by the same 25 Playwright specs passing
+None. The two apps behave identically on every row above, proven by the same 49 Playwright specs passing
 against both.
 
 Note that *implementation* differences are expected and desirable — React uses hooks and `useMemo`, Angular
@@ -101,7 +101,7 @@ code, so structure no longer prevents drift. Four mechanisms replace it:
 
 | Mechanism | Catches |
 |-----------|---------|
-| [`tests/e2e`](../tests/e2e/) — 34 specs run against both apps | Behavioural drift, including differences nobody thought to check |
+| [`tests/e2e`](../tests/e2e/) — 49 specs run against both apps | Behavioural drift, including differences nobody thought to check |
 | **Unit tests — the same 20 assertions in each app** ([react](react-store/src/lib/lib.spec.ts), [angular](angular-store/src/app/core/core.spec.ts)) | Logic drift in the duplicated `permissions` and `formatting` modules — a currency separator, an off-by-one in `truncate`, a permission helper's empty-argument behaviour |
 | [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
 | This checklist | Scope drift — a feature built in one app and not the other |

@@ -35,8 +35,12 @@ public static class OrderEndpoints
             .WithSummary("Turns the caller's basket into an order.")
             .Produces<OrderDto>(StatusCodes.Status201Created);
 
+        // Either permission. "My orders" is always filtered to the caller's own `sub` server-side, so
+        // someone holding order:read - the right to read ANY order - can self-evidently read their own.
+        // Requiring only :own 403'd every member of staff who bought something from their own shop,
+        // which is a real scenario rather than a hypothetical one.
         group.MapGet("/me", GetMyOrders)
-            .RequirePermission(Permissions.Order.ReadOwn)
+            .RequireAnyPermission(Permissions.Order.Read, Permissions.Order.ReadOwn)
             .WithSummary("The caller's orders, newest first.")
             .Produces<PagedResult<OrderSummaryDto>>();
 
