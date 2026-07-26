@@ -70,6 +70,21 @@ public static class Permissions
         public const string ManageRoles = "user:roles:manage";
     }
 
+    /// <summary>
+    /// The customer's own basket.
+    /// </summary>
+    /// <remarks>
+    /// Both are <c>:own</c> and both are granted to <b>every</b> signed-in role, for the reason set out
+    /// in docs/authorization-model.md: a permission that reads "your own X" belongs to everyone who logs
+    /// in, because holding it grants access to exactly one thing - the caller's own. Only power over
+    /// other people's data is scoped by job.
+    /// </remarks>
+    public static class Basket
+    {
+        public const string ReadOwn = "basket:read:own";
+        public const string WriteOwn = "basket:write:own";
+    }
+
     public static class Profile
     {
         public const string ReadOwn = "profile:read:own";
@@ -92,6 +107,7 @@ public static class Permissions
         Order.Read, Order.ReadOwn, Order.Write, Order.Cancel, Order.Refund,
         Inventory.Read, Inventory.Adjust,
         Users.Read, Users.Manage, Users.ManageRoles,
+        Basket.ReadOwn, Basket.WriteOwn,
         Profile.ReadOwn, Profile.WriteOwn,
         Admin.AuditRead, Admin.DashboardRead,
     ];

@@ -1,5 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Basket service. A customer's basket, in Redis.
+
+    A single project with a plain model rather than the four-layer split
+    Ordering gets. A basket has almost no rules - it is a scratchpad the
+    customer edits freely - and applying the full DDD ceremony here would be
+    solving a problem that is not present. See Model/CustomerBasket.cs.
+  -->
+
   <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Auth\ECommerce.Auth.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Common\ECommerce.Common.csproj" />
     <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
   </ItemGroup>
+
 </Project>
