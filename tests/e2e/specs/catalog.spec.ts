@@ -86,7 +86,15 @@ test.describe('product browsing', () => {
     await page.goto('/products');
     await expect(page.getByRole('status')).toContainText('12 products');
 
-    await page.getByLabel('In stock only').check();
+    // `click` + `toBeChecked`, not `check()`. `check()` clicks and then asserts
+    // once, without retrying; a controlled React input driven by the URL can be
+    // momentarily out of step with the DOM while the router update lands, and
+    // `check()` fails on that transient even though the end state is right.
+    // It failed exactly that way on CI's slower runner while passing 96/96
+    // locally. `toBeChecked()` retries, so this asserts the outcome rather than
+    // the timing of a re-render.
+    await page.getByLabel('In stock only').click();
+    await expect(page.getByLabel('In stock only')).toBeChecked();
 
     // Two seeded products have zero stock.
     await expect(page.getByRole('status')).toContainText('10 products');

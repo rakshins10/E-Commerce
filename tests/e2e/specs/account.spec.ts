@@ -1,4 +1,22 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
+
+/**
+ * Sets a checkbox to a known state, then waits for it to settle there.
+ *
+ * Playwright's `check()` clicks and asserts **once**, without retrying. A
+ * controlled input whose value is derived from application state can be
+ * momentarily out of step with the DOM while a re-render lands, and `check()`
+ * fails on that transient even though the end state is correct — reproducibly
+ * so on a slow CI runner. Clicking only when the state is wrong keeps this
+ * idempotent for specs that mutate persistent data, and `toBeChecked()` retries.
+ */
+async function setChecked(checkbox: Locator, value: boolean): Promise<void> {
+  if ((await checkbox.isChecked()) !== value) {
+    await checkbox.click();
+  }
+
+  await expect(checkbox).toBeChecked({ checked: value });
+}
 
 /**
  * My Account — profile, addresses and preferences.
@@ -130,7 +148,12 @@ test.describe('my account', () => {
     await page.goto('/account');
 
     await page.getByLabel('Currency').selectOption('EUR');
-    await page.getByLabel('Send me offers by email').check();
+
+    // Idempotent, because this spec mutates persistent state and must give the
+    // same result on a second run. `check()` would be idempotent too, but its
+    // built-in assertion does not retry - see the note in catalog.spec.ts.
+    await setChecked(page.getByLabel('Send me offers by email'), true);
+
     await page.getByRole('button', { name: 'Save preferences' }).click();
 
     await expect(page.getByRole('status')).toContainText('Preferences saved');
