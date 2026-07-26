@@ -150,15 +150,35 @@ deployed as-is.** Production wiring (env injection, Key Vault, sealed secrets) i
 
 ## Seed users
 
-_Populated in Phase 2 when the Keycloak realm lands._
+Every role has a demo account, so any flow can be exercised immediately after `docker compose up`.
+All use the password **`Passw0rd!`**.
 
-| Username | Password | Realm role | Can demo |
-|----------|----------|------------|----------|
-| _tbd_ | | `customer` | shopping, checkout, own order history |
-| _tbd_ | | `catalog-manager` | product/category CRUD, pricing |
-| _tbd_ | | `order-manager` | order search, status changes, refunds |
-| _tbd_ | | `support-agent` | read-only order + profile lookup |
-| _tbd_ | | `admin` | everything, incl. user & role management |
+| Username | Realm role | Perms | Can demo |
+|----------|------------|:---:|----------|
+| `customer` | `customer` | 5 | Browsing, checkout, own order history, own profile |
+| `support` | `support-agent` | 4 | Read-only helpdesk — can look at orders and users, cannot change anything |
+| `catalogmgr` | `catalog-manager` | 5 | Product/category CRUD, pricing, price override |
+| `ordermgr` | `order-manager` | 7 | Order search, status changes, refunds, stock adjustment |
+| `administrator` | `admin` | 15 | Everything, including user and role management |
+| `blocked` | `customer` | — | **Disabled account** — proves a disabled user cannot log in at all |
+
+Keycloak admin console: http://localhost:8080 — `admin` / `dev_only_kc_admin_pw`
+
+Permissions are **not** assigned to these users directly. Each realm role is a Keycloak **composite** that
+grants a set of fine-grained permissions, which the token carries in a `permissions` claim. `admin` is a
+*nested* composite of the three staff roles, so a permission added to `catalog-manager` reaches `admin`
+automatically. The full matrix is in [`docs/authorization-model.md`](docs/authorization-model.md).
+
+See it for yourself:
+
+```bash
+curl -s -X POST http://localhost:8080/realms/ecommerce/protocol/openid-connect/token \
+  -d grant_type=password -d client_id=test-harness \
+  -d client_secret=dev_only_test_harness_secret \
+  -d username=catalogmgr -d password='Passw0rd!' | jq -r .access_token
+```
+
+Paste the result into [jwt.io](https://jwt.io) to see the `permissions` claim and `aud: ecommerce-api`.
 
 ---
 

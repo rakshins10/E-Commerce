@@ -1,3 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  </Project>
+  <!--
+    Shared authentication and authorization. Security must be uniform across
+    nine services: reimplementing token validation per service is how services
+    drift, and drift in authorization code is how holes appear.
+    See docs/authorization-model.md.
+  -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+</Project>
