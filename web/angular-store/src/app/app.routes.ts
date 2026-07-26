@@ -28,6 +28,11 @@ export const routes: Routes = [
     title: 'Product',
   },
   {
+    path: 'account',
+    loadComponent: () => import('./pages/account').then((m) => m.AccountPage),
+    title: 'My account',
+  },
+  {
     path: 'auth/callback',
     loadComponent: () => import('./pages/static-pages').then((m) => m.AuthCallbackPage),
     title: 'Signing in',

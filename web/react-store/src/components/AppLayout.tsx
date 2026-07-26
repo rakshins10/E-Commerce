@@ -39,6 +39,11 @@ export function AppLayout() {
             <NavLink to="/products" className="nav-link">
               Products
             </NavLink>
+            {isAuthenticated && (
+              <NavLink to="/account" className="nav-link">
+                My account
+              </NavLink>
+            )}
           </nav>
 
           <div className="app-header__spacer" />

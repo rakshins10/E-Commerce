@@ -1,9 +1,10 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { LogLevel, provideAuth } from 'angular-auth-oidc-client';
 import { createOidcConfig } from './core/auth-config';
 
+import { authInterceptor } from './core/auth-interceptor';
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
 
@@ -28,7 +29,7 @@ export const appConfig: ApplicationConfig = {
 
     // withFetch uses the Fetch API rather than XMLHttpRequest - required for
     // request cancellation to work properly and the modern default.
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
 
     provideAuth({
       config: {

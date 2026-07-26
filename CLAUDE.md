@@ -58,9 +58,9 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 |-------|-------|--------|
 | 1 | Repo, solution skeleton, building blocks, compose, CI | ✅ merged |
 | 2 | Keycloak realm, `Auth` building block, authorization model | ✅ merged |
-| 3 | `design-tokens`, `web/shared`, **both** storefront shells with OIDC login | 🚧 foundation done; app shells remain |
-| 4 | Catalog + Storefront BFF + browse/search/detail — **both frameworks** | ⬜ |
-| 5 | User Profile + My Account — **both** | ⬜ |
+| 3 | **Both** storefront shells with OIDC login; self-contained frontends (ADR-0018) | ✅ merged |
+| 4 | Catalog + Storefront BFF + browse/search/detail — **both frameworks** | ✅ merged |
+| 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ 34 e2e specs green on both |
 | 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ⬜ |
 | 7 | Payment + Inventory + Notification + Saga | ⬜ |
 | 8 | Back-office + Admin BFF + **both** admin shells | ⬜ |
@@ -144,6 +144,12 @@ run against two independent implementations.
 | **`setup-python` cache needs a requirements file** | Docs workflow fails before it starts | `docs/requirements.txt` exists for this |
 | **Central Package Management** | `NU1109` downgrade errors when a transitive package is newer | Bump the version in `Directory.Packages.props`; never add `Version=` to a `PackageReference` |
 | **Issuer vs metadata address** | Every token rejected, though both URLs are the same server | `Auth__Issuer` = the URL the **browser** used (`localhost`); `Auth__MetadataAddress` = the internal one (`keycloak:8080`) |
+| **Keycloak imports the realm only on FIRST start** | Editing `realm-export.json` and restarting changes nothing | `docker compose rm -sf keycloak keycloak-db` + `docker volume rm ecommerce_keycloak-db-data`, then `up -d --wait keycloak` |
+| **A re-imported realm has NEW signing keys** | Every request `401` afterwards; services cached the old JWKS at startup | `docker compose restart catalog-api user-profile-api storefront-bff` — this is exactly what an IdP key rotation looks like |
+| **EF infers entity state from the key** | `DbUpdateConcurrencyException: expected to affect 1 row(s), but actually affected 0` on an INSERT | The domain sets `Guid.CreateVersion7()` in constructors, so a non-default key reads as "exists". Mark every such key `ValueGeneratedNever()` |
+| **A snake_case naming convention breaks owned types** | `OwnsOne` mapping fails — the shadow key must match the owner's PK column | Only apply the convention where hand-written SQL needs it (Catalog); not in EF-only services |
+| **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing — you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
+| **Playwright `getByLabel` is a substring match** | `getByLabel('Email')` also matches "Email me about my orders" | Pass `{ exact: true }` |
 
 ---
 
@@ -194,10 +200,10 @@ All password `Passw0rd!`. Keycloak admin: `admin` / `dev_only_kc_admin_pw` at ht
 | User | Role | Perms |
 |------|------|:---:|
 | `customer` | `customer` | 5 |
-| `support` | `support-agent` | 4 |
-| `catalogmgr` | `catalog-manager` | 5 |
-| `ordermgr` | `order-manager` | 7 |
-| `administrator` | `admin` | 15 |
+| `support` | `support-agent` | 6 |
+| `catalogmgr` | `catalog-manager` | 7 |
+| `ordermgr` | `order-manager` | 9 |
+| `administrator` | `admin` | 17 |
 | `blocked` | `customer` | disabled — cannot log in |
 
 ---

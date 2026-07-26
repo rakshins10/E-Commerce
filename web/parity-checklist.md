@@ -29,9 +29,9 @@ link to a justification)
 | S11 | Order confirmation | ⬜ | ⬜ | ⬜ | ⬜ |
 | S12 | Order history | ⬜ | ⬜ | ⬜ | ⬜ |
 | S13 | Order detail with status timeline | ⬜ | ⬜ | ⬜ | ⬜ |
-| S14 | My Account — profile | ⬜ | ⬜ | ⬜ | ⬜ |
-| S15 | My Account — addresses | ⬜ | ⬜ | ⬜ | ⬜ |
-| S16 | My Account — preferences (locale, currency, theme, opt-ins) | ⬜ | ⬜ | ⬜ | ⬜ |
+| S14 | My Account — profile | ✅ | ✅ | ✅ | ✅ |
+| S15 | My Account — addresses | ✅ | ✅ | ✅ | ✅ |
+| S16 | My Account — preferences (locale, currency, theme, opt-ins) | ✅ | ✅ | ✅ | ✅ |
 | S17 | 403 / 404 / error boundary | ✅ | ✅ | ✅ | ✅ |
 | S18 | Navigation with `aria-current` on the active link | ✅ | ✅ | ✅ | ✅ |
 | S19 | Deep link survives a full page reload (SPA fallback) | ✅ | ✅ | ✅ | ✅ |
@@ -101,7 +101,7 @@ code, so structure no longer prevents drift. Three mechanisms replace it:
 
 | Mechanism | Catches |
 |-----------|---------|
-| [`tests/e2e`](../tests/e2e/) — 25 specs run against both apps | Behavioural drift, including differences nobody thought to check |
+| [`tests/e2e`](../tests/e2e/) — 34 specs run against both apps | Behavioural drift, including differences nobody thought to check |
 | [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
 | This checklist | Scope drift — a feature built in one app and not the other |
 

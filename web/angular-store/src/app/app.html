@@ -24,6 +24,15 @@
           class="nav-link"
           >Products</a
         >
+        @if (auth.isAuthenticated()) {
+          <a
+            routerLink="/account"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            class="nav-link"
+            >My account</a
+          >
+        }
       </nav>
 
       <div class="app-header__spacer"></div>
