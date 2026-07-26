@@ -27,6 +27,13 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 3. **React and Angular move in lockstep.** Every UI feature lands in *both* frameworks in the *same* PR,
    proven by one Playwright suite run against both. Never build React first and port later
    ([ADR-0014](docs/adr/0014-react-and-angular-in-lockstep.md)).
+   **Each app is self-contained** — no shared package; `react-store` and `angular-store` each own their
+   permissions, auth, formatting, API client and design tokens
+   ([ADR-0018](docs/adr/0018-self-contained-frontends.md)). A change to shared logic must be applied
+   **twice**, and the e2e suite is what catches it if you forget.
+7. **Everything must run on Docker *and* be portable to Azure**
+   ([ADR-0017](docs/adr/0017-cloud-portable-architecture.md)). No service may reference an Azure SDK
+   directly; provider selection happens once, in the composition root.
 4. **Never commit real secrets.** Committed dev fixtures must be prefixed `dev_only_` and be worthless
    outside a throwaway local container ([ADR-0009](docs/adr/0009-secrets-management.md)).
 5. **Endpoints are guarded by permissions, never roles** — `RequirePermission(Permissions.Order.Refund)`,
@@ -96,9 +103,21 @@ docker compose down -v                            # DELETES all data
 ```powershell
 cd web
 npm install                                       # npm workspaces - run from web/, not a sub-package
-npm run build:tokens                              # regenerates + validates contrast
-npm run typecheck --workspace @ecommerce/shared
+npm run build --workspace @ecommerce/react-store
+npm run build --workspace @ecommerce/angular-store
+node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette drift
 ```
+
+### End-to-end (the parity proof)
+
+```powershell
+cd tests/e2e
+npm run test:react                                # 9 specs against :3000
+npm run test:angular                              # the SAME 9 against :4200
+```
+
+Both must pass. Specs use roles and accessible names only - never CSS selectors or test ids - because they
+run against two independent implementations.
 
 ### Demo helper
 

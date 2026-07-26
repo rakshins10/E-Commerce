@@ -21,8 +21,6 @@ WORKDIR /app
 # Manifests first: this layer is cached unless a dependency actually changes,
 # so a source-only edit skips the slow npm ci entirely.
 COPY package.json package-lock.json ./
-COPY design-tokens/package.json ./design-tokens/
-COPY shared/package.json ./shared/
 COPY react-store/package.json ./react-store/
 COPY angular-store/package.json ./angular-store/
 
@@ -33,11 +31,6 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
-# Design tokens must be generated before any app builds - the apps import
-# dist/tokens.css, which does not exist in the repository. This step also runs
-# the WCAG contrast validation, so an inaccessible colour fails the IMAGE build,
-# not just CI.
-RUN npm run build --workspace @ecommerce/design-tokens
 
 ARG APP_WORKSPACE
 ARG APP_DIST

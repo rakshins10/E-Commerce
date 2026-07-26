@@ -2,23 +2,16 @@
   "name": "@ecommerce/web",
   "private": true,
   "version": "0.1.0",
-  "description": "npm workspace root for all web clients and the shared layer they consume",
-  "//": "Workspaces give ONE node_modules and let @ecommerce/shared be imported by name from every app, with no publish step and no relative ../../.. paths. Crucially it also guarantees React and Angular consume the SAME shared code rather than two copies that drift - which is the whole premise of docs/adr/0014-react-and-angular-in-lockstep.md.",
-  "workspaces": [
-    "design-tokens",
-    "shared",
-    "react-store",
-    "angular-store",
-    "react-admin",
-    "angular-admin"
-  ],
+  "description": "Workspace root for the web clients. Each app is fully self-contained.",
+  "//": "Workspaces exist here ONLY so one `npm install` covers every app and scripts can run across them. There are deliberately NO cross-package dependencies: nothing in react-store imports from angular-store or from a shared package, and vice versa. Each app owns its own permissions, auth, formatting, API client and design tokens. See docs/adr/0018-self-contained-frontends.md.",
+  "workspaces": ["react-store", "angular-store", "react-admin", "angular-admin"],
   "scripts": {
-    "build:tokens": "npm run build --workspace @ecommerce/design-tokens",
-    "build": "npm run build:tokens && npm run build --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "dev:react-store": "npm run dev --workspace @ecommerce/react-store",
-    "dev:angular-store": "npm run start --workspace @ecommerce/angular-store"
+    "check:tokens": "node ../scripts/check-design-tokens.mjs",
+    "dev:react": "npm run dev --workspace @ecommerce/react-store",
+    "dev:angular": "npm run start --workspace @ecommerce/angular-store"
   },
   "engines": {
     "node": ">=22"

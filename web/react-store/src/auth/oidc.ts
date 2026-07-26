@@ -1,7 +1,7 @@
 /**
  * OIDC wiring for the React storefront.
  *
- * The *configuration* comes from `@ecommerce/shared`, which the Angular
+ * The configuration lives in src/lib/auth.ts. The Angular
  * storefront also uses — so both apps request identical scopes and redirect
  * URIs. Only the plumbing below is React-specific.
  *
@@ -11,7 +11,7 @@
 
 import { WebStorageStateStore } from 'oidc-client-ts';
 import type { AuthProviderProps } from 'react-oidc-context';
-import { createOidcConfig } from '@ecommerce/shared';
+import { createOidcConfig } from '../lib/auth';
 
 const authority =
   import.meta.env.VITE_KEYCLOAK_AUTHORITY ?? 'http://localhost:8080/realms/ecommerce';

@@ -1,17 +1,15 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { OidcSecurityService } from 'angular-auth-oidc-client';
-import {
-  hasPermission as sharedHasPermission,
-  toAuthenticatedUser,
-  type AuthenticatedUser,
-  type Permission,
-} from '@ecommerce/shared';
+
+import { hasPermission as localHasPermission } from '../core/permissions';
+import { toAuthenticatedUser } from '../core/auth-config';
+import type { AuthenticatedUser, Permission } from '../core/permissions';
 
 /**
  * Auth state for the Angular storefront, exposed as signals.
  *
  * Uses the SAME `toAuthenticatedUser` and `hasPermission` from
- * `@ecommerce/shared` as the React storefront, so both apps derive permissions
+ * core/auth-config.ts as the React storefront's lib/auth.ts, so both derive permissions
  * from a token identically. That is the point of the shared layer — if each
  * parsed claims itself, one would eventually read the wrong claim and the bug
  * would surface only as "permissions randomly missing in Angular".
@@ -83,7 +81,7 @@ export class Auth {
    * anyone can copy the token from devtools and call the API directly.
    */
   can(permission: Permission): boolean {
-    return sharedHasPermission(this.user(), permission);
+    return localHasPermission(this.user(), permission);
   }
 
   signIn(): void {

@@ -11,8 +11,6 @@
     "preview": "vite preview --port 3000"
   },
   "dependencies": {
-    "@ecommerce/design-tokens": "*",
-    "@ecommerce/shared": "*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",

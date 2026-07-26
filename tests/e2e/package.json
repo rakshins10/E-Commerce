@@ -1,0 +1,16 @@
+{
+  "name": "@ecommerce/e2e",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "One Playwright suite, run twice - against React and against Angular. The parity proof required by ADR-0014.",
+  "scripts": {
+    "test": "playwright test",
+    "test:react": "cross-env E2E_TARGET=react E2E_BASE_URL=http://localhost:3000 playwright test",
+    "test:angular": "cross-env E2E_TARGET=angular E2E_BASE_URL=http://localhost:4200 playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}

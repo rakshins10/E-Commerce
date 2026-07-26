@@ -10,7 +10,7 @@
  * @see docs/concepts-explained.md#17-oauth2-oidc-jwt-and-pkce
  */
 
-import type { AuthenticatedUser } from '../permissions/index.js';
+import type { AuthenticatedUser } from './permissions';
 
 /** Which Keycloak client an application authenticates as. */
 export type ClientId =
@@ -52,10 +52,27 @@ export function createOidcConfig(options: {
     clientId,
     redirectUri: `${origin}/auth/callback`,
     postLogoutRedirectUri: `${origin}/`,
-    // `openid` identifies the user; `profile` and `email` add name and address.
-    // `offline_access` is what yields a refresh token, without which the session
-    // ends when the short-lived access token expires (5 minutes in our realm).
-    scope: 'openid profile email offline_access',
+    // `openid` identifies the user; `profile` and `email` add name and email.
+    //
+    // NOTE: `offline_access` is deliberately NOT requested, and this is worth
+    // understanding because the mistake is easy to make.
+    //
+    // An OFFLINE token is a special long-lived refresh token that keeps working
+    // when the user is no longer present - for a background job syncing on
+    // someone's behalf. It is not the same thing as an ordinary refresh token,
+    // and Keycloak rejects it for clients not explicitly permitted:
+    //
+    //     error="not_allowed"
+    //     reason="Offline tokens not allowed for the user or client"
+    //
+    // A browser SPA does not want one. It gets an ordinary refresh token from
+    // the standard authorization-code flow automatically, tied to the SSO
+    // session, which is exactly right: when the user's session ends, so does
+    // the application's access. Asking for `offline_access` would grant the
+    // browser durable access outliving the session - more privilege than the
+    // client needs, which is the wrong direction on principle even where it is
+    // permitted.
+    scope: 'openid profile email',
     silentRedirectUri: `${origin}/auth/silent-renew`,
   };
 }

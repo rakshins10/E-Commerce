@@ -9,7 +9,7 @@
    See web/design-tokens/README.md.
    --------------------------------------------------------------------------- */
 
-@import '@ecommerce/design-tokens/css';
+@import './styles/tokens.css';
 
 *,
 *::before,

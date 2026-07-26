@@ -1,7 +1,7 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { LogLevel, provideAuth } from 'angular-auth-oidc-client';
-import { createOidcConfig } from '@ecommerce/shared';
+import { createOidcConfig } from './core/auth-config';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
@@ -9,7 +9,7 @@ import { environment } from '../environments/environment';
 /**
  * Composition root for the Angular storefront.
  *
- * The OIDC *configuration* comes from `@ecommerce/shared` — the same function
+ * The OIDC configuration lives in core/auth-config.ts. The same function exists
  * the React storefront calls — so both apps request identical scopes and
  * redirect URIs and cannot drift apart.
  */

@@ -16,10 +16,10 @@ link to a justification)
 
 | # | Screen / behaviour | Spec | React | Angular | e2e |
 |---|--------------------|------|-------|---------|-----|
-| S1 | App shell — layout, header, footer, theme switch | ⬜ | ⬜ | ⬜ | ⬜ |
-| S2 | OIDC login (Auth Code + PKCE) | ⬜ | ⬜ | ⬜ | ⬜ |
-| S3 | Silent renew / refresh-token rotation | ⬜ | ⬜ | ⬜ | ⬜ |
-| S4 | Logout | ⬜ | ⬜ | ⬜ | ⬜ |
+| S1 | App shell — layout, header, footer, theme switch | ✅ | ✅ | ✅ | ✅ |
+| S2 | OIDC login (Auth Code + PKCE) | ✅ | ✅ | ✅ | ✅ |
+| S3 | Silent renew / refresh-token rotation | ✅ | ✅ | ✅ | ⬜ |
+| S4 | Logout | ✅ | ✅ | ✅ | ✅ |
 | S5 | Product list — browse | ⬜ | ⬜ | ⬜ | ⬜ |
 | S6 | Search & filter | ⬜ | ⬜ | ⬜ | ⬜ |
 | S7 | Product detail | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -32,7 +32,10 @@ link to a justification)
 | S14 | My Account — profile | ⬜ | ⬜ | ⬜ | ⬜ |
 | S15 | My Account — addresses | ⬜ | ⬜ | ⬜ | ⬜ |
 | S16 | My Account — preferences (locale, currency, theme, opt-ins) | ⬜ | ⬜ | ⬜ | ⬜ |
-| S17 | 403 / 404 / error boundary | ⬜ | ⬜ | ⬜ | ⬜ |
+| S17 | 403 / 404 / error boundary | ✅ | ✅ | ✅ | ✅ |
+| S18 | Navigation with `aria-current` on the active link | ✅ | ✅ | ✅ | ✅ |
+| S19 | Deep link survives a full page reload (SPA fallback) | ✅ | ✅ | ✅ | ✅ |
+| S20 | Keyboard skip link is the first focusable element | ✅ | ✅ | ✅ | ✅ |
 
 ## Admin
 
@@ -66,7 +69,7 @@ link to a justification)
 
 | # | Behaviour | React | Angular | Notes |
 |---|-----------|-------|---------|-------|
-| X1 | Design tokens applied from the shared source | ⬜ | ⬜ | No hardcoded colours or spacing in either app |
+| X1 | Design tokens applied; palettes verified identical | ✅ | ✅ | Each app owns its own `tokens.css` (ADR-0018); `scripts/check-design-tokens.mjs` asserts they match and meet WCAG AA |
 | X2 | Loading / empty / error states on every data view | ⬜ | ⬜ | |
 | X3 | Responsive layout — mobile, tablet, desktop | ⬜ | ⬜ | |
 | X4 | WCAG 2.2 AA — keyboard, focus order, contrast, labels | ⬜ | ⬜ | Enforced by e2e specs querying by role and name |
@@ -78,6 +81,31 @@ link to a justification)
 
 ## Intentional divergences
 
-None yet. Anything landing here must link to a note in
-[`docs/react-vs-angular.md`](../docs/react-vs-angular.md) explaining why matching behaviour was the wrong
-call. **Silent divergence is a defect; declared divergence is a decision.**
+None. The two apps behave identically on every row above, proven by the same 9 Playwright specs passing
+against both.
+
+Note that *implementation* differences are expected and desirable — React uses hooks and `useMemo`, Angular
+uses an injectable service and `computed()`. Those are recorded in
+[`docs/react-vs-angular.md`](../docs/react-vs-angular.md), not here. This table tracks **behaviour**, and
+behaviour must match.
+
+Anything landing in this section must link to a justification. **Silent divergence is a defect; declared
+divergence is a decision.**
+
+---
+
+## How parity is actually enforced
+
+Since [ADR-0018](../docs/adr/0018-self-contained-frontends.md) each app owns its own copy of the supporting
+code, so structure no longer prevents drift. Three mechanisms replace it:
+
+| Mechanism | Catches |
+|-----------|---------|
+| [`tests/e2e`](../tests/e2e/) — 9 specs run against both apps | Behavioural drift, including differences nobody thought to check |
+| [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
+| This checklist | Scope drift — a feature built in one app and not the other |
+
+```bash
+cd tests/e2e && npm run test:react && npm run test:angular
+node scripts/check-design-tokens.mjs
+```

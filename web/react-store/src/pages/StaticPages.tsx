@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 
 /**
@@ -35,6 +36,24 @@ export function ProductsPage() {
  */
 export function AuthCallbackPage() {
   const auth = useAuth();
+  const navigate = useNavigate();
+
+  // Leave the callback route once the exchange completes.
+  //
+  // This is NOT optional plumbing. `onSigninCallback` strips `?code=&state=`
+  // from the URL but leaves the PATH at /auth/callback, and React Router has no
+  // idea anything happened - so the user ends up signed in (the header shows
+  // their name) while the page still reads "Completing sign-in…" forever.
+  //
+  // Angular's library restores the pre-login route by itself, which is why the
+  // Angular storefront needed no equivalent. A genuine framework divergence,
+  // recorded in docs/react-vs-angular.md.
+  useEffect(() => {
+    if (auth.isAuthenticated) {
+      // replace: true so Back does not return to the callback URL.
+      void navigate('/', { replace: true });
+    }
+  }, [auth.isAuthenticated, navigate]);
 
   if (auth.error) {
     return (
