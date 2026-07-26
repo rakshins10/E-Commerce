@@ -103,8 +103,10 @@ docker compose down -v                            # DELETES all data
 ```powershell
 cd web
 npm install                                       # npm workspaces - run from web/, not a sub-package
-npm run build --workspace @ecommerce/react-store
-npm run build --workspace @ecommerce/angular-store
+npm run build --workspace react-store
+npm run build --workspace angular-store
+npm test  --workspace react-store                 # 20 unit tests
+npm test  --workspace angular-store               # the SAME 20 - drift guard
 node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette drift
 ```
 
@@ -112,8 +114,8 @@ node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette
 
 ```powershell
 cd tests/e2e
-npm run test:react                                # 9 specs against :3000
-npm run test:angular                              # the SAME 9 against :4200
+npm run test:react                                # 34 specs against :3000
+npm run test:angular                              # the SAME 34 against :4200
 ```
 
 Both must pass. Specs use roles and accessible names only - never CSS selectors or test ids - because they
@@ -150,6 +152,9 @@ run against two independent implementations.
 | **A snake_case naming convention breaks owned types** | `OwnsOne` mapping fails — the shadow key must match the owner's PK column | Only apply the convention where hand-written SQL needs it (Catalog); not in EF-only services |
 | **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing — you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
 | **Playwright `getByLabel` is a substring match** | `getByLabel('Email')` also matches "Email me about my orders" | Pass `{ exact: true }` |
+| **Vitest does not type-check** | esbuild strips types, so a test calling a function with the wrong argument shape passes | React's `npm run build` (`tsc -b`) covers specs; Angular's `ng test` type-checks them itself. Run the build, not just the tests |
+| **`ng test` fails when there are zero specs** | `No tests found matching **/*.spec.ts` - a red CI job with nothing wrong | Keep at least one real spec in `angular-store` |
+| **CI Node cache needs the workspace lockfile** | `Some specified paths were not resolved, unable to cache dependencies` before anything compiles | `cache-dependency-path: web/package-lock.json` - there is one lockfile, at `web/`, not one per app |
 
 ---
 

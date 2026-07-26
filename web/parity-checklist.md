@@ -97,15 +97,21 @@ divergence is a decision.**
 ## How parity is actually enforced
 
 Since [ADR-0018](../docs/adr/0018-self-contained-frontends.md) each app owns its own copy of the supporting
-code, so structure no longer prevents drift. Three mechanisms replace it:
+code, so structure no longer prevents drift. Four mechanisms replace it:
 
 | Mechanism | Catches |
 |-----------|---------|
 | [`tests/e2e`](../tests/e2e/) — 34 specs run against both apps | Behavioural drift, including differences nobody thought to check |
+| **Unit tests — the same 20 assertions in each app** ([react](react-store/src/lib/lib.spec.ts), [angular](angular-store/src/app/core/core.spec.ts)) | Logic drift in the duplicated `permissions` and `formatting` modules — a currency separator, an off-by-one in `truncate`, a permission helper's empty-argument behaviour |
 | [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
 | This checklist | Scope drift — a feature built in one app and not the other |
 
+The unit tests are **deliberately identical files**. If one copy of a module changes behaviour, exactly one
+of the two suites goes red and the diff points straight at the divergence. That is the whole trick: the e2e
+suite catches drift that is visible on screen, and this catches drift that is not.
+
 ```bash
-cd tests/e2e && npm run test:react && npm run test:angular
-node scripts/check-design-tokens.mjs
+cd web && npm test --workspace react-store && npm test --workspace angular-store
+cd ../tests/e2e && npm run test:react && npm run test:angular
+node ../../scripts/check-design-tokens.mjs
 ```

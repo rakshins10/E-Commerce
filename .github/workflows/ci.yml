@@ -130,30 +130,38 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/${{ matrix.app }}/package-lock.json
+          # The apps are npm *workspaces*, so there is exactly one lockfile, at
+          # web/. Pointing this at web/<app>/package-lock.json finds nothing and
+          # fails the job before a single line of the app is compiled.
+          cache-dependency-path: web/package-lock.json
 
       - name: Install
         if: steps.exists.outputs.present == 'true'
-        working-directory: web/${{ matrix.app }}
+        working-directory: web
         # `npm ci` not `npm install`: it installs exactly the lockfile and fails
         # if package.json and the lock disagree. `npm install` would silently
         # resolve new versions, so CI would test something the developer never ran.
-        run: npm ci
+        #
+        # Installed from the workspace root, which is where the lockfile lives.
+        # Each app is still self-contained in *source* terms - no app imports
+        # from another, and there are no cross-package dependencies. See
+        # docs/adr/0018-self-contained-frontends.md.
+        run: npm ci --no-audit --no-fund
 
       - name: Lint
         if: steps.exists.outputs.present == 'true'
-        working-directory: web/${{ matrix.app }}
-        run: npm run lint
+        working-directory: web
+        run: npm run lint --workspace ${{ matrix.app }}
 
       - name: Type-check & build
         if: steps.exists.outputs.present == 'true'
-        working-directory: web/${{ matrix.app }}
-        run: npm run build
+        working-directory: web
+        run: npm run build --workspace ${{ matrix.app }}
 
       - name: Unit tests
         if: steps.exists.outputs.present == 'true'
-        working-directory: web/${{ matrix.app }}
-        run: npm test --if-present
+        working-directory: web
+        run: npm test --workspace ${{ matrix.app }} --if-present
 
   # ---------------------------------------------------------------------------
   #  End-to-end — the same specs, run against React and against Angular
