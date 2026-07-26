@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The RabbitMQ transport. This is the ONLY assembly in the solution that
+    references RabbitMQ.Client. Services depend on ECommerce.EventBus (the
+    abstraction) and reference this one only from their composition root.
+    See docs/adr/0016-rabbitmq-behind-ieventbus.md.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="RabbitMQ.Client" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventBus\ECommerce.EventBus.csproj" />
+  </ItemGroup>
+
+</Project>

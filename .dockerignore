@@ -1,0 +1,48 @@
+# Build context is the repository root, so this file matters a great deal:
+# without it, Docker uploads node_modules and every bin/obj directory to the
+# daemon on every build. That is typically hundreds of megabytes and turns a
+# two-second context transfer into a minute.
+
+**/bin/
+**/obj/
+**/out/
+**/publish/
+**/.vs/
+**/.vscode/
+**/.idea/
+
+# Node / frontend — never needed by a .NET image build
+**/node_modules/
+**/dist/
+**/.vite/
+**/.angular/
+**/.expo/
+**/storybook-static/
+**/playwright-report/
+**/test-results/
+web/
+mobile/
+
+# Docs, tests and infra are not inputs to a service image
+docs/
+tests/
+deploy/
+identity/
+.github/
+*.md
+!README.md
+
+# Local environment and secrets must never enter an image layer. Even a deleted
+# file remains in the layer history and is trivially recoverable from the image.
+.env
+.env.*
+!.env.example
+**/*.pfx
+**/*.pem
+**/*.key
+**/secrets.json
+**/appsettings.Local.json
+
+.git/
+.gitignore
+.gitattributes

@@ -104,18 +104,37 @@ cp .env.example .env          # dev-only values; see the warning below
 docker compose up -d
 ```
 
-_Filled in at the end of Phase 1 with the real endpoint table._
+This brings up **27 containers**. First run takes 10–25 minutes (image pulls plus twelve .NET builds);
+afterwards it is about 60 seconds. Use `docker compose up -d --wait` to block until everything reports
+healthy — it also fails if a service starts and then crashes, which a plain `up -d` reports as success.
 
-| Surface | URL |
-|---------|-----|
-| React storefront | http://localhost:3000 |
-| React admin | http://localhost:3001 |
-| Angular storefront | http://localhost:4200 |
-| Angular admin | http://localhost:4201 |
-| Keycloak | http://localhost:8080 |
-| RabbitMQ management | http://localhost:15672 |
-| Seq (logs) | http://localhost:8081 |
-| Jaeger (traces) | http://localhost:16686 |
+| Surface | URL | Status |
+|---------|-----|--------|
+| **Keycloak** | http://localhost:8080 | ✅ live (`admin` / `dev_only_kc_admin_pw`) |
+| **RabbitMQ management** | http://localhost:15672 | ✅ live (`ecom` / `dev_only_rabbit_pw`) |
+| **Seq** — structured logs | http://localhost:8081 | ✅ live, no login in dev |
+| **Jaeger** — distributed traces | http://localhost:16686 | ✅ live |
+| Services — REST | http://localhost:5001–5009 | ✅ live (identity + health only) |
+| Services — gRPC | localhost:5101–5107 | Phase 4 |
+| Storefront BFF | http://localhost:6001 | ✅ boots; routes in Phase 4 |
+| Admin BFF | http://localhost:6002 | ✅ boots; routes in Phase 8 |
+| Mobile BFF | http://localhost:6003 | ✅ boots; routes in Phase 11 |
+| React storefront | http://localhost:3000 | Phase 3 |
+| Angular storefront | http://localhost:4200 | Phase 3 |
+| React admin | http://localhost:3001 | Phase 8 |
+| Angular admin | http://localhost:4201 | Phase 8 |
+
+Quick check that it works:
+
+```bash
+curl http://localhost:5001/                 # {"service":"catalog","status":"up",...}
+curl http://localhost:5001/health/live      # liveness  — self only
+curl http://localhost:5001/health/ready     # readiness — dependencies
+curl -i -H "X-Correlation-Id: demo" http://localhost:5001/   # echoed back
+```
+
+Per-service Postgres instances are published on `15432`–`15440` so you can point psql or DataGrip at any one
+of them. The full port allocation is in [`deploy/.env.example`](deploy/.env.example).
 
 ### ⚠️ On the committed credentials
 
@@ -151,7 +170,34 @@ This table is grown at the end of every phase; see [`docs/concept-map.md`](docs/
 
 | Concept | Implemented in | Phase |
 |---------|----------------|-------|
-| _populated as each phase lands_ | | |
+| Bounded contexts & how boundaries were drawn | [`docs/domain/bounded-contexts.md`](docs/domain/bounded-contexts.md) | 1 |
+| Database per service / data sovereignty | 9 DB containers in [`deploy/docker-compose.yml`](deploy/docker-compose.yml) · [ADR-0003](docs/adr/0003-postgresql-and-polyglot-persistence.md) | 1 |
+| Polyglot persistence | [ADR-0003](docs/adr/0003-postgresql-and-polyglot-persistence.md) | 1 |
+| Entity (identity equality) | [`Common/SeedWork/Entity.cs`](src/building-blocks/Common/SeedWork/Entity.cs) | 1 |
+| Value object (structural equality) | [`Common/SeedWork/ValueObject.cs`](src/building-blocks/Common/SeedWork/ValueObject.cs) | 1 |
+| Aggregate & aggregate root | [`Common/SeedWork/IAggregateRoot.cs`](src/building-blocks/Common/SeedWork/IAggregateRoot.cs) | 1 |
+| Domain events vs integration events | [`IDomainEvent.cs`](src/building-blocks/Common/SeedWork/IDomainEvent.cs) vs [`IntegrationEvent.cs`](src/building-blocks/EventBus/IntegrationEvent.cs) | 1 |
+| Repository + Unit of Work | [`Common/SeedWork/IRepository.cs`](src/building-blocks/Common/SeedWork/IRepository.cs) | 1 |
+| Guard clauses / invariants | [`Common/Guards/Guard.cs`](src/building-blocks/Common/Guards/Guard.cs) | 1 |
+| Result type vs exceptions | [`Common/Results/Result.cs`](src/building-blocks/Common/Results/Result.cs) | 1 |
+| Event bus abstraction (swappable transport) | [`EventBus/IEventBus.cs`](src/building-blocks/EventBus/IEventBus.cs) · [ADR-0016](docs/adr/0016-rabbitmq-behind-ieventbus.md) | 1 |
+| Publish/subscribe, competing consumers, DLQ | [`RabbitMqEventBus.cs`](src/building-blocks/EventBus.RabbitMQ/RabbitMqEventBus.cs) | 1 |
+| Idempotent consumer (contract + rationale) | [`IIntegrationEventHandler.cs`](src/building-blocks/EventBus/IIntegrationEventHandler.cs) | 1 |
+| Retry with exponential backoff + jitter | [`RabbitMqConnection.cs`](src/building-blocks/EventBus.RabbitMQ/RabbitMqConnection.cs) | 1 |
+| Health checks — liveness vs readiness | [`HealthCheckExtensions.cs`](src/building-blocks/Observability/HealthCheckExtensions.cs) · [docs](docs/operations/health-checks.md) | 1 |
+| Structured logging + correlation IDs | [`CorrelationId.cs`](src/building-blocks/Observability/CorrelationId.cs) | 1 |
+| Distributed tracing (OpenTelemetry) | [`ObservabilityExtensions.cs`](src/building-blocks/Observability/ObservabilityExtensions.cs) | 1 |
+| API gateway / BFF pattern | [`src/gateways/`](src/gateways/) · [ADR-0006](docs/adr/0006-yarp-gateway-and-bff-per-client.md) | 1 (shells) |
+| Architecture boundary enforcement | [`tests/unit/ECommerce.Architecture.Tests`](tests/unit/ECommerce.Architecture.Tests/) | 1 |
+| Transactional Outbox | [ADR-0010](docs/adr/0010-transactional-outbox.md) | 6 |
+| Saga + compensating transactions | [ADR-0011](docs/adr/0011-orchestration-saga.md) | 7 |
+| CQRS + MediatR pipeline behaviours | [ADR-0012](docs/adr/0012-cqrs-with-mediatr.md) | 6 |
+| OIDC / PKCE, permission-based policies | [ADR-0005](docs/adr/0005-keycloak-as-identity-provider.md) · [authorization model](docs/authorization-model.md) | 2 |
+
+Every entry above with a phase later than 1 is **decided and argued in an ADR**, not yet coded — the
+reasoning is written first so the code has something to conform to.
+[`docs/concept-map.md`](docs/concept-map.md) gives each one a full explanation and the interview question it
+answers.
 
 ---
 
@@ -183,8 +229,17 @@ Documentation is a first-class deliverable, written in the same PR as the code i
 committed as Mermaid source, never binary images, so they diff and review like code.
 Start at **[`docs/README.md`](docs/README.md)** — every topic is reachable in two clicks.
 
+> **🟢 New to microservices?** Start with
+> [**`docs/concepts-explained.md`**](docs/concepts-explained.md) — every concept in this system explained in
+> plain English with everyday analogies, assuming no prior knowledge. What a BFF is, what a saga is, what
+> CQRS means, why services never share a database. Then
+> [**`docs/operations/tooling-guide.md`**](docs/operations/tooling-guide.md) for hands-on use of Seq, Jaeger,
+> RabbitMQ and Keycloak.
+
 | Document | What it covers |
 |----------|----------------|
+| [`docs/concepts-explained.md`](docs/concepts-explained.md) | **Start here if the terms are new.** Every concept in plain English — microservices, bounded contexts, BFF, saga, CQRS, DDD, outbox, idempotency, OAuth2/JWT/PKCE, circuit breakers, containers |
+| [`docs/operations/tooling-guide.md`](docs/operations/tooling-guide.md) | Hands-on introduction to Seq, Jaeger, RabbitMQ and Keycloak for someone who has never used them |
 | [`docs/getting-started.md`](docs/getting-started.md) | Clean-machine setup: tooling, ports, env vars, first run, verification, troubleshooting |
 | [`docs/architecture.md`](docs/architecture.md) | C4 context/container/component, topology, communication styles |
 | [`docs/domain/`](docs/domain/) | Ubiquitous-language glossary, per-context pages, business rules, process narratives |

@@ -1,0 +1,281 @@
+# =============================================================================
+#  Continuous integration
+# =============================================================================
+#  Runs on every push and pull request. The rule is that `main` must always be a
+#  state where `docker compose up` works, and this pipeline is what enforces it.
+#
+#  Frontend and e2e jobs are written now and no-op with an explicit message until
+#  the apps land in Phase 3. That is deliberate: adding them later invariably
+#  means discovering the workflow was wrong at the moment you most want it
+#  working. A job that says "skipped, not built yet" is honest; a missing job
+#  silently reports success.
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, 'phase/**', 'fix/**', 'docs/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same branch. Without this, pushing three times
+# in a minute runs three full pipelines and the first two are worthless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  #  .NET — build, style, test
+  # ---------------------------------------------------------------------------
+  dotnet:
+    name: .NET build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # No version here: setup-dotnet reads global.json, so CI and local
+          # machines cannot drift apart. Pinning it twice is how they do.
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore ECommerce.slnx
+
+      - name: Verify formatting
+        # .editorconfig is the single source of truth for style AND analyzer
+        # severity, so this and a local build can never disagree.
+        run: dotnet format ECommerce.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        # Warnings are already errors via Directory.Build.props. NuGet audit runs
+        # here too, so a dependency with a known advisory fails the build rather
+        # than shipping quietly.
+        run: dotnet build ECommerce.slnx --configuration Release --no-restore
+
+      - name: Unit & integration tests
+        # Integration tests use Testcontainers, which needs a Docker daemon.
+        # ubuntu-latest runners have one already.
+        run: >
+          dotnet test ECommerce.slnx
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-test-results
+          path: ./TestResults
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  #  Frontends — all four, in parallel
+  # ---------------------------------------------------------------------------
+  #  A matrix rather than four jobs: adding the mobile app later is one line.
+  #  fail-fast is off so one broken app does not hide the state of the others —
+  #  under the lockstep rule (docs/adr/0014) knowing whether React AND Angular
+  #  are broken, or only one, is the useful signal.
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [react-store, react-admin, angular-store, angular-admin]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check whether this app exists yet
+        id: exists
+        run: |
+          if [ -f "web/${{ matrix.app }}/package.json" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Not built yet::web/${{ matrix.app }} lands in Phase 3. Skipping."
+          fi
+
+      - name: Set up Node
+        if: steps.exists.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/${{ matrix.app }}/package-lock.json
+
+      - name: Install
+        if: steps.exists.outputs.present == 'true'
+        working-directory: web/${{ matrix.app }}
+        # `npm ci` not `npm install`: it installs exactly the lockfile and fails
+        # if package.json and the lock disagree. `npm install` would silently
+        # resolve new versions, so CI would test something the developer never ran.
+        run: npm ci
+
+      - name: Lint
+        if: steps.exists.outputs.present == 'true'
+        working-directory: web/${{ matrix.app }}
+        run: npm run lint
+
+      - name: Type-check & build
+        if: steps.exists.outputs.present == 'true'
+        working-directory: web/${{ matrix.app }}
+        run: npm run build
+
+      - name: Unit tests
+        if: steps.exists.outputs.present == 'true'
+        working-directory: web/${{ matrix.app }}
+        run: npm test --if-present
+
+  # ---------------------------------------------------------------------------
+  #  End-to-end — the same specs, run against React and against Angular
+  # ---------------------------------------------------------------------------
+  #  This job IS the parity proof required by docs/adr/0014. One suite, a
+  #  parameterised base URL, executed twice. A behavioural difference between the
+  #  two implementations fails CI — including differences nobody thought to check.
+  # ---------------------------------------------------------------------------
+  e2e:
+    name: e2e (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [dotnet, frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: react
+            base_url: http://localhost:3000
+          - target: angular
+            base_url: http://localhost:4200
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check whether the e2e suite exists yet
+        id: exists
+        run: |
+          if [ -f "tests/e2e/package.json" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Not built yet::tests/e2e lands in Phase 3. Skipping."
+          fi
+
+      - name: Set up Node
+        if: steps.exists.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Boot the stack
+        if: steps.exists.outputs.present == 'true'
+        working-directory: deploy
+        # Booting from .env.example alone is what stops that file drifting out of
+        # step with compose. If a new variable is added to one and not the other,
+        # this fails here rather than on a colleague's fresh clone.
+        run: |
+          cp .env.example .env
+          docker compose up -d --wait --wait-timeout 300
+
+      - name: Install Playwright
+        if: steps.exists.outputs.present == 'true'
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run the shared specs
+        if: steps.exists.outputs.present == 'true'
+        working-directory: tests/e2e
+        env:
+          E2E_BASE_URL: ${{ matrix.base_url }}
+          E2E_TARGET: ${{ matrix.target }}
+        run: npx playwright test
+
+      - name: Upload report
+        if: always() && steps.exists.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.target }}
+          path: tests/e2e/playwright-report
+          retention-days: 7
+
+      - name: Dump container logs on failure
+        if: failure() && steps.exists.outputs.present == 'true'
+        working-directory: deploy
+        run: docker compose logs --no-color --tail 200
+
+  # ---------------------------------------------------------------------------
+  #  The stack actually boots
+  # ---------------------------------------------------------------------------
+  #  The one check that directly enforces the rule that `main` must always be a
+  #  state where `docker compose up` works. Everything else can pass while the
+  #  system fails to start.
+  # ---------------------------------------------------------------------------
+  compose:
+    name: docker compose up
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose configuration
+        working-directory: deploy
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Build images
+        working-directory: deploy
+        run: docker compose build
+
+      - name: Bring the stack up and wait for health
+        working-directory: deploy
+        # --wait blocks until every service with a healthcheck reports healthy,
+        # so this fails on a service that starts and then crashes — which a plain
+        # `up -d` would report as success.
+        run: docker compose up -d --wait --wait-timeout 420
+
+      - name: Show final state
+        if: always()
+        working-directory: deploy
+        run: docker compose ps
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: deploy
+        run: docker compose logs --no-color --tail 300
+
+      - name: Tear down
+        if: always()
+        working-directory: deploy
+        run: docker compose down -v
