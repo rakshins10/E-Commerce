@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, request, test, type Page } from '@playwright/test';
 
 /**
  * The back office.
@@ -11,6 +11,82 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const PASSWORD = 'Passw0rd!';
+
+/**
+ * Where the storefront lives, so these specs can create an order to look at.
+ *
+ * The back office cannot place orders - that is the shop's job - so a spec about the orders SCREEN has
+ * to get an order from somewhere. On a developer's machine there are always some lying about; on a
+ * fresh CI database there are none, which is exactly how these specs first failed.
+ *
+ * Creating one over HTTP rather than by driving the storefront UI keeps this fast and keeps the
+ * failure honest: if this setup breaks, the message says so instead of blaming the admin panel.
+ */
+const STOREFRONT_BFF = process.env.E2E_STOREFRONT_BFF ?? 'http://localhost:6001';
+const KEYCLOAK = process.env.E2E_KEYCLOAK ?? 'http://localhost:8080';
+
+/** Places one order as `customer`, so the admin specs have something real to display. */
+async function ensureAnOrderExists(): Promise<void> {
+  const api = await request.newContext();
+
+  try {
+    const tokenResponse = await api.post(
+      `${KEYCLOAK}/realms/ecommerce/protocol/openid-connect/token`,
+      {
+        form: {
+          grant_type: 'password',
+          client_id: 'test-harness',
+          client_secret: 'dev_only_test_harness_secret',
+          username: 'customer',
+          password: PASSWORD,
+        },
+      },
+    );
+
+    const { access_token: token } = await tokenResponse.json();
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const products = await (
+      await api.get(`${STOREFRONT_BFF}/api/catalog/products?inStockOnly=true&pageSize=1`)
+    ).json();
+
+    const product = products.items?.[0];
+
+    if (!product) {
+      throw new Error('No product is in stock, so no order can be created for the admin specs.');
+    }
+
+    await api.delete(`${STOREFRONT_BFF}/api/basket/me`, { headers });
+
+    await api.post(`${STOREFRONT_BFF}/api/basket/me/items`, {
+      headers,
+      data: {
+        productId: product.id,
+        sku: product.sku,
+        productName: product.name,
+        unitPrice: product.price,
+        currency: product.currency,
+        quantity: 1,
+      },
+    });
+
+    await api.post(`${STOREFRONT_BFF}/api/orders`, {
+      headers,
+      data: {
+        shippingAddress: {
+          recipient: 'Casey Customer',
+          line1: '12 Rosewood Avenue',
+          city: 'Bristol',
+          postcode: 'BS1 4TP',
+          country: 'GB',
+        },
+        currency: 'GBP',
+      },
+    });
+  } finally {
+    await api.dispose();
+  }
+}
 
 async function signIn(page: Page, username: string) {
   await page.goto('/');
@@ -96,6 +172,10 @@ test.describe('dashboard', () => {
 });
 
 test.describe('orders', () => {
+  // Creates an order over the storefront API first. A fresh CI database has none, and a spec that only
+  // passes on a developer's well-used machine is a spec that fails the first time it matters.
+  test.beforeAll(ensureAnOrderExists);
+
   test('lists every order, not just the signed-in user’s', async ({ page }) => {
     await signIn(page, 'administrator');
     await page.goto('/orders');
