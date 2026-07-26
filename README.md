@@ -15,19 +15,51 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 
 | Phase | Scope | State |
 |-------|-------|-------|
-| 1 | Repo, solution skeleton, building blocks, compose scaffolding, CI, docs tree | 🚧 in progress |
-| 2 | Keycloak realm, `Auth` building block, authorization model | ⬜ not started |
-| 3 | Shared web foundation (`design-tokens`, `shared`) + **both** storefront shells with OIDC login | ⬜ not started |
-| 4 | Catalog + Storefront BFF + browse/search/detail — **React and Angular together** | ⬜ not started |
-| 5 | User Profile + My Account — **both frontends** | ⬜ not started |
-| 6 | Basket + Ordering (DDD/CQRS) + event bus + outbox + cart/checkout UI — **both frontends** | ⬜ not started |
-| 7 | Payment + Inventory + Notification + Saga; order timeline in **both frontends** | ⬜ not started |
-| 8 | Back-office + Admin BFF + **both admin shells** (permission-gated routing, data table) | ⬜ not started |
-| 9 | Admin catalog / orders / inventory — **both admin panels** | ⬜ not started |
-| 10 | Admin user management, roles & permissions, dashboard, audit log — **both admin panels** | ⬜ not started |
-| 11 | React Native (Expo) app reusing `/web/shared` | ⬜ not started |
-| 12 | Resiliency / observability / security hardening | ⬜ not started |
-| 13 | Final pass — coverage, docs audit, fresh-machine walkthrough | ⬜ not started |
+| 1 | Repo, solution skeleton, building blocks, compose, CI | ✅ done |
+| 2 | Keycloak realm as code, `Auth` building block, authorization model | ✅ done |
+| 3 | **Both** storefront shells with OIDC login; self-contained frontends ([ADR-0018](docs/adr/0018-self-contained-frontends.md)) | ✅ done |
+| 4 | Catalog (CQRS/Dapper) + Storefront BFF + browse/search/detail — **both** | ✅ done |
+| 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ done |
+| 6 | Basket (Redis) + Ordering (DDD/CQRS) + **transactional outbox** + cart/checkout — **both** | ✅ done |
+| 7 | Payment + Inventory + Notification + **saga with compensating actions** — **both** | ✅ done |
+| 8 | Back-office + Admin BFF + **both** admin panels, permission-gated | ✅ done |
+| 9 | Catalogue CRUD in **both** admin panels | ⬜ next |
+| 10 | Resiliency, observability and security hardening | ⬜ |
+| 11 | React Native (Expo) app + Mobile BFF | ⬜ deferred by request |
+| 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
+| 13 | Final pass — coverage, docs audit, fresh-machine walkthrough | ⬜ |
+
+### What runs today
+
+```bash
+cd deploy && docker compose up -d --wait
+```
+
+Thirty-one containers: nine services, three gateways, four web applications, Keycloak, RabbitMQ, Redis,
+seven databases, and the observability stack.
+
+| Surface | URL |
+|---------|-----|
+| Storefront | [:3000](http://localhost:3000) React · [:4200](http://localhost:4200) Angular |
+| Back office | [:3001](http://localhost:3001) React · [:4201](http://localhost:4201) Angular |
+| Keycloak | [:8080](http://localhost:8080) |
+| Seq (logs) · Jaeger (traces) · RabbitMQ | [:8081](http://localhost:8081) · [:16686](http://localhost:16686) · [:15672](http://localhost:15672) |
+
+Sign in as `customer` / `Passw0rd!` and buy something — the order advances from *placed* to *paid* on its
+own as four services and a message broker talk to each other. Order the £5,200 Leather Portfolio and watch
+the saga reserve stock, fail the payment, **release the stock** and cancel the order.
+
+Sign into the back office as `administrator`, then `support`, then `ordermgr`: same build, three
+different navigation bars.
+
+### Test coverage
+
+| Suite | Count |
+|-------|------:|
+| Domain + architecture tests (no database, 177 ms) | 30 |
+| Frontend unit tests — the same 20 assertions in each of four apps | 80 |
+| Storefront end-to-end, run against React **and** Angular | 53 × 2 |
+| Back-office end-to-end, run against React **and** Angular | 15 × 2 |
 
 **Frameworks are built in lockstep.** No phase is complete until the same Playwright specs pass against both
 the React and the Angular app and [`web/parity-checklist.md`](web/parity-checklist.md) has no gaps.

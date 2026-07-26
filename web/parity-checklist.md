@@ -25,7 +25,7 @@ link to a justification)
 | S7 | Product detail | ✅ | ✅ | ✅ | ✅ |
 | S8 | Basket — view, update quantity, remove | ✅ | ✅ | ✅ | ✅ |
 | S9 | Basket — optimistic add-to-basket | ✅ | ✅ | ✅ | ✅ |
-| S10 | Checkout — address (payment arrives in Phase 7) | ✅ | ✅ | ✅ | ✅ |
+| S10 | Checkout — address; payment is taken asynchronously by the saga | ✅ | ✅ | ✅ | ✅ |
 | S11 | Order confirmation | ✅ | ✅ | ✅ | ✅ |
 | S12 | Order history | ✅ | ✅ | ✅ | ✅ |
 | S13 | Order detail with status **and saga** timeline | ✅ | ✅ | ✅ | ✅ |

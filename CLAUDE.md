@@ -64,8 +64,18 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ✅ 49 e2e specs green on both |
 | 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
 | 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
+| 9 | Catalogue CRUD in **both** admin panels | ⬜ **next** |
+| 10 | Resiliency, observability and security hardening | ⬜ |
+| 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
+| 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
+| 13 | Final pass — coverage, docs audit, fresh-machine walkthrough | ⬜ |
 
-Mobile (React Native) is explicitly **deferred** — the user asked not to build it yet.
+Mobile (React Native) and Kubernetes are explicitly **deferred** — the user asked to finish everything
+else first. That is now true.
+
+**Phase 9 starts here:** Catalog is GET-only. The write endpoints are already declared in
+`docs/authorization-model.md` §10 with their permissions, and the Admin BFF's catalogue route whitelists
+GET precisely so those endpoints are unreachable by default until a route is added for them.
 
 ---
 

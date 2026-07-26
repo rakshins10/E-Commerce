@@ -331,8 +331,14 @@ That is expected at Phase 1, not a fault:
 
 - **Seq empty?** Nothing has been called. `curl http://localhost:5001/` then refresh.
 - **Jaeger has no services?** Same — traces appear after the first request.
-- **RabbitMQ has no queues?** Correct. Nothing publishes until Phase 6.
-- **Keycloak has only `master`?** Correct. The `ecommerce` realm lands in Phase 2.
+- **RabbitMQ has no queues?** They are declared when a service subscribes, so they appear once the stack
+  has finished booting. Place an order and you will see `ordering`, `inventory`, `payment`,
+  `notification` and `ordering-saga` queues bound to the `ecommerce.events` exchange, each with its own
+  `.dlq`.
+- **Keycloak has only `master`?** The `ecommerce` realm is imported on Keycloak's FIRST start only. If it
+  is missing, the container has an old volume: `docker compose rm -sf keycloak keycloak-db`,
+  `docker volume rm ecommerce_keycloak-db-data`, then bring it up again — and restart the services
+  afterwards, because a re-imported realm has new signing keys.
 
 ## Are we locked into these?
 
