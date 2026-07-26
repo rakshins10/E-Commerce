@@ -34,12 +34,6 @@ public interface IOutboxWriter
 /// <inheritdoc cref="IOutboxWriter"/>
 public sealed class OutboxWriter(IOutboxContext context) : IOutboxWriter
 {
-    /// <remarks>
-    /// Matches how ASP.NET Core serialises responses, so an event's JSON looks the same in the database
-    /// as it does on the wire and can be compared without a translation step.
-    /// </remarks>
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
-
     public void Add(IntegrationEvent @event)
     {
         ArgumentNullException.ThrowIfNull(@event);
@@ -53,7 +47,7 @@ public sealed class OutboxWriter(IOutboxContext context) : IOutboxWriter
         var message = new OutboxMessage(
             @event.Id,
             @event.EventName,
-            JsonSerializer.Serialize(@event, @event.GetType(), SerializerOptions),
+            JsonSerializer.Serialize(@event, @event.GetType(), OutboxSerialization.Options),
             correlationId,
             traceParent);
 

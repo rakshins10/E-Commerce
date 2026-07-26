@@ -382,6 +382,8 @@ services:
     environment:
       <<: *dotnet-env
       ConnectionStrings__Redis: redis:6379,password=${REDIS_PASSWORD}
+      Cors__Origins__0: http://localhost:3000
+      Cors__Origins__1: http://localhost:4200
     ports: ["${BASKET_HTTP_PORT:-5002}:8080", "${BASKET_GRPC_PORT:-5102}:8081"]
     depends_on:
       redis: { condition: service_healthy }
@@ -398,6 +400,13 @@ services:
     environment:
       <<: *dotnet-env
       ConnectionStrings__OrderingDb: Host=ordering-db;Database=ordering;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Checkout calls both synchronously: the basket to know WHAT to order, and
+      # the catalogue to know what it COSTS. The second is a security control -
+      # a price that came from a client must never reach the ledger.
+      Services__Basket: http://basket-api:8080
+      Services__Catalog: http://catalog-api:8080
+      Cors__Origins__0: http://localhost:3000
+      Cors__Origins__1: http://localhost:4200
     ports: ["${ORDERING_HTTP_PORT:-5003}:8080", "${ORDERING_GRPC_PORT:-5103}:8081"]
     depends_on:
       ordering-db: { condition: service_healthy }

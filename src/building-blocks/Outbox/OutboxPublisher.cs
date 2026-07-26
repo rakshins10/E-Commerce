@@ -155,7 +155,8 @@ public sealed class OutboxPublisher<TContext>(
                 return;
             }
 
-            if (JsonSerializer.Deserialize(message.Payload, eventType) is not IntegrationEvent @event)
+            if (JsonSerializer.Deserialize(message.Payload, eventType, OutboxSerialization.Options)
+                is not IntegrationEvent @event)
             {
                 message.MarkFailed($"Payload did not deserialise to an IntegrationEvent.");
                 return;

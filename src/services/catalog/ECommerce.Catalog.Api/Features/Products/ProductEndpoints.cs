@@ -49,7 +49,47 @@ public static class ProductEndpoints
             .WithSummary("Brands with product counts, for the filter panel")
             .Produces<IReadOnlyList<BrandDto>>();
 
+        // ---------------------------------------------------------------------------------------
+        //  Internal: authoritative pricing for checkout.
+        // ---------------------------------------------------------------------------------------
+        //  Deliberately OUTSIDE the /api/catalog group, so it is not exposed through the storefront
+        //  BFF - that route whitelists /api/catalog only.
+        //
+        //  Ordering calls this when placing an order, because the price in a basket came from a
+        //  client and may be a month old. Trusting it would mean anyone who can send an HTTP request
+        //  can set their own prices. Anything that reaches a ledger is derived server-side.
+        //
+        //  One call for the whole basket rather than one per line: twenty lines meaning twenty round
+        //  trips would make checkout latency a function of basket size.
+        app.MapGet("/internal/catalog/prices", GetPrices)
+            .WithTags("Catalog")
+            .WithSummary("Internal: current prices for a set of products.")
+            .ExcludeFromDescription();
+
         return app;
+    }
+
+    private static async Task<IResult> GetPrices(
+        string ids,
+        ProductQueries queries,
+        CancellationToken cancellationToken)
+    {
+        Guid[] productIds = (ids ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(part => Guid.TryParse(part, out Guid id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            // Bounded, because this is an IN clause built from a query string. Without a cap, one
+            // request could ask for every product in the catalogue and make the database do it.
+            .Distinct()
+            .Take(100)
+            .ToArray();
+
+        if (productIds.Length == 0)
+        {
+            return Results.Ok(Array.Empty<ProductPriceDto>());
+        }
+
+        return Results.Ok(await queries.GetPricesAsync(productIds, cancellationToken));
     }
 
     /// <remarks>

@@ -1,43 +1,140 @@
+using System.Data;
+
+using ECommerce.Auth;
+using ECommerce.Common.SeedWork;
+using ECommerce.Contracts.Ordering;
+using ECommerce.EventBus.RabbitMQ;
 using ECommerce.Observability;
+using ECommerce.Ordering.Api.Features;
+using ECommerce.Ordering.Application.Orders;
+using ECommerce.Ordering.Domain.Orders;
+using ECommerce.Ordering.Infrastructure;
+using ECommerce.Ordering.Infrastructure.Orders;
+using ECommerce.Ordering.Infrastructure.Services;
+using ECommerce.Outbox;
+
+using Microsoft.EntityFrameworkCore;
+
+using Npgsql;
 
 // -----------------------------------------------------------------------------
 //  ordering
 // -----------------------------------------------------------------------------
-//  Phase 1 shape: this service boots, reports health, and is observable. Its
-//  domain arrives in a later phase (see the phase table in README.md).
+//  The core subdomain: the Order aggregate, CQRS, and the transactional outbox.
 //
 //  The composition root is deliberately the ONLY place that knows about
 //  infrastructure. Everything below is wiring; no business logic lives here.
-//  See docs/architecture.md and docs/operations/health-checks.md.
+//  See docs/services/ordering.md.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Structured logging, distributed tracing and metrics, configured identically in
-// every service so that spans and log lines actually correlate across them.
 builder.AddObservability("ordering");
 
-// Liveness is a self check only. Dependency checks (database, broker, cache) are
-// registered with the `ready` tag as each service gains them, so that a database
-// blip never causes the orchestrator to restart healthy processes.
-builder.Services.AddDefaultHealthChecks();
+string connectionString =
+    builder.Configuration.GetConnectionString("OrderingDb")
+    ?? throw new InvalidOperationException("ConnectionStrings:OrderingDb is not configured.");
+
+builder.Services.AddDbContext<OrderingDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
+
+// The read side gets a raw connection, not the DbContext. That is the CQRS boundary made physical:
+// OrderQueries has no way to reach a domain type because it never sees one.
+builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(connectionString));
+builder.Services.AddScoped<OrderQueries>();
+
+builder.Services.AddScoped<IRepository<Order, Guid>, OrderRepository>();
+builder.Services.AddScoped<IOrderingUnitOfWork, OrderingUnitOfWork>();
+builder.Services.AddScoped<PlaceOrderHandler>();
+builder.Services.AddScoped<CancelOrderHandler>();
+builder.Services.AddScoped<AdvanceOrderHandler>();
+
+// --- Service-to-service HTTP -------------------------------------------------------------------
+//
+// Resilience lives here, in the composition root, rather than inside each client. The standard
+// handler bundles two policies that solve different problems:
+//
+//   Retry with exponential backoff AND JITTER. Backoff handles a brief blip. Jitter is what stops
+//   fifty instances that all failed at the same moment retrying in lockstep and re-creating the load
+//   spike that caused the failure - the "thundering herd". Without jitter, retries synchronise.
+//
+//   Circuit breaker. After enough consecutive failures it stops calling for a while. Retrying a
+//   service that is genuinely down wastes the caller's threads and connections and delays its
+//   recovery; failing fast is kinder to both ends.
+builder.Services.AddHttpClient<IBasketService, HttpBasketService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["Services:Basket"]
+            ?? throw new InvalidOperationException("Services:Basket is not configured."));
+
+        // Bounded, because checkout is a request a person is waiting on. Without a timeout, a hung
+        // Basket holds this request - and its thread and connection - indefinitely.
+        client.Timeout = TimeSpan.FromSeconds(10);
+    })
+    .AddStandardResilienceHandler();
+
+builder.Services.AddHttpClient<ICatalogService, HttpCatalogService>(client =>
+    {
+        client.BaseAddress = new Uri(
+            builder.Configuration["Services:Catalog"]
+            ?? throw new InvalidOperationException("Services:Catalog is not configured."));
+
+        client.Timeout = TimeSpan.FromSeconds(10);
+    })
+    .AddStandardResilienceHandler();
+
+// --- Messaging ---------------------------------------------------------------------------------
+// The subscription client name becomes the queue name prefix, so each service gets its OWN queue
+// bound to the shared exchange. That is what makes competing consumers work: three replicas of
+// Ordering share one queue and split the messages, while Inventory has a separate queue and receives
+// its own copy of every event.
+builder.Services.AddRabbitMqEventBus(builder.Configuration, "ordering");
+
+// The outbox publisher, scanning the contracts assembly for event types. Only types in that assembly
+// can ever be deserialised from the outbox table - see IOutboxEventResolver.
+builder.Services.AddOutbox<OrderingDbContext>(
+    builder.Configuration,
+    typeof(OrderSubmittedIntegrationEvent).Assembly);
+
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPermissionPolicies();
+
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
+
+builder.Services
+    .AddDefaultHealthChecks()
+    .AddNpgSql(connectionString, name: "ordering-db", tags: ["ready"]);
+
+builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
-// Correlation must be first: a request that fails inside exception handling
-// should still be correlated. Request logging follows so its completion event
-// carries the correlation id.
 app.UseObservability();
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultHealthChecks();
+app.MapOpenApi();
 
-// A minimal identity endpoint. Useful when you have thirty containers running
-// and want to confirm which service is answering on a port.
 app.MapGet("/", () => Results.Ok(new
 {
     service = "ordering",
     status = "up",
     environment = app.Environment.EnvironmentName,
 }));
+
+app.MapOrderEndpoints();
+
+// Simplified for this repo: production would not migrate from application startup, because several
+// replicas would race and a failed migration would crash every instance rather than one deployment
+// step. See docs/operations/deployment.md.
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<OrderingDbContext>().Database.MigrateAsync();
+}
 
 await app.RunAsync();

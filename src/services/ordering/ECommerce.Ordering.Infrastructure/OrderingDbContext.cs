@@ -54,7 +54,16 @@ public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> option
             // and an INSERT is issued as an UPDATE, failing with a DbUpdateConcurrencyException whose
             // message points nowhere near the cause. Learned the expensive way in Phase 5 - see
             // docs/services/user-profile.md.
-            order.Property(o => o.Id).ValueGeneratedNever();
+            //
+            // HasColumnName("id") is NOT optional here, even though "Id" would work through EF. The
+            // read side is hand-written Dapper SQL, and PostgreSQL folds an unquoted identifier to
+            // LOWERCASE - so "SELECT o.id" looks for a column named id and finds a column named "Id".
+            // EF quotes everything it generates, so the write side is perfectly happy and only the
+            // query fails, at runtime, with "column o.id does not exist".
+            //
+            // Every other column on this entity is named explicitly below; the keys are the ones easy
+            // to forget precisely because nothing in the C# mentions them.
+            order.Property(o => o.Id).HasColumnName("id").ValueGeneratedNever();
 
             order.Property(o => o.OrderNumber).HasColumnName("order_number")
                 .HasMaxLength(30).IsRequired();
@@ -122,7 +131,8 @@ public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> option
 
                 item.WithOwner().HasForeignKey(i => i.OrderId);
                 item.HasKey(i => i.Id);
-                item.Property(i => i.Id).ValueGeneratedNever();
+                item.Property(i => i.Id).HasColumnName("id").ValueGeneratedNever();
+                item.Property(i => i.OrderId).HasColumnName("order_id");
 
                 item.Property(i => i.ProductId).HasColumnName("product_id").IsRequired();
                 item.Property(i => i.Sku).HasColumnName("sku").HasMaxLength(64).IsRequired();

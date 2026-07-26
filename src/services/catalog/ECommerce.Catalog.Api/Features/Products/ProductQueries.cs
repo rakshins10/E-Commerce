@@ -34,6 +34,22 @@ public sealed record ProductDetailDto(
     string? ImageUrl,
     int StockOnHand);
 
+/// <summary>
+/// What a product costs right now, for checkout.
+/// </summary>
+/// <remarks>
+/// Deliberately minimal. Ordering needs a price, a name and whether the product can still be sold;
+/// sending the description and the image as well would be shipping a detail page to a service that
+/// renders nothing.
+/// </remarks>
+public sealed record ProductPriceDto(
+    Guid ProductId,
+    string Sku,
+    string Name,
+    decimal UnitPrice,
+    string Currency,
+    bool IsAvailable);
+
 public sealed record CategoryDto(Guid Id, string Name, string Slug, string? ParentSlug, int ProductCount);
 
 public sealed record BrandDto(Guid Id, string Name, string Slug, int ProductCount);
@@ -173,6 +189,45 @@ public sealed class ProductQueries(IDbConnection connection)
         long total = await multi.ReadSingleAsync<long>();
 
         return new PagedResult<ProductSummaryDto>(items, page.Page, page.PageSize, total);
+    }
+
+    /// <summary>
+    /// Current prices for a set of products.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>= ANY(@Ids)</c> rather than a generated <c>IN (...)</c> list. PostgreSQL treats the array as
+    /// a single parameter, so one plan is cached however many ids arrive; building the list into the
+    /// SQL text produces a different statement per basket size and defeats the plan cache entirely.
+    /// It is also parameterised, so there is nothing to inject.
+    /// </para>
+    /// <para>
+    /// Withdrawn products are returned with <c>IsAvailable = false</c> rather than omitted, so the
+    /// caller can name the item in its error message. Silently dropping a line would produce an order
+    /// missing something the customer thought they were buying, which is far worse.
+    /// </para>
+    /// </remarks>
+    public async Task<IReadOnlyList<ProductPriceDto>> GetPricesAsync(
+        IReadOnlyCollection<Guid> productIds,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT  p.id            AS ProductId,
+                    p.sku           AS Sku,
+                    p.name          AS Name,
+                    p.price         AS UnitPrice,
+                    p.currency      AS Currency,
+                    p.is_active     AS IsAvailable
+            FROM products p
+            WHERE p.id = ANY(@Ids);
+            """;
+
+        var command = new CommandDefinition(
+            sql,
+            new { Ids = productIds.ToArray() },
+            cancellationToken: cancellationToken);
+
+        return (await connection.QueryAsync<ProductPriceDto>(command)).ToArray();
     }
 
     public async Task<ProductDetailDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

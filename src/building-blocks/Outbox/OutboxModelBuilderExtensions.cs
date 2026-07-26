@@ -24,7 +24,11 @@ public static class OutboxModelBuilderExtensions
 
             // Never database-generated: the id comes from the integration event so that the same value
             // reaches the consumer and can be deduplicated there.
-            entity.Property(message => message.Id).ValueGeneratedNever();
+            //
+            // Named explicitly, because PostgreSQL folds unquoted identifiers to lowercase and any
+            // hand-written SQL against this table - a diagnostic query as much as application code -
+            // would otherwise fail to find a column called "Id".
+            entity.Property(message => message.Id).HasColumnName("id").ValueGeneratedNever();
 
             entity.Property(message => message.EventName).HasColumnName("event_name")
                 .HasMaxLength(200).IsRequired();
