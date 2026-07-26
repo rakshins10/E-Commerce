@@ -65,7 +65,7 @@ public abstract class NotificationHandlerBase(NotificationDbContext db, ILogger 
             return false;
         }
 
-                // Fully qualified: the entity name collides with a segment of this project's namespace.
+        // Fully qualified: the entity name collides with a segment of this project's namespace.
         db.Notifications.Add(new Model.Notification(orderId, orderNumber, buyerId, subject, body));
 
         // The SAME transaction. This is the entire point - if the two were separate, a crash between

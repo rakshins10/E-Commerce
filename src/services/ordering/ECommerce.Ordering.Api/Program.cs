@@ -1,12 +1,11 @@
 using System.Data;
-
 using ECommerce.Auth;
 using ECommerce.Common.SeedWork;
 using ECommerce.Contracts.Ordering;
+using ECommerce.Contracts.Saga;
 using ECommerce.EventBus;
 using ECommerce.EventBus.RabbitMQ;
 using ECommerce.Observability;
-using ECommerce.Contracts.Saga;
 using ECommerce.Ordering.Api.Features;
 using ECommerce.Ordering.Api.Handlers;
 using ECommerce.Ordering.Application.Orders;
@@ -15,9 +14,7 @@ using ECommerce.Ordering.Infrastructure;
 using ECommerce.Ordering.Infrastructure.Orders;
 using ECommerce.Ordering.Infrastructure.Services;
 using ECommerce.Outbox;
-
 using Microsoft.EntityFrameworkCore;
-
 using Npgsql;
 
 // -----------------------------------------------------------------------------
