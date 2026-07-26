@@ -756,6 +756,19 @@
       "groups": [
         "/customers"
       ]
+    },
+    {
+      "username": "service-account-back-office-service",
+      "enabled": true,
+      "serviceAccountClientId": "back-office-service",
+      "clientRoles": {
+        "realm-management": [
+          "view-users",
+          "manage-users",
+          "query-users",
+          "view-realm"
+        ]
+      }
     }
   ]
 }

@@ -1,43 +1,61 @@
+using ECommerce.Auth;
 using ECommerce.Observability;
 
 // -----------------------------------------------------------------------------
 //  admin-bff
 // -----------------------------------------------------------------------------
-//  Phase 1 shape: this service boots, reports health, and is observable. Its
-//  domain arrives in a later phase (see the phase table in README.md).
+//  The back-office gateway. A SECOND BFF, deliberately separate from the
+//  storefront's - see the .csproj for why.
 //
-//  The composition root is deliberately the ONLY place that knows about
-//  infrastructure. Everything below is wiring; no business logic lives here.
-//  See docs/architecture.md and docs/operations/health-checks.md.
+//  Every route here requires a permission at the EDGE as well as at the service.
+//  The storefront BFF only asks "are you signed in?" and leaves authorization to
+//  each service; this one is stricter, because the blast radius of a mistake is
+//  larger. Defence in depth, not a replacement for the service's own checks.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Structured logging, distributed tracing and metrics, configured identically in
-// every service so that spans and log lines actually correlate across them.
 builder.AddObservability("admin-bff");
 
-// Liveness is a self check only. Dependency checks (database, broker, cache) are
-// registered with the `ready` tag as each service gains them, so that a database
-// blip never causes the orchestrator to restart healthy processes.
+builder.Services
+    .AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPermissionPolicies();
+
+string[] allowedOrigins =
+    builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+
+// The admin apps only, never the storefront origins. An explicit allow-list rather than
+// AllowAnyOrigin: with credentials in play, reflecting any origin lets any page on the internet make
+// authenticated admin calls on a signed-in manager's behalf.
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+    .WithOrigins(allowedOrigins)
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .WithExposedHeaders("X-Correlation-Id")));
+
 builder.Services.AddDefaultHealthChecks();
+builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
-// Correlation must be first: a request that fails inside exception handling
-// should still be correlated. Request logging follows so its completion event
-// carries the correlation id.
 app.UseObservability();
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultHealthChecks();
+app.MapOpenApi();
 
-// A minimal identity endpoint. Useful when you have thirty containers running
-// and want to confirm which service is answering on a port.
 app.MapGet("/", () => Results.Ok(new
 {
     service = "admin-bff",
     status = "up",
     environment = app.Environment.EnvironmentName,
 }));
+
+app.MapReverseProxy();
 
 await app.RunAsync();

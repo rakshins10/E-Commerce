@@ -490,10 +490,24 @@ services:
       <<: *dotnet-env
       # Audit log only. Back-office stores no business data - everything else is
       # delegated to the owning service or to Keycloak.
-      ConnectionStrings__AuditDb: Host=backoffice-db;Database=backoffice;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
-      Keycloak__AdminBaseUrl: http://keycloak:8080
-      Keycloak__Realm: ${KEYCLOAK_REALM}
-      Keycloak__ClientSecret: ${BACKOFFICE_SERVICE_CLIENT_SECRET}
+      # Its OWN database, which holds exactly one thing: the audit log.
+      ConnectionStrings__BackOfficeDb: Host=backoffice-db;Database=backoffice;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Read-only connections to other services' databases, for dashboard aggregates only.
+      #
+      # This is the one place a service reads another's data, and it is a bounded exception - see
+      # docs/services/back-office.md. In a real deployment these would use accounts with SELECT
+      # granted and nothing else, so "read-only" is enforced by the database rather than by
+      # convention. Compose has one superuser, so that constraint is documented rather than applied,
+      # which is worth being honest about.
+      ConnectionStrings__OrderingReadDb: Host=ordering-db;Database=ordering;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__SagaReadDb: Host=saga-db;Database=saga;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__InventoryReadDb: Host=inventory-db;Database=inventory;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      KeycloakAdmin__BaseUrl: http://keycloak:8080
+      KeycloakAdmin__Realm: ${KEYCLOAK_REALM}
+      KeycloakAdmin__ClientId: back-office-service
+      KeycloakAdmin__ClientSecret: ${BACKOFFICE_SERVICE_CLIENT_SECRET}
+      Cors__Origins__0: http://localhost:3001
+      Cors__Origins__1: http://localhost:4201
     ports: ["${BACKOFFICE_HTTP_PORT:-5008}:8080"]
     depends_on:
       backoffice-db: { condition: service_healthy }
@@ -553,7 +567,13 @@ services:
     environment:
       <<: *dotnet-env
       Services__BackOffice: http://back-office-api:8080
-      Keycloak__ClientSecret: ${ADMIN_BFF_CLIENT_SECRET}
+      Services__Ordering: http://ordering-api:8080
+      Services__Inventory: http://inventory-api:8080
+      Services__Catalog: http://catalog-api:8080
+      Services__OrderingSaga: http://ordering-saga:8080
+      # The ADMIN apps only, never the storefront origins.
+      Cors__Origins__0: http://localhost:3001
+      Cors__Origins__1: http://localhost:4201
     ports: ["${ADMIN_BFF_PORT:-6002}:8080"]
     networks: [backend, frontend]
     depends_on:
@@ -599,6 +619,41 @@ services:
     depends_on:
       keycloak: { condition: service_healthy }
 
+
+  # ---------------------------------------------------------------------------
+  #  Back office. Separate apps on separate ports, talking to the ADMIN BFF.
+  #
+  #  Each has its own Keycloak client, so the redirect-URI allow-lists are
+  #  separate too - a misconfiguration on the shop cannot yield a token this
+  #  application would accept.
+  # ---------------------------------------------------------------------------
+  react-admin:
+    container_name: ecom-react-admin
+    restart: unless-stopped
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      args:
+        APP_WORKSPACE: "@ecommerce/react-admin"
+        APP_DIST: react-admin/dist
+    ports: ["${REACT_ADMIN_PORT:-3001}:8080"]
+    networks: [frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }
+
+  angular-admin:
+    container_name: ecom-angular-admin
+    restart: unless-stopped
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      args:
+        APP_WORKSPACE: "@ecommerce/angular-admin"
+        APP_DIST: angular-admin/dist/angular-admin/browser
+    ports: ["${ANGULAR_ADMIN_PORT:-4201}:8080"]
+    networks: [frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }
   mobile-bff:
     <<: *dotnet-common
     container_name: ecom-mobile-bff
