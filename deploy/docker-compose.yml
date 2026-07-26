@@ -550,6 +550,46 @@ services:
     depends_on:
       keycloak: { condition: service_healthy }
 
+  # ===========================================================================
+  #  Web applications
+  # ===========================================================================
+  #  Both storefronts are built from ONE Dockerfile and serve byte-identical
+  #  CSS from the same design tokens. They share the storefront BFF, because a
+  #  BFF exists per client experience, not per framework (docs/adr/0006) - which
+  #  is also what makes their parity provable: identical endpoints, identical
+  #  payloads, so any visible difference is a client-side bug.
+  #
+  #  They sit only on the `frontend` network: a browser-facing container has no
+  #  business being able to reach Postgres.
+  # ===========================================================================
+  react-store:
+    container_name: ecom-react-store
+    restart: unless-stopped
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      args:
+        APP_WORKSPACE: "@ecommerce/react-store"
+        APP_DIST: react-store/dist
+    ports: ["${REACT_STORE_PORT:-3000}:8080"]
+    networks: [frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }
+
+  angular-store:
+    container_name: ecom-angular-store
+    restart: unless-stopped
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      args:
+        APP_WORKSPACE: "@ecommerce/angular-store"
+        APP_DIST: angular-store/dist/angular-store/browser
+    ports: ["${ANGULAR_STORE_PORT:-4200}:8080"]
+    networks: [frontend]
+    depends_on:
+      keycloak: { condition: service_healthy }
+
   mobile-bff:
     <<: *dotnet-common
     container_name: ecom-mobile-bff

@@ -29,13 +29,20 @@ export interface ProblemDetails {
  * messages to form fields.
  */
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly problem: ProblemDetails,
-    readonly correlationId?: string,
-  ) {
+  // Declared as fields and assigned explicitly rather than using constructor
+  // parameter properties: those are TypeScript-only syntax that emits code, and
+  // modern toolchains enable `erasableSyntaxOnly` so that stripping types is a
+  // pure erase. Writing it this way keeps the package consumable by any build.
+  readonly status: number;
+  readonly problem: ProblemDetails;
+  readonly correlationId?: string;
+
+  constructor(status: number, problem: ProblemDetails, correlationId?: string) {
     super(problem.detail ?? problem.title ?? `Request failed with status ${status}`);
     this.name = 'ApiError';
+    this.status = status;
+    this.problem = problem;
+    this.correlationId = correlationId;
   }
 
   /** Not signed in, or the token expired. The caller should re-authenticate. */
@@ -93,7 +100,11 @@ function newCorrelationId(): string {
  * This class remains the transport underneath.
  */
 export class ApiClient {
-  constructor(private readonly options: ApiClientOptions) {}
+  private readonly options: ApiClientOptions;
+
+  constructor(options: ApiClientOptions) {
+    this.options = options;
+  }
 
   get<T>(path: string, options?: RequestOptions): Promise<T> {
     return this.send<T>('GET', path, undefined, options);
@@ -138,8 +149,12 @@ export class ApiClient {
       ...options?.headers,
     };
 
+    // Bracket notation throughout: Angular compiles with
+    // `noPropertyAccessFromIndexSignature`, which rejects `headers.Authorization`
+    // on an index-signature type. A shared package has to satisfy the strictest
+    // consumer, and Angular is it.
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
     const response = await fetch(url, {
       method,
