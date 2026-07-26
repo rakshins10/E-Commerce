@@ -174,4 +174,107 @@ and TanStack Query enters the picture.
 
 ## Phase 4 — product browsing
 
-_To be written._
+**Parity rows:** S5, S6, S7 · **Specs:** [`tests/e2e/specs/catalog.spec.ts`](../tests/e2e/specs/catalog.spec.ts)
+(16 more specs, 25 total, passing against both)
+
+This is the first phase where the comparison gets genuinely interesting, because it is about **server state**
+rather than framework plumbing — and the verdict flips.
+
+### Data fetching: React wins clearly
+
+React uses **TanStack Query**. Angular has no framework equivalent, so the same behaviours are hand-built.
+
+| Behaviour | React | Angular |
+|---|---|---|
+| Cache per filter combination | free (`queryKey`) | hand-rolled signal cache |
+| Deduplicate concurrent requests | free | not implemented |
+| Keep previous page while loading | `placeholderData: keepPreviousData` | a retained `previousResult` signal |
+| Stale time for slow-changing data | `staleTime: 5 * 60_000` | a manual `if (cache() !== null) return` |
+| Retry policy per error type | `retry: (n, e) => …` | hand-written try/catch |
+| Request cancellation | `queryFn({ signal })` | `withFetch()` + manual plumbing |
+
+```ts
+// React — declarative, and the caching is not code you own
+const productsQuery = useQuery({
+  queryKey: ['products', filters],
+  queryFn: ({ signal }) => searchProducts(filters, signal),
+  placeholderData: keepPreviousData,
+});
+```
+
+```ts
+// Angular — the same behaviours, written out
+protected readonly result = signal<PagedResult<ProductSummary> | null>(null);
+protected readonly isLoading = signal(false);
+protected readonly error = signal<string | null>(null);
+
+effect(() => { void this.load(this.filters()); });
+```
+
+**Point for React, decisively.** TanStack Query solves a problem Angular expects you to solve yourself, and
+the hand-rolled version is both more code and less capable — no deduplication, no background refetch, no
+cache invalidation story. Angular's `resource()`/`httpResource` are closing this gap, but as of Angular 22
+they are not yet a full replacement.
+
+This is the counterweight to Phase 3, where Angular won almost every row. It is worth noticing *why*: Angular
+is strong where the **framework** owns the problem (DI, routing, change detection), React is strong where the
+**ecosystem** owns it (server state, data fetching). That is a more useful way to hold the comparison than a
+scoreboard.
+
+### Reading the URL as state
+
+Both apps keep filters in the URL rather than component state, so a filtered view is shareable and survives a
+refresh.
+
+```ts
+// React
+const [searchParams, setSearchParams] = useSearchParams();
+const filters = useMemo(() => ({ search: searchParams.get('search') ?? '', … }), [searchParams]);
+
+// Angular
+private readonly queryParams = toSignal(this.route.queryParamMap, { requireSync: true });
+protected readonly filters = computed(() => ({ search: this.queryParams().get('search') ?? '', … }));
+```
+
+**Narrow point for Angular.** `computed` needs no dependency array, so it cannot go stale. But `toSignal` is a
+bridge over an Observable API, and having to reach for it is a reminder that Angular's router has not caught
+up with signals yet.
+
+### Route parameters
+
+```ts
+// Angular — bound directly from the route by withComponentInputBinding()
+readonly id = input.required<string>();
+
+// React
+const { id } = useParams<{ id: string }>();
+```
+
+**Point for Angular.** A typed, required signal input beats a hook returning `string | undefined`.
+
+### Templates at scale
+
+The browse screen is the first template big enough for this to matter. Angular's `@if` / `@for` blocks stay
+readable; React's JSX with nested ternaries and `&&` gets noisy:
+
+```tsx
+{result && result.items.length === 0 && (…)}
+{result && result.items.length > 0 && (…)}
+```
+
+**Point for Angular.**
+
+### Running total
+
+| Dimension | Winner |
+|-----------|--------|
+| **Server state, caching, request lifecycle** | **React** — and it is not close |
+| Route parameter binding | Angular |
+| Deriving state without dependency arrays | Angular |
+| Template readability at scale | Angular |
+| Framework plumbing (DI, routing, auth) | Angular |
+| Bundle size | React (59 kB vs 94 kB gzipped) |
+
+The honest summary for an interview: **Angular gives you more, React lets you choose more.** Angular's
+batteries cover routing, DI and forms extremely well but stop at server state; React's core is smaller and
+the ecosystem fills the gap — better, in the case of TanStack Query, but only because you went and picked it.

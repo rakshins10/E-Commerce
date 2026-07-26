@@ -36,8 +36,8 @@ Use [`0000-template.md`](0000-template.md) for new records.
 | [0017](0017-cloud-portable-architecture.md) | Cloud-portable: the same code runs on Docker or on Azure | Accepted | 3 |
 | [0018](0018-self-contained-frontends.md) | Each frontend owns its code, even where that duplicates | Accepted | 3 |
 
-Planned for later phases: permission-based policies over role checks (Phase 2), read-model projection
-strategy for Catalog (Phase 4), resilience policy defaults (Phase 12).
+Planned for later phases: read-model projection strategy for Catalog if browse volume justifies a
+separate store (currently one database, two code paths), and resilience policy defaults (Phase 12).
 
 ---
 
