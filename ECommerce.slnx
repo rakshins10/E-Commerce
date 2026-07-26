@@ -64,5 +64,6 @@
   <Folder Name="/tests/unit/">
     <Project Path="tests/unit/ECommerce.Architecture.Tests/ECommerce.Architecture.Tests.csproj" />
     <Project Path="tests/unit/ECommerce.Common.Tests/ECommerce.Common.Tests.csproj" />
+    <Project Path="tests/unit/ECommerce.Ordering.Domain.Tests/ECommerce.Ordering.Domain.Tests.csproj" />
   </Folder>
 </Solution>
