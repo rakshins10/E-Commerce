@@ -22,7 +22,16 @@
   </PropertyGroup>
 
   <ItemGroup Label="ASP.NET Core / hosting">
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <!-- Pinned transitively: Microsoft.AspNetCore.OpenApi pulls Microsoft.OpenApi 2.0.0,
+         which carries a known HIGH severity advisory (GHSA-v5pm-xwqc-g5wc). NuGet audit
+         under TreatWarningsAsErrors failed the build over it, which is exactly the point
+         of switching both on. CentralPackageTransitivePinningEnabled lets us force the
+         patched version without waiting for the parent package to update. -->
+    <!-- 2.11.0, not 3.x: the 3.x line makes IOpenApiMediaType.Example read-only, which
+         breaks the source generator that ships inside Microsoft.AspNetCore.OpenApi 10.
+         2.11.0 is the newest release on the compatible major, and is past the advisory. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.11.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.0.0" />
   </ItemGroup>
@@ -53,6 +62,21 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.17.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Persistence">
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
+    <!-- The CQRS read side. Dapper rather than EF Core is a deliberate hard
+         boundary: query handlers return purpose-built DTOs and can never touch a
+         domain type. See docs/adr/0012-cqrs-with-mediatr.md. -->
+    <PackageVersion Include="Dapper" Version="2.1.79" />
+    <PackageVersion Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Label="Gateway">
+    <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup Label="Messaging">
