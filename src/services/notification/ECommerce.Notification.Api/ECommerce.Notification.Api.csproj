@@ -1,5 +1,25 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Notification service. The one place where a duplicate message is genuinely unrecoverable, so it uses the processed_messages inbox. -->
+
   <ItemGroup>
-    <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Auth\ECommerce.Auth.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Common\ECommerce.Common.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\EventBus.RabbitMQ\ECommerce.EventBus.RabbitMQ.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Outbox\ECommerce.Outbox.csproj" />
+    <ProjectReference Include="..\..\..\contracts\ECommerce.Contracts\ECommerce.Contracts.csproj" />
+  </ItemGroup>
+
 </Project>

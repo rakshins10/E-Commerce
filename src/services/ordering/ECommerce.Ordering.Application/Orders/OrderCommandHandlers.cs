@@ -80,6 +80,54 @@ public sealed class CancelOrderHandler(
 
         return order;
     }
+
+    /// <summary>
+    /// Cancels on the saga's instruction, with the saga's reason.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="HandleAsync"/> because there is no requester to check ownership against -
+    /// the saga is acting on the system's behalf, not a person's. Giving it a distinct entry point means
+    /// the ownership check on the customer-facing path cannot be accidentally bypassed by passing a flag.
+    ///
+    /// The reason is the saga's (PaymentDeclined, OutOfStock) rather than one of the human ones, which is
+    /// exactly what makes the customer's order page able to say WHY rather than just "cancelled".
+    /// </remarks>
+    public async Task<Order> HandleForSagaAsync(
+        Guid orderId,
+        OrderCancellationReason reason,
+        CancellationToken cancellationToken = default)
+    {
+        Order order = await orders.GetByIdAsync(orderId, cancellationToken).ConfigureAwait(false)
+                      ?? throw new OrderNotFoundException(orderId);
+
+        if (order.Status == OrderStatus.Cancelled)
+        {
+            // Idempotent: a redelivered cancellation must not publish a second event.
+            return order;
+        }
+
+        order.Cancel(reason);
+
+        outbox.Add(new OrderCancelledIntegrationEvent
+        {
+            OrderId = order.Id,
+            OrderNumber = order.OrderNumber,
+            BuyerId = order.BuyerId,
+            Reason = reason.ToString(),
+            StockWasReserved = order.DomainEvents
+                .OfType<OrderCancelledDomainEvent>()
+                .Select(e => e.StockWasReserved)
+                .FirstOrDefault(),
+        });
+
+        await unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        order.ClearDomainEvents();
+
+        logger.LogInformation(
+            "Order {OrderNumber} cancelled by the saga ({Reason}).", order.OrderNumber, reason);
+
+        return order;
+    }
 }
 
 /// <summary>
