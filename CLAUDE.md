@@ -62,7 +62,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 4 | Catalog + Storefront BFF + browse/search/detail — **both frameworks** | ✅ merged |
 | 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ 34 e2e specs green on both |
 | 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ✅ 49 e2e specs green on both |
-| 7 | Payment + Inventory + Notification + Saga | ⬜ |
+| 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
 | 8 | Back-office + Admin BFF + **both** admin shells | ⬜ |
 
 Mobile (React Native) is explicitly **deferred** — the user asked not to build it yet.
@@ -160,6 +160,8 @@ run against two independent implementations.
 | **The outbox writer and publisher must share JsonSerializerOptions** | Events commit fine and never publish; no request ever errors, so nothing surfaces except a rising `attempts` count | `OutboxSerialization.Options` - used by both halves |
 | **Playwright `check()` asserts once, without retrying** | `Clicking the checkbox did not change its state` on CI while passing 96/96 locally - a controlled input can be briefly out of step with the DOM mid-re-render | `click()` then `expect(...).toBeChecked()`, which retries. Use the idempotent `setChecked` helper in `account.spec.ts` for specs that mutate persistent state |
 | **A spec that mutates state must not assume its starting state** | Passes on a clean database, fails on the second run | Make it idempotent - read the current state and act only if it differs. Run the suite **twice** before trusting it |
+| **DI validation catches missing registrations at BOOT** | A scoped service whose dependency was never registered crashes the container on startup, not on first request | Read it as a feature. The saga's missing IDbConnection surfaced in seconds instead of on a page nobody visits until production |
+| **A service and its own namespace segment collide** | `Notification` the entity vs `ECommerce.Notification.Api` the namespace - `CS0118: is a namespace but is used like a type` | Fully qualify (`Model.Notification`) or rename the entity |
 | **Vitest does not type-check** | esbuild strips types, so a test calling a function with the wrong argument shape passes | React's `npm run build` (`tsc -b`) covers specs; Angular's `ng test` type-checks them itself. Run the build, not just the tests |
 | **`ng test` fails when there are zero specs** | `No tests found matching **/*.spec.ts` - a red CI job with nothing wrong | Keep at least one real spec in `angular-store` |
 | **CI Node cache needs the workspace lockfile** | `Some specified paths were not resolved, unable to cache dependencies` before anything compiles | `cache-dependency-path: web/package-lock.json` - there is one lockfile, at `web/`, not one per app |

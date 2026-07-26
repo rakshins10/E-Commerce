@@ -144,6 +144,45 @@ export const ORDER_CANCELLATION_LABELS: Record<string, string> = {
   OutOfStock: 'An item went out of stock',
 };
 
+/** One entry in an order's saga timeline. */
+export interface SagaStep {
+  readonly name: string;
+  readonly detail: string;
+  readonly occurredAt: string;
+}
+
+/**
+ * What the checkout process actually did.
+ *
+ * Distinct from the order's own status, and both are worth showing. The order says *what it is*
+ * ("Cancelled"); the saga says *what happened* ("payment declined, so we released the stock").
+ */
+export interface SagaTimeline {
+  readonly orderId: string;
+  readonly orderNumber: string;
+  readonly state: 'AwaitingStock' | 'AwaitingPayment' | 'Completed' | 'Compensated' | 'Unknown';
+  readonly stockReserved: boolean;
+  readonly failureReason: string | null;
+  readonly startedAt: string;
+  readonly completedAt: string | null;
+  readonly steps: readonly SagaStep[];
+}
+
+/** Plain-English wording for each saga step. "CompensatingReleaseStock" belongs in a log, not a page. */
+export const SAGA_STEP_LABELS: Record<string, string> = {
+  OrderSubmitted: 'Order received',
+  ReserveStockRequested: 'Checking stock',
+  StockReserved: 'Stock reserved for you',
+  StockRejected: 'Some items were unavailable',
+  PaymentRequested: 'Taking payment',
+  PaymentSucceeded: 'Payment successful',
+  PaymentFailed: 'Payment declined',
+  CompensatingReleaseStock: 'Releasing the reserved stock',
+  NoCompensationNeeded: 'Nothing to release',
+  SagaCompleted: 'Order confirmed',
+  SagaCompensated: 'Order cancelled and stock returned',
+};
+
 /**
  * Basket state and API access.
  *
@@ -253,5 +292,11 @@ export class BasketService {
 
   cancelOrder(orderId: string): Promise<Order> {
     return firstValueFrom(this.http.post<Order>(`${this.ordersUrl}/${orderId}/cancel`, {}));
+  }
+
+  getSagaTimeline(orderId: string): Promise<SagaTimeline> {
+    return firstValueFrom(
+      this.http.get<SagaTimeline>(`${environment.bffBaseUrl}/api/saga/orders/${orderId}`),
+    );
   }
 }
