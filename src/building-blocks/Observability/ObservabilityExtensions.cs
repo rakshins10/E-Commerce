@@ -55,7 +55,15 @@ public static class ObservabilityExtensions
     private static void AddSerilog(WebApplicationBuilder builder, string serviceName)
     {
         builder.Host.UseSerilog((context, services, configuration) => configuration
-            // Read levels and overrides from appsettings so log verbosity is changeable without a rebuild.
+            // Noise defaults FIRST, so that appsettings or an environment variable read below can still
+            // raise them. Applying them after ReadFrom.Configuration would make
+            // `Serilog__MinimumLevel__Override__Microsoft.EntityFrameworkCore.Database.Command=Information`
+            // silently do nothing - which cost real debugging time when EF command logging could not be
+            // turned on to diagnose a failing SaveChanges.
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+
+            // Read levels and overrides from configuration so verbosity changes without a rebuild.
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
@@ -68,10 +76,6 @@ public static class ObservabilityExtensions
             .Enrich.WithSpan()
             .Enrich.WithProperty("ServiceName", serviceName)
 
-            // ASP.NET Core emits one log line per request pipeline stage. Serilog's request logging replaces
-            // that with a single enriched completion event per request - far less noise, more information.
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-            .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
             // InvariantCulture on both sinks, deliberately: logs are machine-parsed and read by operators in
             // many locales. A number formatted as "1,5" because the container happened to have a German locale
             // is a genuine and very confusing production bug.

@@ -1,43 +1,71 @@
+using ECommerce.Auth;
 using ECommerce.Observability;
+using ECommerce.UserProfile.Api.Features;
+using ECommerce.UserProfile.Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 // -----------------------------------------------------------------------------
-//  user-profile
+//  User Profile service
 // -----------------------------------------------------------------------------
-//  Phase 1 shape: this service boots, reports health, and is observable. Its
-//  domain arrives in a later phase (see the phase table in README.md).
+//  Owns the customer data that does NOT belong in an identity provider: display
+//  name, contact details, saved addresses, preferences and consent records.
 //
-//  The composition root is deliberately the ONLY place that knows about
-//  infrastructure. Everything below is wiring; no business logic lives here.
-//  See docs/architecture.md and docs/operations/health-checks.md.
+//  It NEVER stores a password, a role or a group. Keycloak answers "who are you
+//  and what may you do"; this answers "what do we know about you". The two are
+//  joined only by the `sub` claim.
+//
+//  See docs/services/user-profile.md and docs/adr/0004.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Structured logging, distributed tracing and metrics, configured identically in
-// every service so that spans and log lines actually correlate across them.
 builder.AddObservability("user-profile");
 
-// Liveness is a self check only. Dependency checks (database, broker, cache) are
-// registered with the `ready` tag as each service gains them, so that a database
-// blip never causes the orchestrator to restart healthy processes.
-builder.Services.AddDefaultHealthChecks();
+string connectionString =
+    builder.Configuration.GetConnectionString("UserProfileDb")
+    ?? throw new InvalidOperationException("ConnectionStrings:UserProfileDb is not configured.");
+
+builder.Services.AddDbContext<UserProfileDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
+
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPermissionPolicies();
+
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
+
+builder.Services
+    .AddDefaultHealthChecks()
+    .AddNpgSql(connectionString, name: "userprofile-db", tags: ["ready"]);
+
+builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
-// Correlation must be first: a request that fails inside exception handling
-// should still be correlated. Request logging follows so its completion event
-// carries the correlation id.
 app.UseObservability();
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultHealthChecks();
+app.MapOpenApi();
 
-// A minimal identity endpoint. Useful when you have thirty containers running
-// and want to confirm which service is answering on a port.
 app.MapGet("/", () => Results.Ok(new
 {
     service = "user-profile",
     status = "up",
     environment = app.Environment.EnvironmentName,
 }));
+
+app.MapProfileEndpoints();
+
+// Migrate on startup. No seeding: profiles are created lazily on a user's first
+// authenticated request, which is the point of the provisioning design.
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<UserProfileDbContext>().Database.MigrateAsync();
+}
 
 await app.RunAsync();
