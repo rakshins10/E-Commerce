@@ -19,8 +19,13 @@ export const routes: Routes = [
   },
   {
     path: 'products',
-    loadComponent: () => import('./pages/static-pages').then((m) => m.ProductsPage),
+    loadComponent: () => import('./pages/products').then((m) => m.ProductsPage),
     title: 'Products',
+  },
+  {
+    path: 'products/:id',
+    loadComponent: () => import('./pages/product-detail').then((m) => m.ProductDetailPage),
+    title: 'Product',
   },
   {
     path: 'auth/callback',

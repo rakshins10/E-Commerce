@@ -332,3 +332,159 @@ body {
   min-height: 50vh;
   text-align: center;
 }
+
+/* ---------------------------------------------------------------------------
+   Product browsing (Phase 4)
+   --------------------------------------------------------------------------- */
+
+.filters {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+  align-items: end;
+}
+
+@media (min-width: 48rem) {
+  .filters {
+    grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  /* Matches the 44px control height so the checkbox row lines up with the
+     inputs beside it rather than floating. */
+  min-height: 2.75rem;
+}
+
+.input {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.product-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.product-card--skeleton {
+  min-height: 16rem;
+  background: var(--color-surface-raised);
+}
+
+.product-card__link {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* A placeholder tile standing in for product photography, so the layout is
+   honest about its proportions without shipping binary assets. */
+.product-card__image,
+.product-detail__image {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-3);
+}
+
+.product-card__name {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.product-card__meta {
+  margin: 0;
+}
+
+.product-card__price,
+.product-detail__price {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.product-detail__price {
+  font-size: var(--font-size-2xl);
+}
+
+.product-detail {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .product-detail {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.badge--in-stock {
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-fg);
+  align-self: flex-start;
+}
+
+.badge--low-stock {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+  align-self: flex-start;
+}
+
+.badge--out-of-stock {
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-fg);
+  align-self: flex-start;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.centred-block {
+  text-align: center;
+}

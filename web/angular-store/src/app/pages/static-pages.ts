@@ -4,30 +4,6 @@ import { RouterLink } from '@angular/router';
 import { Auth } from '../auth/auth';
 
 /**
- * Placeholder for the product list — real browsing arrives in Phase 4.
- *
- * Exists now so the navigation is complete and the shared e2e specs have a
- * second route to exercise; a nav link that goes nowhere cannot be tested.
- */
-@Component({
-  selector: 'app-products-page',
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div class="stack">
-      <h1 class="page-title">Products</h1>
-      <p class="lede">Browsing arrives in Phase 4.</p>
-      <section class="card">
-        <p class="muted" style="margin: 0">
-          This page will list products from the Catalog service via the Storefront BFF, with search,
-          filtering and server-side pagination — built in React and Angular in the same pull request.
-        </p>
-      </section>
-    </div>
-  `,
-})
-export class ProductsPage {}
-
-/**
  * OIDC redirect target.
  *
  * Keycloak sends the browser back here with `?code=&state=`. The auth library
