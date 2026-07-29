@@ -4,12 +4,16 @@ import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import type {
+  AdminBrand,
+  AdminCategory,
   AdminOrder,
   AdminOrderSummary,
+  AdminProduct,
   AdminUser,
   AuditEntry,
   Dashboard,
   SagaTimeline,
+  SaveProductRequest,
   StockItem,
 } from './admin-types';
 
@@ -119,6 +123,66 @@ export class AdminApi {
   removeRole(userId: string, role: string): Promise<AdminUser> {
     return firstValueFrom(
       this.http.delete<AdminUser>(`${this.baseUrl}/api/admin/users/${userId}/roles/${role}`),
+    );
+  }
+
+  // --- Catalogue -------------------------------------------------------------------------------
+
+  getProducts(search?: string): Promise<{ items: AdminProduct[]; totalCount: number }> {
+    const query = search ? `&search=${encodeURIComponent(search)}` : '';
+    return firstValueFrom(
+      this.http.get<{ items: AdminProduct[]; totalCount: number }>(
+        `${this.baseUrl}/api/catalog/products?pageSize=100${query}`,
+      ),
+    );
+  }
+
+  getProduct(id: string): Promise<AdminProduct> {
+    return firstValueFrom(this.http.get<AdminProduct>(`${this.baseUrl}/api/catalog/products/${id}`));
+  }
+
+  /** Withdrawn products are invisible to every other query, so they need their own. */
+  getWithdrawnProducts(): Promise<AdminProduct[]> {
+    return firstValueFrom(
+      this.http.get<AdminProduct[]>(`${this.baseUrl}/api/catalog/products/withdrawn`),
+    );
+  }
+
+  getCategories(): Promise<AdminCategory[]> {
+    return firstValueFrom(this.http.get<AdminCategory[]>(`${this.baseUrl}/api/catalog/categories`));
+  }
+
+  getBrands(): Promise<AdminBrand[]> {
+    return firstValueFrom(this.http.get<AdminBrand[]>(`${this.baseUrl}/api/catalog/brands`));
+  }
+
+  createProduct(product: SaveProductRequest): Promise<AdminProduct> {
+    return firstValueFrom(
+      this.http.post<AdminProduct>(`${this.baseUrl}/api/catalog/products`, product),
+    );
+  }
+
+  updateProduct(id: string, product: SaveProductRequest): Promise<AdminProduct> {
+    return firstValueFrom(
+      this.http.put<AdminProduct>(`${this.baseUrl}/api/catalog/products/${id}`, product),
+    );
+  }
+
+  /** A SEPARATE call, because it needs a separate permission. See ProductAdminEndpoints. */
+  changePrice(id: string, price: number): Promise<AdminProduct> {
+    return firstValueFrom(
+      this.http.put<AdminProduct>(`${this.baseUrl}/api/catalog/products/${id}/price`, { price }),
+    );
+  }
+
+  /** Soft delete. The row survives so historic orders keep working. */
+  withdrawProduct(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${this.baseUrl}/api/catalog/products/${id}`));
+  }
+
+  restoreProduct(id: string): Promise<AdminProduct> {
+    return firstValueFrom(
+      this.http.post<AdminProduct>(`${this.baseUrl}/api/catalog/products/${id}/restore`, {}),
     );
   }
 }

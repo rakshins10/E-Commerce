@@ -111,6 +111,48 @@ export interface SagaTimeline {
   readonly steps: readonly SagaStep[];
 }
 
+
+export interface AdminProduct {
+  readonly id: string;
+  readonly sku: string;
+  readonly name: string;
+  readonly description: string;
+  readonly price: number;
+  readonly currency: string;
+  readonly categoryName: string;
+  readonly categorySlug: string;
+  readonly brandName: string;
+  readonly brandSlug: string;
+  readonly imageUrl: string | null;
+  readonly stockOnHand: number;
+}
+
+export interface AdminCategory {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly parentSlug: string | null;
+  readonly productCount: number;
+}
+
+export interface AdminBrand {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly productCount: number;
+}
+
+export interface SaveProductRequest {
+  readonly sku?: string;
+  readonly name: string;
+  readonly description: string;
+  readonly price?: number;
+  readonly currency?: string;
+  readonly categoryId: string;
+  readonly brandId: string;
+  readonly imageUrl?: string | null;
+}
+
 /** Roles a manager may assign. Mirrors the server's allow-list — the server is what enforces it. */
 export const ASSIGNABLE_ROLES = [
   'customer',

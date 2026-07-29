@@ -14,6 +14,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- For DomainException, which this block translates into an RFC 7807 response.
+         The dependency points Observability -> Common, never the reverse: Common is referenced by
+         every DOMAIN project, so giving it a framework reference would make the domain depend on
+         ASP.NET and break the layering the architecture tests assert. -->
+    <ProjectReference Include="..\Common\ECommerce.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Sinks.Seq" />
     <PackageReference Include="Serilog.Enrichers.Environment" />

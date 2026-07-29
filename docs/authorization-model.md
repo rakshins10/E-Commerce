@@ -332,10 +332,12 @@ method body.
 | `PUT /basket/me/items/{id}` | `basket:write:own` | **`sub`** | 6 ✅ |
 | `DELETE /basket/me/items/{id}` | `basket:write:own` | **`sub`** | 6 ✅ |
 | `DELETE /basket/me` | `basket:write:own` | **`sub`** | 6 ✅ |
-| `POST /catalog/products` | `catalog:write` | — | 9 |
-| `PUT /catalog/products/{id}` | `catalog:write` | — | 9 |
-| `DELETE /catalog/products/{id}` | `catalog:delete` | — | 9 |
-| `PUT /catalog/products/{id}/price` | `price:override` | — | 9 |
+| `GET /catalog/products/withdrawn` | `catalog:write` | — | 9 ✅ |
+| `POST /catalog/products` | `catalog:write` | — | 9 ✅ |
+| `PUT /catalog/products/{id}` | `catalog:write` | — | 9 ✅ |
+| `PUT /catalog/products/{id}/price` | `price:override` | — | 9 ✅ |
+| `DELETE /catalog/products/{id}` | `catalog:delete` | — | 9 ✅ |
+| `POST /catalog/products/{id}/restore` | `catalog:delete` | — | 9 ✅ |
 | `POST /orders` | `order:write` | — | 6 ✅ |
 | `GET /orders/me` | `order:read` OR `order:read:own` | **`sub`** | 6 ✅ |
 | `GET /orders/{id}` | `order:read` OR `order:read:own` | **owner** | 6 ✅ |

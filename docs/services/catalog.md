@@ -186,18 +186,84 @@ vanish from the filter list, which looks like a bug.
 
 **Auth:** anonymous · **200** `BrandDto[]` with `productCount`.
 
-### Coming in Phase 9 (admin)
+### Admin endpoints
 
-| Endpoint | Permission |
-|----------|-----------|
-| `POST /api/catalog/products` | `catalog:write` |
-| `PUT /api/catalog/products/{id}` | `catalog:write` |
-| `DELETE /api/catalog/products/{id}` | `catalog:delete` |
-| `PUT /api/catalog/products/{id}/price` | `price:override` |
+Staff only, and in a separate file from the public reads
+([`ProductAdminEndpoints.cs`](../../src/services/catalog/ECommerce.Catalog.Api/Features/Products/ProductAdminEndpoints.cs))
+so the entire write surface is visible at once.
+
+| Endpoint | Permission | Notes |
+|----------|-----------|-------|
+| `POST /api/catalog/products` | `catalog:write` | |
+| `PUT /api/catalog/products/{id}` | `catalog:write` | Name, description, image, category, brand |
+| `PUT /api/catalog/products/{id}/price` | **`price:override`** | Separate on purpose — see below |
+| `DELETE /api/catalog/products/{id}` | `catalog:delete` | **Does not delete** — see below |
+| `POST /api/catalog/products/{id}/restore` | `catalog:delete` | Puts it back on sale |
+| `GET /api/catalog/products/withdrawn` | `catalog:write` | Withdrawn products, invisible everywhere else |
+
+#### Three permissions, not one
+
+Editing a description, changing a price, and withdrawing an item are **different powers held by different
+people**. A merchandiser writes copy; changing what customers are charged is the sort of thing an
+organisation wants separately grantable and separately auditable.
+
+That is why price is its own endpoint rather than a field on the update. Folding it in would mean anyone
+who can fix a typo can reprice the shop — and the permission could not be checked on the route, which is
+where the whole authorization surface is meant to be readable.
+
+Verified: `catalogmgr` succeeds; `support` and `ordermgr` both get **403** on price.
+
+#### `DELETE` does not delete
+
+The route is `DELETE` and the row survives. That is not a compromise — it is the correct behaviour, and
+the verb is kept because *withdrawing* is what "delete" means to the person clicking it.
+
+Hard-deleting a product **breaks history**. Orders copy the product name and price onto their own lines
+precisely so an old invoice still reads correctly, but:
+
+- the `product_id` on those lines would dangle;
+- the admin panel could not link from an order to what was bought;
+- any report joining orders to products would **silently lose rows**.
+
+So `is_active` goes false. The storefront stops showing it, checkout refuses it by name (*"'X' is not
+currently available"*), and everything historical keeps working. Restoring is one call rather than a
+database recovery.
+
+Verified end to end: the storefront's search went from 1 result to 0, the row remained with
+`is_active = f`, and restore put it back.
+
+> Because every other query filters `is_active = TRUE`, withdrawing something would otherwise make it
+> vanish from the only screen that could bring it back. Hence `GET /products/withdrawn`.
+
+#### The SKU is immutable
+
+Absent from both update requests, and disabled in both admin panels. It is what the warehouse picks by
+and what historic order lines record, so renaming one silently decouples an order from the thing that was
+shipped. Withdraw and create a new one instead.
+
+#### Duplicate SKUs
+
+Checked in code **and** enforced by a unique index. The check alone loses a race between two concurrent
+creates; the index alone produces a 500 with `23505: duplicate key value violates unique constraint` in
+the body. Both together give a merchandiser a sentence they can act on:
+
+```json
+{
+  "title": "The request was refused",
+  "status": 400,
+  "detail": "SKU 'NW-TS-001' is already in use.",
+  "correlationId": "019faec2-8dbf-7672-aba0-ee4efc47b02e"
+}
+```
+
+That translation is not local to this service — see
+[`DomainExceptionHandler`](../../src/building-blocks/Observability/DomainExceptionHandler.cs), applied by
+`AddObservability` so every service behaves the same way.
 
 ---
 
 ## Events
+
 
 | Direction | Event | Phase |
 |-----------|-------|-------|

@@ -8,6 +8,7 @@ import { oidcConfig } from './auth/oidc';
 import { AdminLayout } from './components/AdminLayout';
 import { RequirePermission } from './components/RequirePermission';
 import { Permissions } from './lib/permissions';
+import { CatalogPage, ProductEditPage } from './pages/CatalogPages';
 import {
   AuditPage,
   DashboardPage,
@@ -63,6 +64,26 @@ createRoot(document.getElementById('root')!).render(
                 element={
                   <RequirePermission permission={Permissions.Admin.DashboardRead}>
                     <DashboardPage />
+                  </RequirePermission>
+                }
+              />
+
+              <Route
+                path="catalog"
+                element={
+                  <RequirePermission permission={Permissions.Catalog.Read}>
+                    <CatalogPage />
+                  </RequirePermission>
+                }
+              />
+
+              {/* One route for both add and edit - the id "new" means create. A separate /catalog/new
+                  route would duplicate a 200-line form to change one boolean. */}
+              <Route
+                path="catalog/:id"
+                element={
+                  <RequirePermission permission={Permissions.Catalog.Write}>
+                    <ProductEditPage />
                   </RequirePermission>
                 }
               />

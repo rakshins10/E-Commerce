@@ -139,6 +139,25 @@ public class Product
         Touch();
     }
 
+    /// <summary>
+    /// Moves the product to a different category or brand.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="UpdateDetails"/> because it changes where the product APPEARS rather than
+    /// what it says - a merchandiser reorganising the taxonomy and one fixing a typo are doing different
+    /// jobs, and keeping them apart makes the intent readable in a log.
+    ///
+    /// The ids are checked against the taxonomy by the caller, not here: the domain project references
+    /// nothing outside the BCL, so it cannot query for them. That is the layering working as intended
+    /// rather than a gap.
+    /// </remarks>
+    public void MoveTo(Guid categoryId, Guid brandId)
+    {
+        CategoryId = Guard.AgainstEmpty(categoryId);
+        BrandId = Guard.AgainstEmpty(brandId);
+        Touch();
+    }
+
     /// <summary>Applies a stock figure received from Inventory. Never sets it authoritatively.</summary>
     public void SyncStock(int stockOnHand)
     {

@@ -79,6 +79,7 @@ app.MapGet("/", () => Results.Ok(new
 }));
 
 app.MapProductEndpoints();
+app.MapProductAdminEndpoints();
 
 // Migrate and seed before serving. See CatalogSeeder for why production would
 // do this as a separate deployment step instead.
