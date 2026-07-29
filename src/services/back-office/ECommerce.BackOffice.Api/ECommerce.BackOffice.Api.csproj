@@ -1,5 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Back-office service. Dashboard aggregates, user administration and the audit
+    log.
+
+    The one place in the repo that reads another service's database, and it does
+    so READ-ONLY and only for aggregates - see Features/DashboardEndpoints.cs for
+    why that exception is made and what keeps it honest.
+  -->
+
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Auth\ECommerce.Auth.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Common\ECommerce.Common.csproj" />
     <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
   </ItemGroup>
+
 </Project>

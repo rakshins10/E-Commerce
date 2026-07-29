@@ -6,7 +6,7 @@
 #  image bump lands in three of them.
 #
 #  Build context is web/ , because the apps depend on sibling workspace packages
-#  (@ecommerce/shared, @ecommerce/design-tokens) and npm workspaces need the
+#  npm workspaces need every workspace's package.json present before install, so
 #  root package.json and lockfile to resolve them.
 # =============================================================================
 
@@ -23,6 +23,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY react-store/package.json ./react-store/
 COPY angular-store/package.json ./angular-store/
+COPY react-admin/package.json ./react-admin/
+COPY angular-admin/package.json ./angular-admin/
 
 # `npm ci`, not `npm install`: it installs exactly the lockfile and fails if the
 # lockfile and package.json disagree. `npm install` would silently resolve newer

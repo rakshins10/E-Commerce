@@ -1,5 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    Admin BFF. A SECOND gateway, deliberately separate from the storefront's.
+
+    Not because the routing differs much, but because the two doors serve
+    different populations. The storefront BFF is reachable by every customer on
+    the internet; this one exposes stock adjustments, user administration and
+    refunds. One gateway carrying both means a mistake in a shared route table is
+    a mistake that hands admin surface to the public.
+  -->
+
   <ItemGroup>
+    <PackageReference Include="Yarp.ReverseProxy" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Auth\ECommerce.Auth.csproj" />
     <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
   </ItemGroup>
+
 </Project>

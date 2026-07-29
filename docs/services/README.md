@@ -30,8 +30,8 @@ OpenAPI is generated from the code; the written reference is kept in step with i
 | Inventory | [`inventory.md`](inventory.md) | Phase 7 ✅ |
 | Notification | [`notification.md`](notification.md) | Phase 7 ✅ |
 | Ordering Saga | [`ordering-saga.md`](ordering-saga.md) | Phase 7 ✅ |
-| Back-office | `back-office.md` | Phase 8 |
-| Admin BFF | `admin-bff.md` | Phase 8 |
+| Back-office | [`back-office.md`](back-office.md) | Phase 8 ✅ |
+| Admin BFF | [`admin-bff.md`](admin-bff.md) | Phase 8 ✅ |
 | Mobile BFF | `mobile-bff.md` | Phase 11 |
 
 **Everything else** exists as a deployable that boots, reports liveness and readiness, and emits traces,

@@ -12,11 +12,29 @@ import { defineConfig, devices } from '@playwright/test';
  */
 
 const target = process.env.E2E_TARGET ?? 'react';
-const baseURL =
-  process.env.E2E_BASE_URL ?? (target === 'angular' ? 'http://localhost:4200' : 'http://localhost:3000');
+
+/**
+ * Which application the specs run against.
+ *
+ * The storefront and the back office are separate applications, on separate ports, with separate
+ * Keycloak clients — so they get separate spec directories. What does NOT change is the parity
+ * property: each surface is still one suite, run twice, once per framework.
+ */
+const surface = process.env.E2E_SURFACE ?? 'storefront';
+
+const defaultPort =
+  surface === 'admin'
+    ? target === 'angular'
+      ? 4201
+      : 3001
+    : target === 'angular'
+      ? 4200
+      : 3000;
+
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${defaultPort}`;
 
 export default defineConfig({
-  testDir: './specs',
+  testDir: surface === 'admin' ? './specs-admin' : './specs',
   // Auth specs share a Keycloak SSO session cookie, so running them in parallel
   // makes one test's sign-out race another's sign-in. Serial is slower and
   // correct; a flaky auth suite is worse than a slow one.
@@ -41,7 +59,7 @@ export default defineConfig({
     navigationTimeout: 30_000,
   },
 
-  projects: [{ name: `${target}-chromium`, use: { ...devices['Desktop Chrome'] } }],
+  projects: [{ name: `${target}-${surface}-chromium`, use: { ...devices['Desktop Chrome'] } }],
 
   // Deliberately no `webServer`: the apps run in docker compose alongside
   // Keycloak, which the auth tests need. Starting a dev server here would test

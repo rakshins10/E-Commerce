@@ -39,6 +39,15 @@ public static class OrderEndpoints
         // someone holding order:read - the right to read ANY order - can self-evidently read their own.
         // Requiring only :own 403'd every member of staff who bought something from their own shop,
         // which is a real scenario rather than a hypothetical one.
+        // Every order, for staff. Distinct from /me, which is ALWAYS filtered to the caller's own
+        // `sub` - so an administrator hitting /me sees their own shopping, not the shop's orders.
+        // Two endpoints rather than one with a flag: "whose orders" is exactly the kind of decision
+        // that must not be a query parameter a client can set.
+        group.MapGet("/", GetAllOrders)
+            .RequirePermission(Permissions.Order.Read)
+            .WithSummary("Staff: every order, newest first.")
+            .Produces<PagedResult<OrderSummaryDto>>();
+
         group.MapGet("/me", GetMyOrders)
             .RequireAnyPermission(Permissions.Order.Read, Permissions.Order.ReadOwn)
             .WithSummary("The caller's orders, newest first.")
@@ -109,6 +118,21 @@ public static class OrderEndpoints
         OrderDto? dto = await queries.GetOrderAsync(order.Id, order.BuyerId, cancellationToken);
 
         return Results.Created($"/api/orders/{order.Id}", dto);
+    }
+
+    private static async Task<IResult> GetAllOrders(
+        OrderQueries queries,
+        CancellationToken cancellationToken,
+        int page = 1,
+        int pageSize = 25)
+    {
+        // buyerId null: no filter. The permission on the route is what decides who reaches this, and
+        // there is no way for a caller to ask for somebody else's orders specifically - they get all
+        // or their own, never a third party's.
+        PagedResult<OrderSummaryDto> result =
+            await queries.GetAllOrdersAsync(page, pageSize, cancellationToken);
+
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> GetMyOrders(

@@ -171,7 +171,7 @@ jobs:
   #  two implementations fails CI — including differences nobody thought to check.
   # ---------------------------------------------------------------------------
   e2e:
-    name: e2e (${{ matrix.target }})
+    name: e2e (${{ matrix.surface }}/${{ matrix.target }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [dotnet, frontend]
@@ -179,10 +179,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: react
+          # Two SURFACES, each run against both frameworks. The storefront and the back office are
+          # separate applications on separate ports with separate Keycloak clients, so they get
+          # separate spec directories - but each is still one suite run twice, which is the parity
+          # property ADR-0014 asks for.
+          - surface: storefront
+            target: react
             base_url: http://localhost:3000
-          - target: angular
+          - surface: storefront
+            target: angular
             base_url: http://localhost:4200
+          - surface: admin
+            target: react
+            base_url: http://localhost:3001
+          - surface: admin
+            target: angular
+            base_url: http://localhost:4201
 
     steps:
       - uses: actions/checkout@v4
@@ -226,13 +238,14 @@ jobs:
         env:
           E2E_BASE_URL: ${{ matrix.base_url }}
           E2E_TARGET: ${{ matrix.target }}
+          E2E_SURFACE: ${{ matrix.surface }}
         run: npx playwright test
 
       - name: Upload report
         if: always() && steps.exists.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.target }}
+          name: playwright-report-${{ matrix.surface }}-${{ matrix.target }}
           path: tests/e2e/playwright-report
           retention-days: 7
 

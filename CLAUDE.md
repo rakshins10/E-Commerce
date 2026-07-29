@@ -63,9 +63,19 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ 34 e2e specs green on both |
 | 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ✅ 49 e2e specs green on both |
 | 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
-| 8 | Back-office + Admin BFF + **both** admin shells | ⬜ |
+| 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
+| 9 | Catalogue CRUD in **both** admin panels | ⬜ **next** |
+| 10 | Resiliency, observability and security hardening | ⬜ |
+| 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
+| 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
+| 13 | Final pass — coverage, docs audit, fresh-machine walkthrough | ⬜ |
 
-Mobile (React Native) is explicitly **deferred** — the user asked not to build it yet.
+Mobile (React Native) and Kubernetes are explicitly **deferred** — the user asked to finish everything
+else first. That is now true.
+
+**Phase 9 starts here:** Catalog is GET-only. The write endpoints are already declared in
+`docs/authorization-model.md` §10 with their permissions, and the Admin BFF's catalogue route whitelists
+GET precisely so those endpoints are unreachable by default until a route is added for them.
 
 ---
 
@@ -114,8 +124,10 @@ node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette
 
 ```powershell
 cd tests/e2e
-npm run test:react                                # 34 specs against :3000
-npm run test:angular                              # the SAME 34 against :4200
+npm run test:react                                # 53 storefront specs against :3000
+npm run test:angular                              # the SAME 53 against :4200
+npm run test:react:admin                          # 15 back-office specs against :3001
+npm run test:angular:admin                        # the SAME 15 against :4201
 ```
 
 Both must pass. Specs use roles and accessible names only - never CSS selectors or test ids - because they
@@ -161,6 +173,8 @@ run against two independent implementations.
 | **Playwright `check()` asserts once, without retrying** | `Clicking the checkbox did not change its state` on CI while passing 96/96 locally - a controlled input can be briefly out of step with the DOM mid-re-render | `click()` then `expect(...).toBeChecked()`, which retries. Use the idempotent `setChecked` helper in `account.spec.ts` for specs that mutate persistent state |
 | **A spec that mutates state must not assume its starting state** | Passes on a clean database, fails on the second run | Make it idempotent - read the current state and act only if it differs. Run the suite **twice** before trusting it |
 | **DI validation catches missing registrations at BOOT** | A scoped service whose dependency was never registered crashes the container on startup, not on first request | Read it as a feature. The saga's missing IDbConnection surfaced in seconds instead of on a page nobody visits until production |
+| **Dapper constructor matching is case-SENSITIVE** | A positional record fails with "no matching signature" while an init-property record works, because PostgreSQL lowercases unquoted aliases | Use `{ get; init; }` properties on every read DTO |
+| **A paid order holds its stock reservation forever** | Repeated demo runs exhaust a SKU and the saga specs fail with "Out of stock" - correct behaviour, unhelpful seed data | Seed generously for products the specs buy; keep scarce ones the specs never touch |
 | **A service and its own namespace segment collide** | `Notification` the entity vs `ECommerce.Notification.Api` the namespace - `CS0118: is a namespace but is used like a type` | Fully qualify (`Model.Notification`) or rename the entity |
 | **Vitest does not type-check** | esbuild strips types, so a test calling a function with the wrong argument shape passes | React's `npm run build` (`tsc -b`) covers specs; Angular's `ng test` type-checks them itself. Run the build, not just the tests |
 | **`ng test` fails when there are zero specs** | `No tests found matching **/*.spec.ts` - a red CI job with nothing wrong | Keep at least one real spec in `angular-store` |
@@ -236,7 +250,7 @@ That is deliberate least privilege, and it is why the checkout e2e block runs se
 | RabbitMQ | http://localhost:15672 (`ecom` / `dev_only_rabbit_pw`) |
 | Services REST | 5001–5009 · gRPC 5101–5107 |
 | BFFs | 6001 storefront · 6002 admin · 6003 mobile |
-| Web (Phase 3+) | 3000 react-store · 4200 angular-store · 3001/4201 admin |
+| Web | 3000 react-store · 4200 angular-store · 3001 react-admin · 4201 angular-admin |
 | Docs site | https://rakshins10.github.io/E-Commerce/ |
 
 ---

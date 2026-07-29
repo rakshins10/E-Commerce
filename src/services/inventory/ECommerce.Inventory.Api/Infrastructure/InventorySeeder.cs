@@ -40,20 +40,32 @@ public static class InventorySeeder
 
         (string Sku, string Name, int OnHand)[] items =
         [
-            ("NW-TS-001", "Classic Cotton T-shirt", 42),
-            ("NW-TS-002", "Long Sleeve T-shirt", 18),
+            // Generous quantities on the products the demo and the e2e suite buy repeatedly.
+            //
+            // Not arbitrary: a PAID order holds its reservation until it ships, and nothing in this
+            // repo ships orders automatically - so every demo run permanently consumes stock. The
+            // original figures looked realistic and exhausted the Ceramic Mug after a day of testing,
+            // which failed the saga specs with "Out of stock" rather than the bug they were written
+            // to catch. Correct system behaviour, unhelpful seed data.
+            ("NW-TS-001", "Classic Cotton T-shirt", 500),
+            ("NW-TS-002", "Long Sleeve T-shirt", 500),
+            ("NW-HD-001", "Pullover Hoodie", 500),
+            ("NW-DW-001", "Enamel Mug", 500),
+            ("FB-DW-003", "Ceramic Mug", 500),
+            ("NW-ST-001", "Dot Grid Notebook", 500),
+            ("CT-DW-002", "Insulated Bottle", 500),
+
+            // Deliberately scarce, so the low-stock and out-of-stock UI states are reachable without
+            // editing the database. These are not bought by any spec.
             ("CT-TS-003", "Graphic Print T-shirt", 7),
-            ("NW-HD-001", "Pullover Hoodie", 25),
             ("CT-HD-002", "Zip-through Hoodie", 3),
             ("FB-HD-003", "Heavyweight Hoodie", 0),
-            ("NW-DW-001", "Enamel Mug", 60),
-            ("CT-DW-002", "Insulated Bottle", 12),
-            ("FB-DW-003", "Ceramic Mug", 33),
-            ("NW-ST-001", "Dot Grid Notebook", 21),
             ("CT-ST-002", "Fineliner Set", 0),
-            // In stock on purpose: this is the £5,200 item, and it is how the payment-failure and
-            // stock-release path is demonstrated end to end.
-            ("FB-ST-003", "Leather Portfolio", 2),
+
+            // The £5,200 item, kept in stock on purpose: it reserves successfully and is then declined
+            // by the payment simulator, which is how the compensation path is demonstrated. 200 so
+            // repeated runs of that spec do not exhaust it either.
+            ("FB-ST-003", "Leather Portfolio", 200),
         ];
 
         db.StockItems.AddRange(items.Select(item => new StockItem(item.Sku, item.Name, item.OnHand)));
