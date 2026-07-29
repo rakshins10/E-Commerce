@@ -19,6 +19,7 @@ import type { Permission } from '../lib/permissions';
  */
 const NAVIGATION: readonly { to: string; label: string; permission: Permission }[] = [
   { to: '/', label: 'Dashboard', permission: Permissions.Admin.DashboardRead },
+  { to: '/catalog', label: 'Catalogue', permission: Permissions.Catalog.Read },
   { to: '/orders', label: 'Orders', permission: Permissions.Order.Read },
   { to: '/inventory', label: 'Inventory', permission: Permissions.Inventory.Read },
   { to: '/users', label: 'Users', permission: Permissions.Users.Read },

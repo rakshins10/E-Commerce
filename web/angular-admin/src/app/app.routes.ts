@@ -31,6 +31,20 @@ export const routes: Routes = [
     title: 'Dashboard',
   },
   {
+    path: 'catalog',
+    canActivate: [requirePermission(Permissions.Catalog.Read)],
+    loadComponent: () => import('./pages/catalog').then((m) => m.CatalogPage),
+    title: 'Catalogue',
+  },
+  {
+    // One route for both add and edit - the id "new" means create. A separate /catalog/new route
+    // would duplicate a 200-line form to change one boolean.
+    path: 'catalog/:id',
+    canActivate: [requirePermission(Permissions.Catalog.Write)],
+    loadComponent: () => import('./pages/catalog').then((m) => m.ProductEditPage),
+    title: 'Product',
+  },
+  {
     path: 'orders',
     canActivate: [requirePermission(Permissions.Order.Read)],
     loadComponent: () => import('./pages/orders').then((m) => m.AdminOrdersPage),

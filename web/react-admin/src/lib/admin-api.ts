@@ -113,6 +113,48 @@ export interface SagaTimeline {
   readonly steps: readonly SagaStep[];
 }
 
+
+export interface AdminProduct {
+  readonly id: string;
+  readonly sku: string;
+  readonly name: string;
+  readonly description: string;
+  readonly price: number;
+  readonly currency: string;
+  readonly categoryName: string;
+  readonly categorySlug: string;
+  readonly brandName: string;
+  readonly brandSlug: string;
+  readonly imageUrl: string | null;
+  readonly stockOnHand: number;
+}
+
+export interface AdminCategory {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly parentSlug: string | null;
+  readonly productCount: number;
+}
+
+export interface AdminBrand {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly productCount: number;
+}
+
+export interface SaveProductRequest {
+  readonly sku?: string;
+  readonly name: string;
+  readonly description: string;
+  readonly price?: number;
+  readonly currency?: string;
+  readonly categoryId: string;
+  readonly brandId: string;
+  readonly imageUrl?: string | null;
+}
+
 /** Roles a manager may assign. Mirrors the server's allow-list — the server is what enforces it. */
 export const ASSIGNABLE_ROLES = [
   'customer',
@@ -170,5 +212,35 @@ export function createAdminApi(getAccessToken: () => string | null) {
 
     removeRole: (userId: string, role: string) =>
       client.delete<AdminUser>(`/api/admin/users/${userId}/roles/${role}`),
+
+    // --- Catalogue ---------------------------------------------------------------------------
+    getProducts: (search?: string) =>
+      client.get<{ items: AdminProduct[]; totalCount: number }>(
+        `/api/catalog/products?pageSize=100${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+      ),
+
+    getProduct: (id: string) => client.get<AdminProduct>(`/api/catalog/products/${id}`),
+
+    /** Withdrawn products are invisible to every other query, so they need their own. */
+    getWithdrawnProducts: () => client.get<AdminProduct[]>('/api/catalog/products/withdrawn'),
+
+    getCategories: () => client.get<AdminCategory[]>('/api/catalog/categories'),
+
+    getBrands: () => client.get<AdminBrand[]>('/api/catalog/brands'),
+
+    createProduct: (product: SaveProductRequest) =>
+      client.post<AdminProduct>('/api/catalog/products', product),
+
+    updateProduct: (id: string, product: SaveProductRequest) =>
+      client.put<AdminProduct>(`/api/catalog/products/${id}`, product),
+
+    /** A SEPARATE call, because it needs a separate permission. See ProductAdminEndpoints. */
+    changePrice: (id: string, price: number) =>
+      client.put<AdminProduct>(`/api/catalog/products/${id}/price`, { price }),
+
+    /** Soft delete. The row survives so historic orders keep working. */
+    withdrawProduct: (id: string) => client.delete<void>(`/api/catalog/products/${id}`),
+
+    restoreProduct: (id: string) => client.post<AdminProduct>(`/api/catalog/products/${id}/restore`),
   };
 }
