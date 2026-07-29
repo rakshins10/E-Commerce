@@ -1,20 +1,20 @@
 using System.Data;
-
 using ECommerce.Auth;
 using ECommerce.Common.SeedWork;
 using ECommerce.Contracts.Ordering;
+using ECommerce.Contracts.Saga;
+using ECommerce.EventBus;
 using ECommerce.EventBus.RabbitMQ;
 using ECommerce.Observability;
 using ECommerce.Ordering.Api.Features;
+using ECommerce.Ordering.Api.Handlers;
 using ECommerce.Ordering.Application.Orders;
 using ECommerce.Ordering.Domain.Orders;
 using ECommerce.Ordering.Infrastructure;
 using ECommerce.Ordering.Infrastructure.Orders;
 using ECommerce.Ordering.Infrastructure.Services;
 using ECommerce.Outbox;
-
 using Microsoft.EntityFrameworkCore;
-
 using Npgsql;
 
 // -----------------------------------------------------------------------------
@@ -48,6 +48,10 @@ builder.Services.AddScoped<IOrderingUnitOfWork, OrderingUnitOfWork>();
 builder.Services.AddScoped<PlaceOrderHandler>();
 builder.Services.AddScoped<CancelOrderHandler>();
 builder.Services.AddScoped<AdvanceOrderHandler>();
+
+// Consumes the saga's transition commands. Ordering is both a publisher and a consumer, which is the
+// normal shape - a service that only publishes is a source, and one that only consumes is a sink.
+builder.Services.AddScoped<AdvanceOrderCommandHandler>();
 
 // --- Service-to-service HTTP -------------------------------------------------------------------
 //
@@ -136,5 +140,11 @@ using (IServiceScope scope = app.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<OrderingDbContext>().Database.MigrateAsync();
 }
+
+// Subscriptions come AFTER the migration, so a consumer never handles a message against a schema that
+// does not exist yet.
+IEventBus bus = app.Services.GetRequiredService<IEventBus>();
+
+await bus.SubscribeAsync<AdvanceOrderCommand, AdvanceOrderCommandHandler>();
 
 await app.RunAsync();

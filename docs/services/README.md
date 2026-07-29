@@ -26,10 +26,10 @@ OpenAPI is generated from the code; the written reference is kept in step with i
 | User Profile | [`user-profile.md`](user-profile.md) | Phase 5 ✅ |
 | Basket | [`basket.md`](basket.md) | Phase 6 ✅ |
 | Ordering | [`ordering.md`](ordering.md) | Phase 6 ✅ |
-| Payment | `payment.md` | Phase 7 |
-| Inventory | `inventory.md` | Phase 7 |
-| Notification | `notification.md` | Phase 7 |
-| Ordering Saga | `ordering-saga.md` | Phase 7 |
+| Payment | [`payment.md`](payment.md) | Phase 7 ✅ |
+| Inventory | [`inventory.md`](inventory.md) | Phase 7 ✅ |
+| Notification | [`notification.md`](notification.md) | Phase 7 ✅ |
+| Ordering Saga | [`ordering-saga.md`](ordering-saga.md) | Phase 7 ✅ |
 | Back-office | `back-office.md` | Phase 8 |
 | Admin BFF | `admin-bff.md` | Phase 8 |
 | Mobile BFF | `mobile-bff.md` | Phase 11 |

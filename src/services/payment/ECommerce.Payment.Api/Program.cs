@@ -1,43 +1,84 @@
+using ECommerce.Auth;
+using ECommerce.Contracts.Saga;
+using ECommerce.EventBus;
+using ECommerce.EventBus.RabbitMQ;
 using ECommerce.Observability;
+using ECommerce.Outbox;
+using ECommerce.Payment.Api.Handlers;
+using ECommerce.Payment.Api.Infrastructure;
+
+using Microsoft.EntityFrameworkCore;
 
 // -----------------------------------------------------------------------------
 //  payment
 // -----------------------------------------------------------------------------
-//  Phase 1 shape: this service boots, reports health, and is observable. Its
-//  domain arrives in a later phase (see the phase table in README.md).
-//
-//  The composition root is deliberately the ONLY place that knows about
-//  infrastructure. Everything below is wiring; no business logic lives here.
-//  See docs/architecture.md and docs/operations/health-checks.md.
+//  A deterministic simulator behind a real event boundary. Swapping in an actual
+//  provider changes RequestPaymentHandler.AuthoriseAsync and nothing else - the
+//  saga, the outbox and the compensation path are all unaffected by where the
+//  money comes from. See docs/services/payment.md.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Structured logging, distributed tracing and metrics, configured identically in
-// every service so that spans and log lines actually correlate across them.
 builder.AddObservability("payment");
 
-// Liveness is a self check only. Dependency checks (database, broker, cache) are
-// registered with the `ready` tag as each service gains them, so that a database
-// blip never causes the orchestrator to restart healthy processes.
-builder.Services.AddDefaultHealthChecks();
+string connectionString =
+    builder.Configuration.GetConnectionString("PaymentDb")
+    ?? throw new InvalidOperationException("ConnectionStrings:PaymentDb is not configured.");
+
+builder.Services.AddDbContext<PaymentDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
+
+builder.Services.AddRabbitMqEventBus(builder.Configuration, "payment");
+builder.Services.AddOutbox<PaymentDbContext>(
+    builder.Configuration, typeof(RequestPaymentCommand).Assembly);
+
+builder.Services.AddScoped<RequestPaymentHandler>();
+builder.Services.AddScoped<RefundPaymentHandler>();
+
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPermissionPolicies();
+
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
+
+builder.Services
+    .AddDefaultHealthChecks()
+    .AddNpgSql(connectionString, name: "payment-db", tags: ["ready"]);
+
+builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
-// Correlation must be first: a request that fails inside exception handling
-// should still be correlated. Request logging follows so its completion event
-// carries the correlation id.
 app.UseObservability();
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultHealthChecks();
+app.MapOpenApi();
 
-// A minimal identity endpoint. Useful when you have thirty containers running
-// and want to confirm which service is answering on a port.
+// The decline threshold is published on the identity endpoint deliberately: it is the one piece of
+// configuration somebody demonstrating the compensation path needs to know, and hunting for it in a
+// constant is a poor use of anybody's time.
 app.MapGet("/", () => Results.Ok(new
 {
     service = "payment",
     status = "up",
     environment = app.Environment.EnvironmentName,
+    declineThreshold = RequestPaymentHandler.DeclineThreshold,
 }));
+
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<PaymentDbContext>().Database.MigrateAsync();
+}
+
+IEventBus bus = app.Services.GetRequiredService<IEventBus>();
+
+await bus.SubscribeAsync<RequestPaymentCommand, RequestPaymentHandler>();
+await bus.SubscribeAsync<RefundPaymentCommand, RefundPaymentHandler>();
 
 await app.RunAsync();

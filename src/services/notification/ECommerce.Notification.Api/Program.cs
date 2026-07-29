@@ -1,43 +1,76 @@
+using ECommerce.Auth;
+using ECommerce.Contracts.Ordering;
+using ECommerce.EventBus;
+using ECommerce.EventBus.RabbitMQ;
+using ECommerce.Notification.Api.Handlers;
+using ECommerce.Notification.Api.Infrastructure;
 using ECommerce.Observability;
+using ECommerce.Outbox;
+
+using Microsoft.EntityFrameworkCore;
 
 // -----------------------------------------------------------------------------
 //  notification
 // -----------------------------------------------------------------------------
-//  Phase 1 shape: this service boots, reports health, and is observable. Its
-//  domain arrives in a later phase (see the phase table in README.md).
-//
-//  The composition root is deliberately the ONLY place that knows about
-//  infrastructure. Everything below is wiring; no business logic lives here.
-//  See docs/architecture.md and docs/operations/health-checks.md.
+//  Emails the customer when something happens to their order. The one service
+//  where a duplicate message is genuinely unrecoverable - an email cannot be
+//  un-sent - so it deduplicates explicitly with processed_messages, in the same
+//  transaction as the notification row.
+//  See docs/services/notification.md.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Structured logging, distributed tracing and metrics, configured identically in
-// every service so that spans and log lines actually correlate across them.
 builder.AddObservability("notification");
 
-// Liveness is a self check only. Dependency checks (database, broker, cache) are
-// registered with the `ready` tag as each service gains them, so that a database
-// blip never causes the orchestrator to restart healthy processes.
-builder.Services.AddDefaultHealthChecks();
+string connectionString =
+    builder.Configuration.GetConnectionString("NotificationDb")
+    ?? throw new InvalidOperationException("ConnectionStrings:NotificationDb is not configured.");
+
+builder.Services.AddDbContext<NotificationDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
+
+builder.Services.AddRabbitMqEventBus(builder.Configuration, "notification");
+builder.Services.AddOutbox<NotificationDbContext>(
+    builder.Configuration, typeof(OrderSubmittedIntegrationEvent).Assembly);
+
+builder.Services.AddScoped<OrderSubmittedNotificationHandler>();
+builder.Services.AddScoped<OrderPaidNotificationHandler>();
+builder.Services.AddScoped<OrderShippedNotificationHandler>();
+builder.Services.AddScoped<OrderCancelledNotificationHandler>();
+
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPermissionPolicies();
+
+builder.Services
+    .AddDefaultHealthChecks()
+    .AddNpgSql(connectionString, name: "notification-db", tags: ["ready"]);
 
 WebApplication app = builder.Build();
 
-// Correlation must be first: a request that fails inside exception handling
-// should still be correlated. Request logging follows so its completion event
-// carries the correlation id.
 app.UseObservability();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultHealthChecks();
 
-// A minimal identity endpoint. Useful when you have thirty containers running
-// and want to confirm which service is answering on a port.
 app.MapGet("/", () => Results.Ok(new
 {
     service = "notification",
     status = "up",
     environment = app.Environment.EnvironmentName,
 }));
+
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    await scope.ServiceProvider.GetRequiredService<NotificationDbContext>().Database.MigrateAsync();
+}
+
+IEventBus bus = app.Services.GetRequiredService<IEventBus>();
+
+await bus.SubscribeAsync<OrderSubmittedIntegrationEvent, OrderSubmittedNotificationHandler>();
+await bus.SubscribeAsync<OrderPaidIntegrationEvent, OrderPaidNotificationHandler>();
+await bus.SubscribeAsync<OrderShippedIntegrationEvent, OrderShippedNotificationHandler>();
+await bus.SubscribeAsync<OrderCancelledIntegrationEvent, OrderCancelledNotificationHandler>();
 
 await app.RunAsync();

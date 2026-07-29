@@ -7,6 +7,7 @@ import {
   createShopApi,
   ORDER_CANCELLATION_LABELS,
   ORDER_STATUS_LABELS,
+  SAGA_STEP_LABELS,
   type OrderStatus,
 } from '../lib/basket';
 import { formatDateTime, formatMoney } from '../lib/formatting';
@@ -152,6 +153,31 @@ export function OrderDetailPage() {
     queryKey: ['order', id],
     queryFn: () => api.getOrder(id!),
     enabled: isAuthenticated && Boolean(id),
+
+    // Checkout is ASYNCHRONOUS. The order is created immediately, but stock reservation and payment
+    // happen over the message bus afterwards - so a customer arriving straight from checkout sees
+    // "Order placed" and, a few seconds later, "Paid". Polling while the order is still in flight is
+    // what makes that visible instead of requiring a manual refresh.
+    //
+    // It stops once the order reaches a state nothing will move it out of. A page that polls forever
+    // is a page that keeps a laptop's radio awake all night.
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'Submitted' || status === 'AwaitingPayment' ? 2_000 : false;
+    },
+  });
+
+  // The saga timeline: what the checkout process actually DID. The order status says what it is;
+  // this says what happened, which is what a customer looking at a cancelled order wants to know.
+  const sagaQuery = useQuery({
+    queryKey: ['saga', id],
+    queryFn: () => api.getSagaTimeline(id!),
+    enabled: isAuthenticated && Boolean(id),
+    refetchInterval: (query) =>
+      query.state.data?.completedAt ? false : 2_000,
+    // A missing saga is not an error worth showing. Orders placed before Phase 7 have none, and the
+    // page is perfectly useful without it.
+    retry: false,
   });
 
   const cancel = useMutation({
@@ -265,6 +291,33 @@ export function OrderDetailPage() {
           </p>
         )}
       </section>
+
+      {sagaQuery.data && sagaQuery.data.steps.length > 0 && (
+        <section className="card stack" aria-labelledby="progress-heading">
+          <h2 id="progress-heading">Order progress</h2>
+
+          {/* An ordered list, because these steps happened in a sequence and a screen reader should
+              say so. Rendered from the SAGA, not from the order status - the order can only tell you
+              where it ended up, and "we reserved your stock and then released it" is the part that
+              explains why. */}
+          <ol className="plain-list">
+            {sagaQuery.data.steps.map((step, index) => (
+              <li key={`${step.name}-${index}`}>
+                <strong>{SAGA_STEP_LABELS[step.name] ?? step.name}</strong>
+                <span className="muted small"> — {formatDateTime(step.occurredAt)}</span>
+              </li>
+            ))}
+          </ol>
+
+          {sagaQuery.data.state === 'Compensated' && (
+            // Said plainly. A customer whose payment failed needs to know that nothing was charged
+            // and that the items are back on sale, not to infer it from a status word.
+            <p className="muted" role="status">
+              Nothing was charged, and the items have been returned to stock.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="card stack" aria-labelledby="items-heading">
         <h2 id="items-heading">Items</h2>

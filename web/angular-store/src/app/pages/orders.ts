@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnDestroy,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 import { Auth } from '../auth/auth';
@@ -7,8 +15,10 @@ import {
   ORDER_CANCELLATION_LABELS,
   ORDER_STATUS_LABELS,
   ORDER_TIMELINE,
+  SAGA_STEP_LABELS,
   type Order,
   type OrderSummary,
+  type SagaTimeline,
 } from '../core/basket';
 import { formatDateTime, formatMoney } from '../core/formatting';
 
@@ -211,6 +221,35 @@ export class OrdersPage {
           }
         </section>
 
+        @if (saga(); as timeline) {
+          @if (timeline.steps.length > 0) {
+            <section class="card stack" aria-labelledby="progress-heading">
+              <h2 id="progress-heading">Order progress</h2>
+
+              <!-- An ordered list, because these steps happened in a sequence and a screen reader
+                   should say so. Rendered from the SAGA, not the order status: the order can only
+                   tell you where it ended up, and "we reserved your stock and then released it" is
+                   the part that explains why. -->
+              <ol class="plain-list">
+                @for (step of timeline.steps; track $index) {
+                  <li>
+                    <strong>{{ stepLabel(step.name) }}</strong>
+                    <span class="muted small"> — {{ dateTime(step.occurredAt) }}</span>
+                  </li>
+                }
+              </ol>
+
+              @if (timeline.state === 'Compensated') {
+                <!-- Said plainly. A customer whose payment failed needs to know nothing was charged
+                     and the items are back on sale, not to infer it from a status word. -->
+                <p class="muted" role="status">
+                  Nothing was charged, and the items have been returned to stock.
+                </p>
+              }
+            </section>
+          }
+        }
+
         <section class="card stack" aria-labelledby="items-heading">
           <h2 id="items-heading">Items</h2>
 
@@ -258,7 +297,7 @@ export class OrdersPage {
     }
   `,
 })
-export class OrderDetailPage {
+export class OrderDetailPage implements OnDestroy {
   /** Bound from the route by `withComponentInputBinding()`. */
   readonly id = input.required<string>();
 
@@ -269,11 +308,24 @@ export class OrderDetailPage {
   private readonly baskets = inject(BasketService);
 
   protected readonly order = signal<Order | null>(null);
+  protected readonly saga = signal<SagaTimeline | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
 
   protected readonly timeline = ORDER_TIMELINE;
+  protected readonly stepLabel = (name: string) => SAGA_STEP_LABELS[name] ?? name;
+  protected readonly dateTime = (value: string) => formatDateTime(value);
+
+  /**
+   * The polling handle, so it can be stopped.
+   *
+   * React's TanStack Query takes a `refetchInterval` and handles the teardown itself. Angular has no
+   * equivalent, so the interval is created, tracked and cleared by hand in ngOnDestroy - and forgetting
+   * that last part leaves a timer running against a destroyed component for as long as the tab is open.
+   * Another instance of the same pattern: fewer lines in Angular, fewer guarantees with them.
+   */
+  private pollHandle: ReturnType<typeof setInterval> | null = null;
   protected readonly money = (amount: number, currency: string) => formatMoney({ amount, currency });
   protected readonly statusLabel = (status: Order['status']) => ORDER_STATUS_LABELS[status];
 
@@ -308,11 +360,17 @@ export class OrderDetailPage {
     queueMicrotask(() => void this.load());
   }
 
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
   private async load(): Promise<void> {
     this.isLoading.set(true);
 
     try {
       this.order.set(await this.baskets.getOrder(this.id()));
+      await this.loadSaga();
+      this.startPollingIfInFlight();
     } catch {
       // A 404 and a network failure both mean "we cannot show you this order". The message stays
       // vague on purpose: confirming that an order exists but belongs to someone else is exactly the
@@ -320,6 +378,58 @@ export class OrderDetailPage {
       this.order.set(null);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Checkout is ASYNCHRONOUS: the order exists immediately, but stock reservation and payment happen
+   * over the message bus afterwards. Polling while the order is in flight is what lets a customer watch
+   * "Order placed" become "Paid" without refreshing.
+   *
+   * It stops as soon as the order reaches a state nothing will move it out of - a page that polls
+   * forever keeps a laptop's radio awake all night.
+   */
+  private startPollingIfInFlight(): void {
+    const status = this.order()?.status;
+
+    if (status !== 'Submitted' && status !== 'AwaitingPayment') {
+      return;
+    }
+
+    this.pollHandle ??= setInterval(() => void this.refresh(), 2_000);
+  }
+
+  private stopPolling(): void {
+    if (this.pollHandle !== null) {
+      clearInterval(this.pollHandle);
+      this.pollHandle = null;
+    }
+  }
+
+  private async refresh(): Promise<void> {
+    try {
+      this.order.set(await this.baskets.getOrder(this.id()));
+      await this.loadSaga();
+
+      const status = this.order()?.status;
+
+      if (status !== 'Submitted' && status !== 'AwaitingPayment') {
+        this.stopPolling();
+      }
+    } catch {
+      // A transient failure during polling is not worth showing - the next tick will retry, and an
+      // error banner appearing and vanishing on its own is worse than a moment of stale data.
+      this.stopPolling();
+    }
+  }
+
+  private async loadSaga(): Promise<void> {
+    try {
+      this.saga.set(await this.baskets.getSagaTimeline(this.id()));
+    } catch {
+      // No saga is not an error worth showing: orders placed before Phase 7 have none, and the page is
+      // perfectly useful without it.
+      this.saga.set(null);
     }
   }
 
