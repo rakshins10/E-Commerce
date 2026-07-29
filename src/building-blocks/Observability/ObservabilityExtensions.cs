@@ -46,6 +46,11 @@ public static class ObservabilityExtensions
 
         string serviceVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "0.0.0";
 
+        // A refused request is the system working, not failing. Without this, a broken business rule
+        // returns 500 with a stack trace in the body - the status code lies about whose fault it is,
+        // and the body leaks the application's internals. See DomainExceptionHandler.
+        builder.Services.AddDomainExceptionHandling();
+
         AddSerilog(builder, serviceName);
         AddOpenTelemetry(builder, serviceName, serviceVersion);
 
@@ -137,6 +142,10 @@ public static class ObservabilityExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
 
+        // Exception handling comes FIRST, so a failure inside any later middleware is still translated
+        // and still correlated. Correlation follows immediately, because the handler reads the id it
+        // sets - and a request that fails during correlation setup would otherwise be untraceable.
+        app.UseExceptionHandler();
         app.UseCorrelationId();
         app.UseSerilogRequestLogging(options =>
         {

@@ -230,6 +230,39 @@ public sealed class ProductQueries(IDbConnection connection)
         return (await connection.QueryAsync<ProductPriceDto>(command)).ToArray();
     }
 
+    /// <summary>
+    /// Products currently withdrawn from sale.
+    /// </summary>
+    /// <remarks>
+    /// The admin panel needs this because every other query filters on <c>is_active = TRUE</c> - so
+    /// withdrawing something makes it vanish from the only screen that could bring it back.
+    /// </remarks>
+    public async Task<IReadOnlyList<ProductSummaryDto>> GetWithdrawnAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT  p.id            AS Id,
+                    p.sku           AS Sku,
+                    p.name          AS Name,
+                    p.price         AS Price,
+                    p.currency      AS Currency,
+                    c.name          AS CategoryName,
+                    c.slug          AS CategorySlug,
+                    b.name          AS BrandName,
+                    b.slug          AS BrandSlug,
+                    p.image_url     AS ImageUrl,
+                    p.stock_on_hand AS StockOnHand
+            FROM products p
+            JOIN categories c ON c.id = p.category_id
+            JOIN brands     b ON b.id = p.brand_id
+            WHERE p.is_active = FALSE
+            ORDER BY p.name;
+            """;
+
+        return (await connection.QueryAsync<ProductSummaryDto>(
+            new CommandDefinition(sql, cancellationToken: cancellationToken))).ToArray();
+    }
+
     public async Task<ProductDetailDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         const string sql = """
