@@ -1,3 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  </Project>
+  <!--
+    The application layer: orchestration, and nothing else.
+
+    Command handlers load an aggregate, call a method on it, translate the domain
+    event into the published contract, and commit. Every RULE lives in the
+    domain. Query handlers use Dapper and return DTOs, and have no way to reach a
+    domain type - CQRS as a boundary rather than a naming convention.
+
+    It references Dapper but NOT EF Core: writes go through the repository
+    interface, and committing goes through IOrderingUnitOfWork. That keeps the
+    layering assertion in tests/unit/ECommerce.Architecture.Tests true.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ECommerce.Ordering.Domain\ECommerce.Ordering.Domain.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Outbox\ECommerce.Outbox.csproj" />
+    <ProjectReference Include="..\..\..\contracts\ECommerce.Contracts\ECommerce.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

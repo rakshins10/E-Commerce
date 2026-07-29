@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <!--
+    Note what is NOT here: no database, no Testcontainers, no HTTP host. These
+    tests exercise the aggregate directly, which is only possible because the
+    domain layer has no infrastructure dependencies. That is the practical payoff
+    of the layering, and the reason this suite runs in milliseconds and can be
+    run on every keystroke.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\services\ordering\ECommerce.Ordering.Domain\ECommerce.Ordering.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

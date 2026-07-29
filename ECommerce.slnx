@@ -16,6 +16,12 @@
   <Folder Name="/src/building-blocks/Observability/">
     <Project Path="src/building-blocks/Observability/ECommerce.Observability.csproj" />
   </Folder>
+  <Folder Name="/src/building-blocks/Outbox/">
+    <Project Path="src/building-blocks/Outbox/ECommerce.Outbox.csproj" />
+  </Folder>
+  <Folder Name="/src/contracts/">
+    <Project Path="src/contracts/ECommerce.Contracts/ECommerce.Contracts.csproj" />
+  </Folder>
   <Folder Name="/src/gateways/" />
   <Folder Name="/src/gateways/admin-bff/">
     <Project Path="src/gateways/admin-bff/ECommerce.AdminBff/ECommerce.AdminBff.csproj" />
@@ -64,5 +70,6 @@
   <Folder Name="/tests/unit/">
     <Project Path="tests/unit/ECommerce.Architecture.Tests/ECommerce.Architecture.Tests.csproj" />
     <Project Path="tests/unit/ECommerce.Common.Tests/ECommerce.Common.Tests.csproj" />
+    <Project Path="tests/unit/ECommerce.Ordering.Domain.Tests/ECommerce.Ordering.Domain.Tests.csproj" />
   </Folder>
 </Solution>

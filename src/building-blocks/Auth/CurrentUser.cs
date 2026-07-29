@@ -79,3 +79,34 @@ public sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICur
     public bool HasPermission(string permission) =>
         Principal?.HasClaim(ECommerce.Auth.Permissions.ClaimType, permission) ?? false;
 }
+
+/// <summary>Convenience over <see cref="ICurrentUser"/>.</summary>
+public static class CurrentUserExtensions
+{
+    /// <summary>
+    /// The caller's Keycloak <c>sub</c>, or an exception if there is not one.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Every <c>/me</c> route needs this and none of them can proceed without it, so the alternative is
+    /// the same four-line null check copied into every handler in every service — where it will
+    /// eventually be written as <c>?? string.Empty</c> by someone in a hurry, silently turning "no
+    /// subject" into "the customer whose id is the empty string".
+    /// </para>
+    /// <para>
+    /// It throws rather than returning null because the situation is genuinely impossible on a route
+    /// that requires a permission: authentication has already succeeded, so a token without a subject
+    /// means a misconfigured identity provider, not a bad request. A 500 is the honest response, and the
+    /// stack trace points at the configuration.
+    /// </para>
+    /// </remarks>
+    public static string RequireSubject(this ICurrentUser user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        return user.UserId
+               ?? throw new InvalidOperationException(
+                   "Authenticated request carries no 'sub' claim. Check the identity provider's "
+                   + "token configuration - this should be impossible on an authorized route.");
+    }
+}

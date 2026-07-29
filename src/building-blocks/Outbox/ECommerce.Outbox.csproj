@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The transactional outbox, shared by every service that publishes integration
+    events. Ordering uses it first; Payment and Inventory follow in Phase 7.
+
+    It references EF Core because the whole point is to write the message in the
+    SAME transaction as the business data, and that means going through the same
+    change tracker. A broker-agnostic outbox that could not do that would be
+    solving a different, easier, useless problem.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventBus\ECommerce.EventBus.csproj" />
+    <ProjectReference Include="..\Observability\ECommerce.Observability.csproj" />
+  </ItemGroup>
+
+</Project>

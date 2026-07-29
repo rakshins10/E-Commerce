@@ -320,8 +320,7 @@ public static class ProfileEndpoints
         UserProfileDbContext db,
         CancellationToken cancellationToken)
     {
-        string subject = currentUser.UserId
-                         ?? throw new InvalidOperationException("Authenticated request has no subject claim.");
+        string subject = currentUser.RequireSubject();
 
         Domain.UserProfile? profile = await LoadAsync(db, subject, cancellationToken);
         if (profile is not null)

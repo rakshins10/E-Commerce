@@ -10,6 +10,9 @@ import { HomePage } from './pages/HomePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { AccountPage } from './pages/AccountPage';
+import { BasketPage } from './pages/BasketPage';
+import { CheckoutPage } from './pages/CheckoutPage';
+import { OrderDetailPage, OrdersPage } from './pages/OrdersPage';
 import { AuthCallbackPage, ForbiddenPage, NotFoundPage, SilentRenewPage } from './pages/StaticPages';
 
 import './styles/app.css';
@@ -49,6 +52,10 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<HomePage />} />
               <Route path="products" element={<ProductsPage />} />
               <Route path="products/:id" element={<ProductDetailPage />} />
+              <Route path="basket" element={<BasketPage />} />
+              <Route path="checkout" element={<CheckoutPage />} />
+              <Route path="orders" element={<OrdersPage />} />
+              <Route path="orders/:id" element={<OrderDetailPage />} />
               <Route path="account" element={<AccountPage />} />
               <Route path="auth/callback" element={<AuthCallbackPage />} />
               <Route path="forbidden" element={<ForbiddenPage />} />

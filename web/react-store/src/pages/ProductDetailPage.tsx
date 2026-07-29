@@ -1,9 +1,13 @@
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useAuth } from 'react-oidc-context';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getProduct, stockLevel } from '../lib/catalog';
+import { createShopApi } from '../lib/basket';
 import { formatMoney } from '../lib/formatting';
 import { ApiError } from '../lib/api-client';
+import { useCurrentUser } from '../auth/useCurrentUser';
 
 /**
  * A single product.
@@ -15,6 +19,15 @@ import { ApiError } from '../lib/api-client';
  */
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const auth = useAuth();
+  const queryClient = useQueryClient();
+  const { isAuthenticated } = useCurrentUser();
+  const [added, setAdded] = useState(false);
+
+  const shop = useMemo(
+    () => createShopApi(() => auth.user?.access_token ?? null),
+    [auth.user?.access_token],
+  );
 
   const query = useQuery({
     queryKey: ['product', id],
@@ -24,6 +37,34 @@ export function ProductDetailPage() {
     // user's time. Anything else is worth one retry.
     retry: (failureCount, error) =>
       error instanceof ApiError && error.isNotFound ? false : failureCount < 1,
+  });
+
+  // Declared BEFORE the early returns below. React requires every hook to run in the same order on
+  // every render, so a hook placed after a conditional return would break the moment that branch is
+  // taken - which is why this reads from query.data rather than from a narrowed `product`.
+  const addToBasket = useMutation({
+    mutationFn: () => {
+      const product = query.data!;
+
+      // The price sent here is what the customer is looking at, and the server treats it as display
+      // information only - every line is re-priced from the catalogue at checkout. See the basket
+      // service docs.
+      return shop.addToBasket({
+        productId: product.id,
+        sku: product.sku,
+        productName: product.name,
+        imageUrl: product.imageUrl,
+        unitPrice: product.price,
+        currency: product.currency,
+        quantity: 1,
+      });
+    },
+    onSuccess: (basket) => {
+      // Written straight into the cache, so the header count and the basket page are correct without
+      // a refetch.
+      queryClient.setQueryData(['basket'], basket);
+      setAdded(true);
+    },
   });
 
   if (query.isPending) {
@@ -95,19 +136,40 @@ export function ProductDetailPage() {
 
           <p>{product.description}</p>
 
-          {/* Disabled rather than hidden when out of stock: a missing button
-              looks like a broken page, whereas a disabled one with a reason
-              explains itself. Basket arrives in Phase 6. */}
-          <div>
+          {/* Disabled rather than hidden when out of stock: a missing button looks like a broken
+              page, whereas a disabled one with a reason explains itself. */}
+          <div className="row">
             <button
               type="button"
               className="btn btn--primary"
-              disabled
-              title="Basket arrives in Phase 6"
+              disabled={product.stockOnHand === 0 || addToBasket.isPending}
+              title={product.stockOnHand === 0 ? 'Out of stock' : undefined}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  void auth.signinRedirect();
+                  return;
+                }
+
+                addToBasket.mutate();
+              }}
             >
-              Add to basket
+              {addToBasket.isPending ? 'Adding…' : 'Add to basket'}
             </button>
+
+            {added && (
+              // role="status" so a screen reader announces it. A visual-only confirmation leaves a
+              // non-sighted customer with no evidence the click did anything.
+              <p className="muted" role="status">
+                Added to your basket. <Link to="/basket">View basket</Link>
+              </p>
+            )}
           </div>
+
+          {addToBasket.isError && (
+            <p className="muted" role="alert">
+              {(addToBasket.error as Error).message}
+            </p>
+          )}
         </div>
       </div>
     </div>

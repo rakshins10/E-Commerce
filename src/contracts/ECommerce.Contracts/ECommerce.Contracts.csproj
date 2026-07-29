@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The published contract between services: integration event records, and
+    nothing else.
+
+    This is the ONE thing services share, and sharing it is a considered
+    trade-off rather than an oversight. The alternative - every service
+    hand-copying the record it consumes - means a field added to OrderPaid is a
+    silent mismatch nobody notices until a null appears in production. Sharing
+    the record makes that a compile error.
+
+    What keeps it safe is the strict rule on what may live here:
+
+      * records with primitive and primitive-collection properties, nothing else
+      * NO behaviour, NO domain types, NO validation, NO references to any service
+      * additive changes only - a removed or renamed property breaks every
+        consumer that has not redeployed yet
+
+    The moment a domain type leaks in, this stops being a contract and becomes a
+    shared model, and the services stop being independently deployable. That is
+    the failure mode this comment exists to prevent.
+
+    See docs/adr/0019-shared-integration-event-contracts.md.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\building-blocks\EventBus\ECommerce.EventBus.csproj" />
+  </ItemGroup>
+
+</Project>

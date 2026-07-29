@@ -1,3 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  </Project>
+  <!--
+    The domain layer.
+
+    It references ONE thing: the seed-work base classes. No EF Core, no ASP.NET,
+    no MediatR, no message broker. That is enforced by a test in
+    tests/unit/ECommerce.Architecture.Tests, not merely by good intentions.
+
+    The reason is practical rather than purist. Business rules outlive the
+    infrastructure they were first written against, and a domain that imports
+    DbContext cannot be unit tested without a database, cannot be reused by a
+    background worker, and cannot be reasoned about without knowing how EF
+    behaves. Keeping the dependency arrow pointing inwards is what makes the
+    rules in Order.cs readable on their own.
+  -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Common\ECommerce.Common.csproj" />
+  </ItemGroup>
+
+</Project>

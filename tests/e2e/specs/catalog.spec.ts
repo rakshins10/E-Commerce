@@ -169,12 +169,13 @@ test.describe('product detail', () => {
     await expect(page.getByRole('link', { name: 'Back to products' })).toBeVisible();
   });
 
-  test('add to basket is disabled with an explanation until Phase 6', async ({ page }) => {
+  test('add to basket is offered on an in-stock product', async ({ page }) => {
     await page.goto('/products?search=Pullover');
     await page.getByRole('link', { name: /Pullover Hoodie/ }).click();
 
-    // Disabled rather than hidden: a missing button looks broken, a disabled
-    // one with a reason explains itself.
-    await expect(page.getByRole('button', { name: 'Add to basket' })).toBeDisabled();
+    // Enabled now that the basket exists. Out-of-stock products keep the disabled-with-a-reason
+    // treatment: a missing button looks broken, a disabled one with a title explains itself.
+    // What the button DOES is covered by shopping.spec.ts.
+    await expect(page.getByRole('button', { name: 'Add to basket' })).toBeEnabled();
   });
 });

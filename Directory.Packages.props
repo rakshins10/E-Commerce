@@ -73,6 +73,10 @@
          domain type. See docs/adr/0012-cqrs-with-mediatr.md. -->
     <PackageVersion Include="Dapper" Version="2.1.79" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
+    <!-- Basket only. Polyglot persistence: a basket is a key/value lookup with a TTL
+         and disposable data, which is what Redis is for. Every other service uses
+         PostgreSQL. See src/services/basket/.../BasketRepository.cs. -->
+    <PackageVersion Include="StackExchange.Redis" Version="3.0.17" />
   </ItemGroup>
 
   <ItemGroup Label="Gateway">
@@ -90,6 +94,7 @@
          an NU1109 build error rather than a runtime assembly binding failure,
          which is exactly why it is switched on. -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.10" />

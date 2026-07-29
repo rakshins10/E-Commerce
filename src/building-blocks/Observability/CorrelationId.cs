@@ -17,6 +17,30 @@ public static class CorrelationId
 
     /// <summary>Key under which the id is stashed in <see cref="HttpContext.Items"/> for the current request.</summary>
     public const string ItemsKey = "CorrelationId";
+
+    private static readonly AsyncLocal<string?> Ambient = new();
+
+    /// <summary>
+    /// The correlation id for the current asynchronous flow, or <c>null</c> outside a request.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="HttpContext.Items"/> holds the same value, but reaching it requires an
+    /// <c>IHttpContextAccessor</c> — which means any component that wants the id has to take a
+    /// dependency on ASP.NET Core. That is a poor trade for infrastructure such as the outbox writer,
+    /// which is otherwise entirely framework-agnostic.
+    /// </para>
+    /// <para>
+    /// <see cref="AsyncLocal{T}"/> flows with the execution context, so it survives every <c>await</c>
+    /// in the request and is visible to code several layers down that has never heard of the middleware.
+    /// It is also correctly isolated between concurrent requests, which a static field would not be.
+    /// </para>
+    /// </remarks>
+    public static string? Current
+    {
+        get => Ambient.Value;
+        internal set => Ambient.Value = value;
+    }
 }
 
 /// <summary>
@@ -50,6 +74,10 @@ public sealed class CorrelationIdMiddleware(RequestDelegate next)
             : Guid.CreateVersion7().ToString();
 
         context.Items[CorrelationId.ItemsKey] = correlationId;
+
+        // Also published as an ambient value, so components with no dependency on ASP.NET Core - the
+        // outbox writer, for one - can read it without an IHttpContextAccessor.
+        CorrelationId.Current = correlationId;
 
         // Echo it before the response starts. Registering on OnStarting rather than setting it after `next`
         // matters: once the response has begun, headers are immutable and setting one throws.

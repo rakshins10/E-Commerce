@@ -95,6 +95,18 @@
         {
           "name": "dashboard:read",
           "description": "View sales and order KPIs"
+        },
+        {
+          "name": "basket:read:own",
+          "description": "View your own basket",
+          "composite": false,
+          "clientRole": true
+        },
+        {
+          "name": "basket:write:own",
+          "description": "Change your own basket",
+          "composite": false,
+          "clientRole": true
         }
       ]
     },
@@ -110,7 +122,9 @@
               "order:read:own",
               "order:write",
               "profile:read:own",
-              "profile:write:own"
+              "profile:write:own",
+              "basket:read:own",
+              "basket:write:own"
             ]
           }
         }
@@ -127,7 +141,9 @@
               "inventory:read",
               "user:read",
               "profile:read:own",
-              "profile:write:own"
+              "profile:write:own",
+              "basket:read:own",
+              "basket:write:own"
             ]
           }
         }
@@ -145,7 +161,9 @@
               "price:override",
               "inventory:read",
               "profile:read:own",
-              "profile:write:own"
+              "profile:write:own",
+              "basket:read:own",
+              "basket:write:own"
             ]
           }
         }
@@ -165,7 +183,9 @@
               "inventory:read",
               "inventory:adjust",
               "profile:read:own",
-              "profile:write:own"
+              "profile:write:own",
+              "basket:read:own",
+              "basket:write:own"
             ]
           }
         }

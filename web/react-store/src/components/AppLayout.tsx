@@ -40,9 +40,19 @@ export function AppLayout() {
               Products
             </NavLink>
             {isAuthenticated && (
-              <NavLink to="/account" className="nav-link">
-                My account
-              </NavLink>
+              // A fragment, because JSX needs a single parent and a wrapper <div> here would break the
+              // flex layout of the nav bar.
+              <>
+                <NavLink to="/basket" className="nav-link">
+                  Basket
+                </NavLink>
+                <NavLink to="/orders" className="nav-link">
+                  Orders
+                </NavLink>
+                <NavLink to="/account" className="nav-link">
+                  My account
+                </NavLink>
+              </>
             )}
           </nav>
 

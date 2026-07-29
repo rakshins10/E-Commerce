@@ -26,6 +26,20 @@
         >
         @if (auth.isAuthenticated()) {
           <a
+            routerLink="/basket"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            class="nav-link"
+            >Basket</a
+          >
+          <a
+            routerLink="/orders"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            class="nav-link"
+            >Orders</a
+          >
+          <a
             routerLink="/account"
             routerLinkActive="is-active"
             ariaCurrentWhenActive="page"
