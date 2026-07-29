@@ -109,13 +109,13 @@ directly.
 | `user:read` | | ✅ | | | ✅ |
 | `user:manage` | | | | | ✅ |
 | `user:roles:manage` | | | | | ✅ |
-| `profile:read:own` | ✅ | | | | |
-| `profile:write:own` | ✅ | | | | |
+| `profile:read:own` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `profile:write:own` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `audit:read` | | | | | ✅ |
 | `dashboard:read` | | | | | ✅ |
-| **Total** | **5** | **4** | **5** | **7** | **15** |
+| **Total** | **5** | **6** | **7** | **9** | **17** |
 
-Three deliberate properties of this table:
+Four deliberate properties of this table:
 
 **Support is read-only.** `support-agent` can see orders and users and change nothing. A helpdesk needs to
 answer questions, not to act — and separating `order:read` from `order:refund` is exactly what makes that
@@ -130,6 +130,17 @@ applied to job function, and it is asserted in
 `support-agent` + `catalog-manager` + `order-manager`, plus user administration. So a permission added to
 `catalog-manager` next month **automatically reaches admin**, with no edit to admin at all. That is the
 maintainability payoff of composites, and a test asserts it.
+
+**`profile:*:own` is on every role, because every role is held by a person.** This was originally granted to
+`customer` alone, and the Phase 5 e2e suite caught it: signing in as `ordermgr` and opening My Account
+returned `403 Forbidden`. The tempting fix is to change the test. The correct fix was to change the model —
+a warehouse supervisor still has a display name, a delivery address and a marketing preference, and "staff
+accounts have no profile" is not a rule anyone actually wanted. Note the distinction from `order:read:own`,
+which stays customer-only: staff read orders through `order:read`, which is a *different* permission with a
+different scope, so there is nothing for them to gain from the `:own` variant.
+
+> The general lesson: a permission that reads *"…your own X"* usually belongs to **everyone who logs in**,
+> not to one role. Permissions that grant power over *other people's* data are the ones to scope by job.
 
 ---
 
@@ -283,13 +294,22 @@ method body.
 
 | Endpoint | Permission | Extra check | Phase |
 |----------|-----------|-------------|-------|
-| `GET /catalog/products` | *(public)* | — | 4 |
-| `POST /catalog/products` | `catalog:write` | — | 4 |
-| `PUT /catalog/products/{id}` | `catalog:write` | — | 4 |
-| `DELETE /catalog/products/{id}` | `catalog:delete` | — | 4 |
-| `PUT /catalog/products/{id}/price` | `price:override` | — | 4 |
-| `GET /profile/me` | `profile:read:own` | owner | 5 |
-| `PUT /profile/me` | `profile:write:own` | owner | 5 |
+| `GET /catalog/products` | *(public)* | — | 4 ✅ |
+| `GET /catalog/products/{id}` | *(public)* | — | 4 ✅ |
+| `GET /catalog/categories` | *(public)* | — | 4 ✅ |
+| `GET /catalog/brands` | *(public)* | — | 4 ✅ |
+| `GET /profile/me` | `profile:read:own` | **`sub`** | 5 ✅ |
+| `PUT /profile/me/contact` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `PUT /profile/me/preferences` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `POST /profile/me/addresses` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `PUT /profile/me/addresses/{id}` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `DELETE /profile/me/addresses/{id}` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `POST /profile/me/addresses/{id}/default-shipping` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `POST /profile/me/addresses/{id}/default-billing` | `profile:write:own` | **`sub`** | 5 ✅ |
+| `POST /catalog/products` | `catalog:write` | — | 9 |
+| `PUT /catalog/products/{id}` | `catalog:write` | — | 9 |
+| `DELETE /catalog/products/{id}` | `catalog:delete` | — | 9 |
+| `PUT /catalog/products/{id}/price` | `price:override` | — | 9 |
 | `GET /orders/{id}` | `order:read` OR `order:read:own` | **owner** | 6 |
 | `POST /orders` | `order:write` | — | 6 |
 | `POST /orders/{id}/cancel` | `order:cancel` | owner or staff | 6 |
@@ -301,6 +321,17 @@ method body.
 | `POST /admin/users/{id}/roles` | `user:roles:manage` | — | 8 |
 | `GET /admin/audit` | `audit:read` | — | 8 |
 | `GET /admin/dashboard` | `dashboard:read` | — | 8 |
+
+**✅ = built and covered by tests.** Rows without it are the planned surface for a later phase, listed here
+so the authorization design is visible before the code exists.
+
+**On the `sub` column.** Every profile route ends in `/me`, and "me" is resolved **server-side from the
+`sub` claim** — there is no `/profile/{userId}` route to attack, and no request body carries a user id.
+The permission answers *"may this kind of user touch profiles at all?"*; the `sub` lookup answers *"whose?"*.
+Splitting those two questions is the reason `profile:read:own` can safely be granted to every role: holding
+it grants access to exactly one profile, the caller's own. Compare `GET /orders/{id}`, where the id **is**
+in the URL and therefore needs a genuine resource-based check
+([`ResourceOwnerRequirement`](../src/building-blocks/Auth/ResourceOwnerRequirement.cs)).
 
 ---
 

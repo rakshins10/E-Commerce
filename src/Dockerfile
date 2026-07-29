@@ -26,7 +26,13 @@ WORKDIR /src
 
 # Solution-level files first: they change rarely, so this layer is cached across
 # nearly every build.
-COPY global.json Directory.Build.props Directory.Packages.props ./
+#
+# .editorconfig is NOT optional here. Directory.Build.props sets
+# EnforceCodeStyleInBuild and TreatWarningsAsErrors, and .editorconfig holds the
+# analyzer suppressions that justify each exception. Omit it and the image build
+# fails on rules the local build passes - a genuinely confusing "works on my
+# machine, in reverse" failure.
+COPY global.json Directory.Build.props Directory.Packages.props .editorconfig ./
 
 # Then the project files. Docker cannot glob into nested paths, so the whole src
 # tree is copied and everything but the project graph is discarded. This is less

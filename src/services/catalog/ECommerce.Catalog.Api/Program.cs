@@ -1,43 +1,90 @@
+using System.Data;
+using ECommerce.Auth;
+using ECommerce.Catalog.Api.Features.Products;
+using ECommerce.Catalog.Api.Infrastructure;
 using ECommerce.Observability;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 // -----------------------------------------------------------------------------
-//  catalog
+//  Catalog service
 // -----------------------------------------------------------------------------
-//  Phase 1 shape: this service boots, reports health, and is observable. Its
-//  domain arrives in a later phase (see the phase table in README.md).
+//  Products, categories, brands, search and browse.
 //
 //  The composition root is deliberately the ONLY place that knows about
 //  infrastructure. Everything below is wiring; no business logic lives here.
-//  See docs/architecture.md and docs/operations/health-checks.md.
+//  See docs/services/catalog.md.
 // -----------------------------------------------------------------------------
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Structured logging, distributed tracing and metrics, configured identically in
-// every service so that spans and log lines actually correlate across them.
 builder.AddObservability("catalog");
 
-// Liveness is a self check only. Dependency checks (database, broker, cache) are
-// registered with the `ready` tag as each service gains them, so that a database
-// blip never causes the orchestrator to restart healthy processes.
-builder.Services.AddDefaultHealthChecks();
+string connectionString =
+    builder.Configuration.GetConnectionString("CatalogDb")
+    ?? throw new InvalidOperationException("ConnectionStrings:CatalogDb is not configured.");
+
+// --- Write side: EF Core ------------------------------------------------------
+builder.Services.AddDbContext<CatalogDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
+
+// --- Read side: Dapper --------------------------------------------------------
+// A separate, short-lived connection per request rather than reusing the EF
+// context's. The two paths are independent by design (docs/adr/0012), and
+// sharing a connection would couple them again through the transaction scope.
+builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(connectionString));
+builder.Services.AddScoped<ProductQueries>();
+
+// --- Auth ---------------------------------------------------------------------
+// Registered even though browsing is anonymous: writes arrive in Phase 9, and a
+// service that validates tokens from day one cannot forget to later.
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPermissionPolicies();
+
+// --- CORS ---------------------------------------------------------------------
+// The storefronts call the BFF, not this service, so this is only for local
+// debugging against the service directly. Origins come from configuration - a
+// wildcard would be wrong even in development, because it trains the habit.
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+    .WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [])
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
+
+// --- Health -------------------------------------------------------------------
+builder.Services
+    .AddDefaultHealthChecks()
+    // Tagged `ready`, never `live`. A database blip must stop traffic being
+    // routed here; it must NOT make the orchestrator restart the process,
+    // because restarting does not fix a database.
+    // See docs/operations/health-checks.md.
+    .AddNpgSql(connectionString, name: "catalog-db", tags: ["ready"]);
+
+builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
-// Correlation must be first: a request that fails inside exception handling
-// should still be correlated. Request logging follows so its completion event
-// carries the correlation id.
 app.UseObservability();
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapDefaultHealthChecks();
+app.MapOpenApi();
 
-// A minimal identity endpoint. Useful when you have thirty containers running
-// and want to confirm which service is answering on a port.
 app.MapGet("/", () => Results.Ok(new
 {
     service = "catalog",
     status = "up",
     environment = app.Environment.EnvironmentName,
 }));
+
+app.MapProductEndpoints();
+
+// Migrate and seed before serving. See CatalogSeeder for why production would
+// do this as a separate deployment step instead.
+await CatalogSeeder.MigrateAndSeedAsync(
+    app.Services,
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("CatalogSeeder"),
+    app.Configuration.GetValue("SeedDemoData", defaultValue: true));
 
 await app.RunAsync();

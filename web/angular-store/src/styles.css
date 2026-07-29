@@ -1,0 +1,490 @@
+/* ---------------------------------------------------------------------------
+   Storefront styles - React.
+
+   EVERY value here is a design token. There is not one hard-coded colour,
+   spacing step or font size, which is what lets the Angular storefront look
+   pixel-identical while being built from entirely different components.
+   Parity-checklist row X1 tracks that.
+
+   See web/design-tokens/README.md.
+   --------------------------------------------------------------------------- */
+
+@import './styles/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* No font-size override: the browser default is 16px, and a user who has
+     raised it has done so deliberately. Overriding it breaks WCAG 1.4.4. */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--font-line-height-normal);
+  color: var(--color-text-primary);
+  background: var(--color-surface-sunken);
+  min-height: 100vh;
+}
+
+/* Every interactive element gets a visible focus ring. Removing outlines
+   without replacing them makes an app unusable by keyboard, which is the
+   single most common accessibility failure on the web. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: var(--layout-focus-ring-width) solid var(--color-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Honour the OS "reduce motion" setting. Motion triggers nausea and migraine
+   for some people; WCAG 2.3.3. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Skip link ------------------------------------------------------------ */
+/* Lets a keyboard user jump past the header straight to the content, instead
+   of tabbing through every nav item on every page. Visually hidden until
+   focused. WCAG 2.4.1. */
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: calc(var(--space-4) * -4);
+  z-index: 100;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: top var(--motion-fast) var(--motion-easing);
+}
+
+.skip-link:focus {
+  top: var(--space-4);
+}
+
+/* --- Layout --------------------------------------------------------------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--layout-container-max);
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--layout-header-height);
+  display: flex;
+  align-items: center;
+  background: var(--color-surface-base);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.app-header__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.app-header__brand {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-header__nav {
+  display: flex;
+  gap: var(--space-1);
+  margin-inline-start: var(--space-4);
+}
+
+.app-header__spacer {
+  flex: 1;
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nav-link {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.nav-link:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+/* aria-current="page" rather than a class: the accessible state and the visual
+   state come from the same attribute, so they cannot disagree. The shared
+   Playwright specs assert on it. */
+.nav-link[aria-current='page'] {
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+}
+
+.app-main {
+  flex: 1;
+  padding-block: var(--space-8);
+}
+
+.app-footer {
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
+  padding-block: var(--space-6);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* --- Buttons -------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  /* min-height 2.75rem = 44px, the WCAG 2.5.8 minimum target size. Smaller
+     targets are genuinely hard to hit on a phone. */
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--motion-fast) var(--motion-easing);
+}
+
+.btn--primary {
+  background: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-brand-600);
+}
+
+.btn--secondary {
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--color-surface-raised);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+  min-height: 2.5rem;
+  padding: var(--space-2);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* --- Cards and content ---------------------------------------------------- */
+.card {
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+.stack > * + * {
+  margin-block-start: var(--space-4);
+}
+
+.page-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-line-height-tight);
+  margin: 0;
+}
+
+.lede {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* --- Status --------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.badge--success {
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-fg);
+}
+
+.badge--info {
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info-fg);
+}
+
+.badge--warning {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+}
+
+/* --- Utilities ------------------------------------------------------------ */
+/* Available to screen readers, invisible on screen. Used for headings that
+   give structure without visual clutter. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-subtle);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.centred {
+  display: grid;
+  place-items: center;
+  min-height: 50vh;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------------------
+   Product browsing (Phase 4)
+   --------------------------------------------------------------------------- */
+
+.filters {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+  align-items: end;
+}
+
+@media (min-width: 48rem) {
+  .filters {
+    grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.field label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  /* Matches the 44px control height so the checkbox row lines up with the
+     inputs beside it rather than floating. */
+  min-height: 2.75rem;
+}
+
+.input {
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  background: var(--color-surface-base);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.product-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.product-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.product-card--skeleton {
+  min-height: 16rem;
+  background: var(--color-surface-raised);
+}
+
+.product-card__link {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* A placeholder tile standing in for product photography, so the layout is
+   honest about its proportions without shipping binary assets. */
+.product-card__image,
+.product-detail__image {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-3);
+}
+
+.product-card__name {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.product-card__meta {
+  margin: 0;
+}
+
+.product-card__price,
+.product-detail__price {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.product-detail__price {
+  font-size: var(--font-size-2xl);
+}
+
+.product-detail {
+  display: grid;
+  gap: var(--space-8);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 48rem) {
+  .product-detail {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.badge--in-stock {
+  background: var(--color-status-success-bg);
+  color: var(--color-status-success-fg);
+  align-self: flex-start;
+}
+
+.badge--low-stock {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+  align-self: flex-start;
+}
+
+.badge--out-of-stock {
+  background: var(--color-status-danger-bg);
+  color: var(--color-status-danger-fg);
+  align-self: flex-start;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.centred-block {
+  text-align: center;
+}

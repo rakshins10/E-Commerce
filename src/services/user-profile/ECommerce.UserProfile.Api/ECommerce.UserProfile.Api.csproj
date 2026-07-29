@@ -1,5 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    User Profile service. Owns the customer data that does NOT belong in an
+    identity provider - see docs/adr/0004-identity-vs-profile-data-split.md.
+
+    No Dapper read side: unlike Catalog, this service reads exactly one small
+    aggregate at a time, so a separate query path would be ceremony rather than
+    optimisation. CQRS is applied where it pays, not everywhere.
+  -->
+
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\building-blocks\Auth\ECommerce.Auth.csproj" />
+    <ProjectReference Include="..\..\..\building-blocks\Common\ECommerce.Common.csproj" />
     <ProjectReference Include="..\..\..\building-blocks\Observability\ECommerce.Observability.csproj" />
   </ItemGroup>
+
 </Project>
