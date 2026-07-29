@@ -609,3 +609,72 @@ Angular's box has solved forms and routing better than anything React ships.** A
 Query and React Hook Form gets the best of both — at the price of two library choices, two upgrade paths
 and two sets of conventions to agree on. A team on Angular gets a good answer to both without deciding
 anything, and pays for it in bundle size and lifecycle subtlety.
+
+---
+
+## The shop UI rebuild — one shared piece of state, two mechanisms
+
+This was not a phase. The storefront worked but looked like a test harness, so both apps were rebuilt
+around real product imagery, a header cart badge, a quantity stepper and a sticky order summary. It
+produced one comparison worth keeping.
+
+### Deriving a header count from a page's data
+
+The header shows how many items are in the basket. The basket page shows the same number. They must
+never disagree — a header reading 2 beside a basket reading 3 is the classic symptom of a count kept in
+its own piece of state, updated by hand in three places and forgotten in a fourth.
+
+**React** declares the same query the basket page declares:
+
+```tsx
+const basketQuery = useQuery({
+  queryKey: ['basket'],       // the SAME key the basket page uses
+  queryFn: () => api.getBasket(),
+  enabled: isAuthenticated,
+});
+
+const itemCount = basketQuery.data?.totalUnits ?? 0;
+```
+
+Two components, one cache entry. Adding an item anywhere writes to `['basket']` and both re-render.
+There is no fetch here at all if the basket page already loaded it.
+
+**Angular** derives from the singleton service:
+
+```ts
+readonly basket = signal<Basket | null>(null);
+readonly itemCount = computed(() => this.basket()?.totalUnits ?? 0);
+```
+
+Two components, one signal. A `computed` **cannot** disagree with its source — it is not a copy, it is a
+function of it.
+
+Both are right, and for once neither is clearly better. What is worth noticing is *why* they are right:
+in both cases the count is **derived**, not stored. The mechanism differs; the rule does not.
+
+The one asymmetry: Angular needs `enabled: isAuthenticated`'s equivalent written out as an effect,
+because sign-in resolves after the shell has already rendered:
+
+```ts
+effect(() => {
+  if (this.auth.isAuthenticated()) void this.basketService.load().catch(() => {});
+});
+```
+
+TanStack Query has a flag for that. Angular has a primitive you assemble it from. That is the same trade
+this document has recorded since Phase 4, appearing in a new place.
+
+### The divergence this found
+
+Angular's `Auth` had no `error` signal. React has rendered `auth.error` on the home page since Phase 3,
+and the Angular home page silently showed nothing, because `angular-auth-oidc-client` reports a failed
+sign-in by resolving `checkAuth()` with `isAuthenticated: false` rather than by throwing — so there was
+nothing obvious to render, and nobody noticed there was nothing.
+
+No spec covered it. A failed sign-in is awkward to provoke on purpose, so this sat undeclared for six
+phases. It is fixed (`Auth.error`, fed from `checkAuth`'s error channel) and recorded as row X10 of the
+parity checklist.
+
+**The lesson is about the shape of the gap, not the gap itself.** The e2e suite catches drift on paths a
+spec walks. It cannot catch drift on a path nobody walks, and the error paths are exactly the paths
+nobody walks. Two independent implementations will diverge there first.

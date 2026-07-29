@@ -95,7 +95,7 @@ const REASSURANCE: readonly { icon: IconName; title: string; detail: string }[] 
           }
         </ul>
 
-        @if (topCategories().length > 0) {
+        @if (shoppableCategories().length > 0) {
           <section aria-labelledby="categories-heading">
             <div class="section-head">
               <h2 id="categories-heading">Shop by category</h2>
@@ -104,8 +104,8 @@ const REASSURANCE: readonly { icon: IconName; title: string; detail: string }[] 
               </a>
             </div>
 
-            <ul class="grid grid--3 plain-list">
-              @for (category of topCategories(); track category.id) {
+            <ul class="grid grid--4 plain-list">
+              @for (category of shoppableCategories(); track category.id) {
                 <li>
                   <a
                     class="category-tile"
@@ -221,9 +221,21 @@ export class HomePage {
     [...(this.auth.user()?.permissions ?? [])].sort(),
   );
 
-  /** Top-level only. Child categories are filters on the products page, not a second menu here. */
-  protected readonly topCategories = computed(() =>
-    this.categories().filter((category) => !category.parentSlug),
+  /**
+   * Categories a shopper can actually shop.
+   *
+   * This started as "top-level categories only", which produced four tiles reading "Clothing, 0
+   * products". Products hang off the LEAF categories - Hoodies and T-shirts sit under Clothing, and
+   * `productCount` counts direct members, not descendants. A tile advertising an empty category is
+   * worse than no tile.
+   *
+   * Filtering on the count rather than on the depth also means the page stays right if the taxonomy is
+   * reshaped later: a flat catalogue and a three-level one both render whatever has products in it.
+   */
+  protected readonly shoppableCategories = computed(() =>
+    this.categories()
+      .filter((category) => category.productCount > 0)
+      .slice(0, 4),
   );
 
   constructor() {

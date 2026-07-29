@@ -125,13 +125,21 @@ test.describe('shell', () => {
   test('navigation works and marks the current page', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('link', { name: 'Products' }).click();
+    // Scoped to the header, and exact.
+    //
+    // This spec is about the SHELL, and the home page now legitimately holds four other links whose
+    // accessible names contain the word "products" - "Shop all products", "All products", and the
+    // category tiles. `getByRole` matches a name as a substring by default, so an unscoped locator
+    // was five elements the moment the shopfront started selling anything.
+    const productsLink = page.getByRole('banner').getByRole('link', { name: 'Products', exact: true });
+
+    await productsLink.click();
     await expect(page).toHaveURL(/\/products$/);
     await expect(page.getByRole('heading', { name: 'Products', level: 1 })).toBeVisible();
 
     // aria-current is the accessible signal for "you are here". Both apps must
     // set it - React via NavLink, Angular via ariaCurrentWhenActive.
-    await expect(page.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
+    await expect(productsLink).toHaveAttribute('aria-current', 'page');
   });
 
   test('a deep link survives a full page reload', async ({ page }) => {

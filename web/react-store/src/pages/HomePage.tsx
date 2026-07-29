@@ -62,9 +62,20 @@ export function HomePage() {
 
   const featured = featuredQuery.data?.items ?? [];
 
-  // Top-level categories only. Child categories appear on the products page as filters, and a landing
-  // page listing both reads as a duplicated menu.
-  const topCategories = (categoriesQuery.data ?? []).filter((category) => !category.parentSlug);
+  /**
+   * Categories a shopper can actually shop.
+   *
+   * This started as "top-level categories only", which produced four tiles reading "Clothing, 0
+   * products". Products hang off the LEAF categories - Hoodies and T-shirts sit under Clothing, and
+   * `productCount` counts direct members, not descendants. A tile advertising an empty category is
+   * worse than no tile.
+   *
+   * Filtering on the count rather than on the depth also means the page stays right if the taxonomy
+   * is reshaped later: a flat catalogue and a three-level one both render whatever has products in it.
+   */
+  const shoppableCategories = (categoriesQuery.data ?? [])
+    .filter((category) => category.productCount > 0)
+    .slice(0, 4);
 
   return (
     <div className="stack">
@@ -125,7 +136,7 @@ export function HomePage() {
       </ul>
 
       {/* --- Categories -------------------------------------------------------------------- */}
-      {topCategories.length > 0 && (
+      {shoppableCategories.length > 0 && (
         <section aria-labelledby="categories-heading">
           <div className="section-head">
             <h2 id="categories-heading">Shop by category</h2>
@@ -134,8 +145,8 @@ export function HomePage() {
             </Link>
           </div>
 
-          <ul className="grid grid--3 plain-list">
-            {topCategories.map((category) => (
+          <ul className="grid grid--4 plain-list">
+            {shoppableCategories.map((category) => (
               <li key={category.id}>
                 <Link className="category-tile" to={`/products?category=${category.slug}`}>
                   <span className="category-tile__name">{category.name}</span>
