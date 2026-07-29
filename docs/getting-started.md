@@ -72,7 +72,7 @@ docker compose up -d --build
 | Stage | Time | What is happening |
 |-------|------|-------------------|
 | Image pull | 3–10 min | Postgres, Keycloak, RabbitMQ, Mongo, Redis, Seq, Jaeger, .NET base images |
-| .NET builds | 5–15 min | Twelve services compiled. **First build only** — later builds reuse cached layers |
+| .NET builds | 5–15 min | Nine services and three gateways compiled. **First build only** — later builds reuse cached layers |
 | Startup | 60–90 s | Databases initialise, Keycloak imports the realm, services connect |
 
 **Total on a first run: 10–25 minutes.** Subsequent `docker compose up -d` takes about 60 seconds.
@@ -107,10 +107,10 @@ curl http://localhost:5001/health/ready
 
 | Surface | URL | Notes |
 |---------|-----|-------|
-| React storefront | http://localhost:3000 | Phase 3 |
-| React admin | http://localhost:3001 | Phase 8 |
-| Angular storefront | http://localhost:4200 | Phase 3 |
-| Angular admin | http://localhost:4201 | Phase 8 |
+| React storefront | http://localhost:3000 | Browse, buy, track orders |
+| React admin | http://localhost:3001 | Dashboard, catalogue, orders, stock, users |
+| Angular storefront | http://localhost:4200 | Functionally identical to :3000 |
+| Angular admin | http://localhost:4201 | Functionally identical to :3001 |
 | Storefront BFF | http://localhost:6001 | |
 | Admin BFF | http://localhost:6002 | |
 | Mobile BFF | http://localhost:6003 | |
