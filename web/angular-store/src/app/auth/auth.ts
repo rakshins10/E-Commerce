@@ -32,6 +32,16 @@ export class Auth {
   private readonly authenticated = signal(false);
   private readonly loading = signal(true);
 
+  /**
+   * A sign-in failure, if there was one.
+   *
+   * React's `react-oidc-context` exposes `auth.error` and the React storefront has always rendered it;
+   * Angular's library reports failure by resolving `checkAuth` with `isAuthenticated: false` and no
+   * explanation, so nothing was shown. That was an undeclared parity gap - the two apps behaved
+   * differently on a path no spec covered, which is exactly how divergence survives.
+   */
+  private readonly signInError = signal<string | null>(null);
+
   /** The signed-in user, or null. Derived from the token, never stored separately. */
   readonly user = computed<AuthenticatedUser | null>(() => {
     const token = this.accessToken();
@@ -58,13 +68,26 @@ export class Auth {
 
   readonly permissions = computed(() => [...(this.user()?.permissions ?? [])].sort());
 
+  readonly error = this.signInError.asReadonly();
+
   constructor() {
     // Bridge the library's Observable into signals. Called once at startup by
     // APP_INITIALIZER equivalent in app.config.ts.
-    this.oidc.checkAuth().subscribe((response) => {
-      this.authenticated.set(response.isAuthenticated);
-      this.accessToken.set(response.accessToken || null);
-      this.loading.set(false);
+    this.oidc.checkAuth().subscribe({
+      next: (response) => {
+        this.authenticated.set(response.isAuthenticated);
+        this.accessToken.set(response.accessToken || null);
+        this.loading.set(false);
+      },
+      error: (cause: unknown) => {
+        // The library throws when the identity provider is unreachable or rejects the callback. The
+        // page must still render - a storefront that shows nothing because sign-in failed is worse
+        // than one that shows the shop and says so.
+        this.signInError.set(
+          cause instanceof Error ? cause.message : 'Could not complete sign-in.',
+        );
+        this.loading.set(false);
+      },
     });
 
     // Keep the token current after a silent renew, otherwise every request

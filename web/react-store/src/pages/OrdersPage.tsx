@@ -12,6 +12,7 @@ import {
 } from '../lib/basket';
 import { formatDateTime, formatMoney } from '../lib/formatting';
 import { useCurrentUser } from '../auth/useCurrentUser';
+import { Icon } from '../components/Icon';
 
 /** The lifecycle, in the order a customer experiences it. Cancelled is not on this path. */
 const TIMELINE: readonly OrderStatus[] = ['Submitted', 'AwaitingPayment', 'Paid', 'Shipped', 'Delivered'];
@@ -91,7 +92,8 @@ export function OrdersPage() {
       <h1 className="page-title">Your orders</h1>
 
       {orders.items.length === 0 ? (
-        <div className="card stack">
+        <div className="card stack empty-state">
+          <Icon name="package" className="empty-state__icon" />
           <p className="lede">You have not placed any orders yet.</p>
           <div>
             <Link className="btn btn--primary" to="/products">

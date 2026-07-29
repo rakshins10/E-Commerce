@@ -5,7 +5,10 @@
   "type": "module",
   "description": "Storefront - React. Functionally and visually identical to @ecommerce/angular-store.",
   "scripts": {
+    "sync:assets": "node ../scripts/sync-assets.mjs",
+    "predev": "npm run sync:assets",
     "dev": "vite",
+    "prebuild": "npm run sync:assets",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview --port 3000",

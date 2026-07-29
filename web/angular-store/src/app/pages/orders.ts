@@ -21,6 +21,7 @@ import {
   type SagaTimeline,
 } from '../core/basket';
 import { formatDateTime, formatMoney } from '../core/formatting';
+import { Icon } from '../icon';
 
 /**
  * "My orders".
@@ -30,7 +31,7 @@ import { formatDateTime, formatMoney } from '../core/formatting';
 @Component({
   selector: 'app-orders-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Icon],
   template: `
     @if (auth.isLoading()) {
       <div class="centred" aria-busy="true" aria-live="polite"><p class="lede">Loading…</p></div>
@@ -62,6 +63,7 @@ import { formatDateTime, formatMoney } from '../core/formatting';
 
         @if (orders().length === 0) {
           <div class="card stack">
+            <app-icon name="package" variant="empty-state__icon" />
             <p class="lede">You have not placed any orders yet.</p>
             <div><a class="btn btn--primary" routerLink="/products">Browse products</a></div>
           </div>

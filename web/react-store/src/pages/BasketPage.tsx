@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createShopApi, type Basket } from '../lib/basket';
 import { formatMoney } from '../lib/formatting';
 import { useCurrentUser } from '../auth/useCurrentUser';
+import { Icon } from '../components/Icon';
 
 /**
  * The basket.
@@ -155,7 +156,8 @@ export function BasketPage() {
       <h1 className="page-title">Your basket</h1>
 
       {isEmpty ? (
-        <div className="card stack">
+        <div className="card stack empty-state">
+          <Icon name="cart" className="empty-state__icon" />
           <p className="lede">Your basket is empty.</p>
           <div>
             <Link className="btn btn--primary" to="/products">
@@ -164,100 +166,165 @@ export function BasketPage() {
           </div>
         </div>
       ) : (
-        <>
-          {/* A table, because this is tabular data. A list of divs would lose the column headers a
-              screen reader announces with each cell. */}
+        <div className="checkout-layout">
+          {/* --- The lines ------------------------------------------------------------------
+              A list, not a table.
+
+              This WAS a table, on the reasoning that a basket is tabular data. It is not: each line
+              is one product with a picture, a price and two controls, and the "Price/Quantity/Total"
+              headers a screen reader repeated on every cell added nothing a shopper did not already
+              read. What matters for accessibility is that every control still names its own product -
+              which the labels below do - not that the layout is a grid. */}
           <div className="card">
-            <table className="table">
-              <caption className="visually-hidden">Items in your basket</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Product</th>
-                  <th scope="col">Price</th>
-                  <th scope="col">Quantity</th>
-                  <th scope="col">Total</th>
-                  <th scope="col">
-                    <span className="visually-hidden">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {basket.items.map((item) => (
-                  <tr key={item.productId}>
-                    <th scope="row">
-                      <Link to={`/products/${item.productId}`}>{item.productName}</Link>
-                      <div className="muted small">{item.sku}</div>
-                    </th>
-                    <td>{formatMoney({ amount: item.unitPrice, currency: item.currency })}</td>
-                    <td>
-                      <label
-                        className="visually-hidden"
-                        htmlFor={`quantity-${item.productId}`}
-                      >
-                        Quantity for {item.productName}
-                      </label>
-                      <input
-                        id={`quantity-${item.productId}`}
-                        type="number"
-                        className="input input--narrow"
-                        min={0}
-                        max={100}
-                        value={item.quantity}
-                        onChange={(event) =>
-                          setQuantity.mutate({
-                            productId: item.productId,
-                            quantity: Number(event.target.value),
-                          })
-                        }
-                      />
-                    </td>
-                    <td>{formatMoney({ amount: item.lineTotal, currency: item.currency })}</td>
-                    <td>
+            <ul className="plain-list" aria-label="Items in your basket">
+              {basket.items.map((item) => (
+                <li key={item.productId} className="line-item">
+                  <Link to={`/products/${item.productId}`} tabIndex={-1} aria-hidden="true">
+                    <img
+                      className="line-item__media"
+                      src={item.imageUrl ?? '/img/placeholder.svg'}
+                      alt=""
+                      loading="lazy"
+                      width={80}
+                      height={80}
+                    />
+                  </Link>
+
+                  <div className="line-item__body">
+                    <div className="line-item__top">
+                      <div className="stack--tight">
+                        <Link to={`/products/${item.productId}`}>{item.productName}</Link>
+                        <span className="muted small">{item.sku}</span>
+                      </div>
+                      <span className="price">
+                        {formatMoney({ amount: item.lineTotal, currency: item.currency })}
+                      </span>
+                    </div>
+
+                    <div className="line-item__actions">
+                      {/* Three real controls, not arrows drawn on a div. The buttons are the fast path
+                          on a phone; the input is still there for someone typing 12. */}
+                      <div className="stepper">
+                        <button
+                          type="button"
+                          className="stepper__btn"
+                          aria-label={`Decrease quantity for ${item.productName}`}
+                          disabled={setQuantity.isPending}
+                          onClick={() =>
+                            setQuantity.mutate({
+                              productId: item.productId,
+                              quantity: item.quantity - 1,
+                            })
+                          }
+                        >
+                          <span aria-hidden="true">−</span>
+                        </button>
+
+                        <label className="visually-hidden" htmlFor={`quantity-${item.productId}`}>
+                          Quantity for {item.productName}
+                        </label>
+                        <input
+                          id={`quantity-${item.productId}`}
+                          type="number"
+                          className="stepper__input"
+                          min={0}
+                          max={100}
+                          value={item.quantity}
+                          onChange={(event) =>
+                            setQuantity.mutate({
+                              productId: item.productId,
+                              quantity: Number(event.target.value),
+                            })
+                          }
+                        />
+
+                        <button
+                          type="button"
+                          className="stepper__btn"
+                          aria-label={`Increase quantity for ${item.productName}`}
+                          disabled={setQuantity.isPending}
+                          onClick={() =>
+                            setQuantity.mutate({
+                              productId: item.productId,
+                              quantity: item.quantity + 1,
+                            })
+                          }
+                        >
+                          <span aria-hidden="true">+</span>
+                        </button>
+                      </div>
+
+                      <span className="muted small">
+                        {formatMoney({ amount: item.unitPrice, currency: item.currency })} each
+                      </span>
+
                       <button
                         type="button"
-                        className="btn btn--secondary"
+                        className="btn btn--ghost btn--sm"
                         onClick={() => remove.mutate(item.productId)}
                         disabled={remove.isPending}
                       >
                         {/* The accessible name says WHAT is being removed. Twelve buttons all called
                             "Remove" are useless to anyone navigating by button. */}
+                        <Icon name="trash" className="icon--sm" />
                         <span aria-hidden="true">Remove</span>
                         <span className="visually-hidden">Remove {item.productName}</span>
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div className="card stack">
-            <p className="lede" role="status">
-              {basket.totalUnits} {basket.totalUnits === 1 ? 'item' : 'items'} ·{' '}
-              {formatMoney({ amount: basket.estimatedTotal, currency: basket.currency })}
-            </p>
+          {/* --- The summary ---------------------------------------------------------------- */}
+          <aside className="checkout-layout__aside" aria-label="Order summary">
+            <div className="card stack">
+              <h2 style={{ marginTop: 0 }}>Summary</h2>
 
-            {/* Said plainly rather than hidden in small print. Prices are re-checked at checkout, and a
-                customer who sees a different total on the confirmation deserves to have been warned. */}
-            <p className="muted small">
-              Prices are confirmed when you place your order, so this total may change.
-            </p>
+              <div className="summary">
+                <p className="summary__row" role="status">
+                  <span>
+                    {basket.totalUnits} {basket.totalUnits === 1 ? 'item' : 'items'}
+                  </span>
+                  <span>
+                    {formatMoney({ amount: basket.estimatedTotal, currency: basket.currency })}
+                  </span>
+                </p>
+                <p className="summary__row">
+                  <span>Delivery</span>
+                  <span>Calculated at checkout</span>
+                </p>
+                <p className="summary__total">
+                  <span>Estimated total</span>
+                  <span>
+                    {formatMoney({ amount: basket.estimatedTotal, currency: basket.currency })}
+                  </span>
+                </p>
+              </div>
 
-            <div className="row">
-              <Link className="btn btn--primary" to="/checkout">
+              {/* Said plainly rather than hidden in small print. Prices are re-checked at checkout, and
+                  a customer who sees a different total on the confirmation deserves to have been
+                  warned. */}
+              <p className="muted small">
+                Prices are confirmed when you place your order, so this total may change.
+              </p>
+
+              <Link className="btn btn--primary btn--block" to="/checkout">
                 Checkout
               </Link>
+
               <button
                 type="button"
-                className="btn btn--secondary"
+                className="btn btn--ghost btn--block"
                 onClick={() => clear.mutate()}
                 disabled={clear.isPending}
               >
                 Empty basket
               </button>
             </div>
-          </div>
-        </>
+          </aside>
+        </div>
       )}
     </div>
   );

@@ -78,7 +78,26 @@ export function CatalogPage() {
           row.sku
         ),
     },
-    { header: 'Name', render: (row) => row.name },
+    {
+      header: 'Name',
+      // A thumbnail beside the name, because a catalogue manager recognises the product long before
+      // they finish reading the SKU. Decorative - the name is right next to it, so a screen reader
+      // would only hear the same thing twice.
+      render: (row) => (
+        <span className="cell-with-thumb">
+          <img
+            className="thumb"
+            src={row.imageUrl ?? '/img/placeholder.svg'}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            width={40}
+            height={40}
+          />
+          {row.name}
+        </span>
+      ),
+    },
     { header: 'Category', render: (row) => row.categoryName },
     { header: 'Brand', render: (row) => row.brandName },
     {

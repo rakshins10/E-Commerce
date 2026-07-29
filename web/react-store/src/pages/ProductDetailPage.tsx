@@ -8,6 +8,7 @@ import { createShopApi } from '../lib/basket';
 import { formatMoney } from '../lib/formatting';
 import { ApiError } from '../lib/api-client';
 import { useCurrentUser } from '../auth/useCurrentUser';
+import { Icon } from '../components/Icon';
 
 /**
  * A single product.
@@ -115,8 +116,17 @@ export function ProductDetailPage() {
       </nav>
 
       <div className="product-detail">
-        <div className="product-detail__image" aria-hidden="true">
-          {product.name.charAt(0)}
+        {/* alt="" because the h1 immediately beside it already names the product. A duplicate
+            announcement is noise, not information. */}
+        <div className="product-media">
+          <img
+            className="product-media__img"
+            src={product.imageUrl ?? '/img/placeholder.svg'}
+            alt=""
+            aria-hidden="true"
+            width={800}
+            height={600}
+          />
         </div>
 
         <div className="stack">
@@ -128,11 +138,12 @@ export function ProductDetailPage() {
             <span>SKU {product.sku}</span>
           </p>
 
-          <p className="product-detail__price">
-            {formatMoney({ amount: product.price, currency: product.currency })}
-          </p>
-
-          <span className={`badge badge--${stock.level}`}>{stock.label}</span>
+          <div className="row">
+            <p className="product-detail__price">
+              {formatMoney({ amount: product.price, currency: product.currency })}
+            </p>
+            <span className={`badge badge--${stock.level}`}>{stock.label}</span>
+          </div>
 
           <p>{product.description}</p>
 
@@ -170,6 +181,21 @@ export function ProductDetailPage() {
               {(addToBasket.error as Error).message}
             </p>
           )}
+
+          {/* The three things a shopper checks before committing. Repeated from the home page on
+              purpose - this is the page where the question is actually asked. */}
+          <ul className="stack--tight plain-list muted small">
+            <li className="row">
+              <Icon name="truck" className="icon--sm" /> Free delivery on orders over £50
+            </li>
+            <li className="row">
+              <Icon name="shield" className="icon--sm" /> 30-day returns
+            </li>
+            <li className="row">
+              <Icon name="boxOpen" className="icon--sm" /> Stock is reserved when you check out, not
+              when you add to the basket
+            </li>
+          </ul>
         </div>
       </div>
     </div>

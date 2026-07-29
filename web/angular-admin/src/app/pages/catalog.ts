@@ -111,7 +111,23 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                         {{ product.sku }}
                       }
                     </th>
-                    <td>{{ product.name }}</td>
+                    <!-- A thumbnail beside the name, because a catalogue manager recognises the
+                         product long before they finish reading the SKU. Decorative - the name is
+                         right next to it, so a screen reader would only hear the same thing twice. -->
+                    <td>
+                      <span class="cell-with-thumb">
+                        <img
+                          class="thumb"
+                          [src]="product.imageUrl ?? '/img/placeholder.svg'"
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          width="40"
+                          height="40"
+                        />
+                        {{ product.name }}
+                      </span>
+                    </td>
                     <td>{{ product.categoryName }}</td>
                     <td>{{ product.brandName }}</td>
                     <td style="text-align: right">{{ money(product.price, product.currency) }}</td>

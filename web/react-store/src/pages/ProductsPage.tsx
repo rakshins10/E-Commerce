@@ -249,19 +249,49 @@ export function ProductsPage() {
 
             return (
               <li key={product.id} className="card product-card">
-                <Link to={`/products/${product.id}`} className="product-card__link">
-                  <div className="product-card__image" aria-hidden="true">
-                    {product.name.charAt(0)}
-                  </div>
-                  <h3 className="product-card__name">{product.name}</h3>
-                </Link>
-                <p className="muted product-card__meta">
-                  {product.brandName} · {product.categoryName}
-                </p>
-                <p className="product-card__price">
-                  {formatMoney({ amount: product.price, currency: product.currency })}
-                </p>
-                <span className={`badge badge--${stock.level}`}>{stock.label}</span>
+                <div className="product-media">
+                  {/*
+                    alt="" and aria-hidden: the illustration carries no information the product name
+                    does not already give, and a screen reader announcing "Ceramic Mug illustration"
+                    directly above the text "Ceramic Mug" is repetition, not description.
+
+                    Real photography of a real product would deserve a real alt.
+                  */}
+                  <img
+                    className="product-media__img"
+                    src={product.imageUrl ?? '/img/placeholder.svg'}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    // The frame is already sized by CSS; these stop the browser reflowing the grid
+                    // as each image decodes.
+                    width={400}
+                    height={300}
+                  />
+                </div>
+
+                <div className="product-card__body">
+                  <p className="product-card__brand">{product.brandName}</p>
+
+                  <h3 className="product-card__name">
+                    {/*
+                      Only the NAME is the link, so the accessible name is the product and nothing
+                      else. The ::after in the stylesheet stretches the hit area to the whole card,
+                      which gives a big pointer target without dragging the price and the badge into
+                      what a screen reader reads out.
+                    */}
+                    <Link to={`/products/${product.id}`} className="product-card__link">
+                      {product.name}
+                    </Link>
+                  </h3>
+                </div>
+
+                <div className="product-card__footer">
+                  <span className="price">
+                    {formatMoney({ amount: product.price, currency: product.currency })}
+                  </span>
+                  <span className={`badge badge--${stock.level}`}>{stock.label}</span>
+                </div>
               </li>
             );
           })}

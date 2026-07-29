@@ -20,9 +20,14 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+// All FOUR applications, not just the storefronts. The admin panels gained their own copy in Phase 8
+// and were not checked until Phase 10 - which meant two of the four could have drifted silently, which
+// is precisely the failure this script exists to prevent.
 const TOKEN_FILES = [
   'web/react-store/src/styles/tokens.css',
   'web/angular-store/src/styles/tokens.css',
+  'web/react-admin/src/styles/tokens.css',
+  'web/angular-admin/src/styles/tokens.css',
 ];
 
 // Pairs that actually appear as text on a background, with the AA threshold.

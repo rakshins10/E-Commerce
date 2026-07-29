@@ -56,7 +56,7 @@ test.describe('authentication', () => {
   test('an anonymous visitor sees the sign-in prompt', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Storefront', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Everyday things, properly made', level: 1 })).toBeVisible();
     await expect(page.getByRole('banner').getByRole('button', { name: 'Sign in' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeHidden();
   });

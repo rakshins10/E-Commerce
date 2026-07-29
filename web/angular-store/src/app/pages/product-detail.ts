@@ -6,6 +6,7 @@ import { Auth } from '../auth/auth';
 import { BasketService } from '../core/basket';
 import { CatalogService, stockLevel, type ProductDetail } from '../core/catalog';
 import { formatMoney } from '../core/formatting';
+import { Icon } from '../icon';
 
 /**
  * A single product.
@@ -24,7 +25,7 @@ import { formatMoney } from '../core/formatting';
 @Component({
   selector: 'app-product-detail-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Icon],
   template: `
     @if (isLoading()) {
       <div class="centred" aria-busy="true" aria-live="polite">
@@ -57,7 +58,18 @@ import { formatMoney } from '../core/formatting';
         </nav>
 
         <div class="product-detail">
-          <div class="product-detail__image" aria-hidden="true">{{ p.name.charAt(0) }}</div>
+          <!-- alt="" because the h1 immediately beside it already names the product. A duplicate
+               announcement is noise, not information. -->
+          <div class="product-media">
+            <img
+              class="product-media__img"
+              [src]="p.imageUrl ?? '/img/placeholder.svg'"
+              alt=""
+              aria-hidden="true"
+              width="800"
+              height="600"
+            />
+          </div>
 
           <div class="stack">
             <h1 class="page-title">{{ p.name }}</h1>
@@ -68,9 +80,10 @@ import { formatMoney } from '../core/formatting';
               <span>SKU {{ p.sku }}</span>
             </p>
 
-            <p class="product-detail__price">{{ money(p) }}</p>
-
-            <span class="badge badge--{{ stock(p).level }}">{{ stock(p).label }}</span>
+            <div class="row">
+              <p class="product-detail__price">{{ money(p) }}</p>
+              <span class="badge badge--{{ stock(p).level }}">{{ stock(p).label }}</span>
+            </div>
 
             <p>{{ p.description }}</p>
 
@@ -99,6 +112,19 @@ import { formatMoney } from '../core/formatting';
                 <p class="muted" role="alert">{{ addError() }}</p>
               }
             </div>
+
+            <!-- The three things a shopper checks before committing. Repeated from the home page on
+                 purpose - this is the page where the question is actually asked. -->
+            <ul class="stack--tight plain-list muted small">
+              <li class="row">
+                <app-icon name="truck" variant="icon--sm" /> Free delivery on orders over £50
+              </li>
+              <li class="row"><app-icon name="shield" variant="icon--sm" /> 30-day returns</li>
+              <li class="row">
+                <app-icon name="boxOpen" variant="icon--sm" /> Stock is reserved when you check out,
+                not when you add to the basket
+              </li>
+            </ul>
           </div>
         </div>
       </div>

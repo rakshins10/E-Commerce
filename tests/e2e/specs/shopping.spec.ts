@@ -93,11 +93,11 @@ test.describe('basket', () => {
 
   test('the basket and orders links only appear once signed in', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('banner').getByRole('link', { name: 'Basket' })).toBeHidden();
+    await expect(page.getByRole('banner').getByRole('link', { name: /^Basket/ })).toBeHidden();
 
     await signIn(page, 'customer');
 
-    await expect(page.getByRole('banner').getByRole('link', { name: 'Basket' })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('link', { name: /^Basket/ })).toBeVisible();
     await expect(page.getByRole('banner').getByRole('link', { name: 'Orders' })).toBeVisible();
   });
 
@@ -116,7 +116,15 @@ test.describe('basket', () => {
     const name = await addFirstProduct(page);
 
     await page.goto('/basket');
-    await expect(page.getByRole('cell', { name, exact: false }).first()).toBeVisible();
+
+    // The line links back to the product it came from. Asserted through the list's accessible name
+    // rather than a table cell: the basket is a list of products with pictures, not a grid, and a
+    // spec that asserts the LAYOUT rather than the content breaks every time the design changes
+    // while telling you nothing about whether the basket works.
+    await expect(
+      page.getByRole('list', { name: 'Items in your basket' }).getByRole('link', { name }),
+    ).toBeVisible();
+
     await expect(page.getByRole('status')).toContainText('1 item');
   });
 

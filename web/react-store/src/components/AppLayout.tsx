@@ -1,6 +1,11 @@
+import { useMemo } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
+import { useQuery } from '@tanstack/react-query';
+
 import { useCurrentUser } from '../auth/useCurrentUser';
+import { createShopApi } from '../lib/basket';
+import { Icon } from './Icon';
 import { ThemeToggle } from './ThemeToggle';
 
 /**
@@ -16,6 +21,27 @@ import { ThemeToggle } from './ThemeToggle';
 export function AppLayout() {
   const auth = useAuth();
   const { user, isAuthenticated } = useCurrentUser();
+
+  const api = useMemo(
+    () => createShopApi(() => auth.user?.access_token ?? null),
+    [auth.user?.access_token],
+  );
+
+  /**
+   * The basket, read here purely for the count on the cart button.
+   *
+   * The SAME query key the basket page uses, so adding an item anywhere in the app updates this badge
+   * without a refetch - TanStack Query hands both consumers the same cache entry. A separate key would
+   * mean the header showing 2 while the basket showed 3, which is the classic symptom of a count kept
+   * in its own piece of state.
+   */
+  const basketQuery = useQuery({
+    queryKey: ['basket'],
+    queryFn: () => api.getBasket(),
+    enabled: isAuthenticated,
+  });
+
+  const itemCount = basketQuery.data?.totalUnits ?? 0;
 
   return (
     <div className="app">
@@ -43,9 +69,6 @@ export function AppLayout() {
               // A fragment, because JSX needs a single parent and a wrapper <div> here would break the
               // flex layout of the nav bar.
               <>
-                <NavLink to="/basket" className="nav-link">
-                  Basket
-                </NavLink>
                 <NavLink to="/orders" className="nav-link">
                   Orders
                 </NavLink>
@@ -60,6 +83,27 @@ export function AppLayout() {
 
           <div className="app-header__actions">
             <ThemeToggle />
+
+            {isAuthenticated && (
+              /* The cart moves out of the text nav and becomes an icon button, which is where a
+                 shopper looks for it. The accessible name carries the count, so a screen reader hears
+                 "Basket, 3 items" in one go rather than a link and then a stray number. */
+              <NavLink
+                to="/basket"
+                className="nav-link cart-button"
+                aria-label={
+                  itemCount === 1 ? 'Basket, 1 item' : `Basket, ${itemCount} items`
+                }
+              >
+                <Icon name="cart" />
+                {itemCount > 0 && (
+                  /* aria-hidden: the count is already in the button's accessible name above. */
+                  <span className="cart-badge" aria-hidden="true">
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
 
             {isAuthenticated ? (
               <>

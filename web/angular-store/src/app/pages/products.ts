@@ -139,13 +139,41 @@ import { formatMoney } from '../core/formatting';
           <ul class="grid grid--3 product-grid">
             @for (product of r.items; track product.id) {
               <li class="card product-card">
-                <a [routerLink]="['/products', product.id]" class="product-card__link">
-                  <div class="product-card__image" aria-hidden="true">{{ product.name.charAt(0) }}</div>
-                  <h3 class="product-card__name">{{ product.name }}</h3>
-                </a>
-                <p class="muted product-card__meta">{{ product.brandName }} · {{ product.categoryName }}</p>
-                <p class="product-card__price">{{ money(product) }}</p>
-                <span class="badge badge--{{ stock(product).level }}">{{ stock(product).label }}</span>
+                <div class="product-media">
+                  <!--
+                    alt="" and aria-hidden: the illustration carries no information the product name
+                    does not already give, and a screen reader announcing "Ceramic Mug illustration"
+                    directly above the text "Ceramic Mug" is repetition, not description.
+                  -->
+                  <img
+                    class="product-media__img"
+                    [src]="product.imageUrl ?? '/img/placeholder.svg'"
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    width="400"
+                    height="300"
+                  />
+                </div>
+
+                <div class="product-card__body">
+                  <p class="product-card__brand">{{ product.brandName }}</p>
+
+                  <h3 class="product-card__name">
+                    <!--
+                      Only the NAME is the link, so the accessible name is the product and nothing
+                      else. The ::after in the stylesheet stretches the hit area to the whole card.
+                    -->
+                    <a [routerLink]="['/products', product.id]" class="product-card__link">{{
+                      product.name
+                    }}</a>
+                  </h3>
+                </div>
+
+                <div class="product-card__footer">
+                  <span class="price">{{ money(product) }}</span>
+                  <span class="badge badge--{{ stock(product).level }}">{{ stock(product).label }}</span>
+                </div>
               </li>
             }
           </ul>

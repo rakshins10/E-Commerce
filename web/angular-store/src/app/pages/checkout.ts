@@ -60,7 +60,10 @@ import { COUNTRIES, ProfileService } from '../core/profile';
           <div class="card" role="alert"><p class="muted">{{ error() }}</p></div>
         }
 
-        <form class="stack" [formGroup]="form" (ngSubmit)="placeOrder()">
+        <!-- Two columns on a wide screen, with the summary sticky beside the form: the total a
+             customer is about to commit to should never be scrolled off the page while they fill in
+             an address. One column below 64rem, where sticky would eat the viewport. -->
+        <form class="checkout-layout" [formGroup]="form" (ngSubmit)="placeOrder()">
           <section class="card stack" aria-labelledby="delivery-heading">
             <h2 id="delivery-heading">Delivery address</h2>
 
@@ -99,33 +102,52 @@ import { COUNTRIES, ProfileService } from '../core/profile';
             </div>
           </section>
 
-          <section class="card stack" aria-labelledby="summary-heading">
-            <h2 id="summary-heading">Order summary</h2>
+          <aside class="checkout-layout__aside">
+            <section class="card stack" aria-labelledby="summary-heading">
+              <h2 id="summary-heading" style="margin-top: 0">Order summary</h2>
 
-            <ul class="plain-list">
-              @for (item of basket()!.items; track item.productId) {
-                <li>
-                  {{ item.productName }} × {{ item.quantity }} —
-                  {{ money(item.lineTotal, item.currency) }}
-                </li>
-              }
-            </ul>
+              <ul class="plain-list stack--tight">
+                @for (item of basket()!.items; track item.productId) {
+                  <li class="row">
+                    <img
+                      class="thumb"
+                      [src]="item.imageUrl ?? '/img/placeholder.svg'"
+                      alt=""
+                      aria-hidden="true"
+                      loading="lazy"
+                      width="40"
+                      height="40"
+                    />
+                    <span>
+                      {{ item.productName }} × {{ item.quantity }} —
+                      {{ money(item.lineTotal, item.currency) }}
+                    </span>
+                  </li>
+                }
+              </ul>
 
-            <p class="lede">
-              Estimated total: {{ money(basket()!.estimatedTotal, basket()!.currency) }}
-            </p>
+              <div class="summary">
+                <p class="summary__row"><span>Delivery</span><span>Free</span></p>
+                <p class="summary__total">
+                  <span>Estimated total</span>
+                  <span>{{ money(basket()!.estimatedTotal, basket()!.currency) }}</span>
+                </p>
+              </div>
 
-            <p class="muted small">
-              We confirm every price against the catalogue when you place your order, so the amount
-              charged may differ from the estimate above.
-            </p>
+              <p class="muted small">
+                We confirm every price against the catalogue when you place your order, so the amount
+                charged may differ from the estimate above.
+              </p>
 
-            <div>
-              <button type="submit" class="btn btn--primary" [disabled]="form.invalid || saving()">
+              <button
+                type="submit"
+                class="btn btn--primary btn--block"
+                [disabled]="form.invalid || saving()"
+              >
                 {{ saving() ? 'Placing your order…' : 'Place order' }}
               </button>
-            </div>
-          </section>
+            </section>
+          </aside>
         </form>
       </div>
     }
