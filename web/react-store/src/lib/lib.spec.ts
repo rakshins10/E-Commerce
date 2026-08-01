@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { groupIntoDepartments } from './catalog';
+
 import {
   formatAddress,
   formatAddressLines,
@@ -195,5 +197,68 @@ describe('formatting', () => {
 
   it('does not leave a dangling space before the ellipsis', () => {
     expect(truncate('abcd efgh', 6)).toBe('abcd…');
+  });
+});
+
+/**
+ * The taxonomy grouping.
+ *
+ * These assertions are DUPLICATED, character for character, in the other app's spec file. Each app
+ * owns its own copy of `groupIntoDepartments` (ADR-0018), so if one copy changes behaviour exactly
+ * one of the two suites goes red and the diff points straight at the divergence.
+ */
+describe('groupIntoDepartments', () => {
+  const category = (slug: string, parentSlug: string | null, productCount = 0) => ({
+    id: slug,
+    name: slug,
+    slug,
+    parentSlug,
+    productCount,
+  });
+
+  it('nests a child under its parent', () => {
+    const departments = groupIntoDepartments([
+      category('clothing', null, 6),
+      category('hoodies', 'clothing', 3),
+      category('t-shirts', 'clothing', 3),
+    ]);
+
+    expect(departments).toHaveLength(1);
+    expect(departments[0]!.slug).toBe('clothing');
+    expect(departments[0]!.children.map((child) => child.slug)).toEqual(['hoodies', 't-shirts']);
+  });
+
+  it('keeps a top-level category with no children', () => {
+    const departments = groupIntoDepartments([category('gifts', null, 2)]);
+
+    expect(departments).toHaveLength(1);
+    expect(departments[0]!.children).toEqual([]);
+  });
+
+  it('preserves the order the server sent', () => {
+    const departments = groupIntoDepartments([
+      category('accessories', null),
+      category('clothing', null),
+      category('drinkware', 'accessories'),
+      category('stationery', 'accessories'),
+    ]);
+
+    expect(departments.map((department) => department.slug)).toEqual(['accessories', 'clothing']);
+    expect(departments[0]!.children.map((child) => child.slug)).toEqual([
+      'drinkware',
+      'stationery',
+    ]);
+  });
+
+  // An orphan is PROMOTED, never dropped. Losing a category because its parent was withdrawn would
+  // hide products from browsing while search still returned them - the worst of both.
+  it('promotes a child whose parent is missing rather than dropping it', () => {
+    const departments = groupIntoDepartments([category('hoodies', 'clothing', 3)]);
+
+    expect(departments.map((department) => department.slug)).toEqual(['hoodies']);
+  });
+
+  it('returns nothing for an empty list', () => {
+    expect(groupIntoDepartments([])).toEqual([]);
   });
 });

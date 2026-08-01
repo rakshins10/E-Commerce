@@ -164,8 +164,11 @@ export function CheckoutPage() {
         </div>
       )}
 
+      {/* Two columns on a wide screen, with the summary sticky beside the form: the total a customer
+          is about to commit to should never be scrolled off the page while they fill in an address.
+          One column below 64rem, where sticky would eat the viewport. */}
       <form
-        className="stack"
+        className="checkout-layout"
         onSubmit={(event) => {
           event.preventDefault();
           setError(null);
@@ -251,38 +254,62 @@ export function CheckoutPage() {
           </div>
         </section>
 
-        <section className="card stack" aria-labelledby="summary-heading">
-          <h2 id="summary-heading">Order summary</h2>
+        <aside className="checkout-layout__aside">
+          <section className="card stack" aria-labelledby="summary-heading">
+            <h2 id="summary-heading" style={{ marginTop: 0 }}>
+              Order summary
+            </h2>
 
-          <ul className="plain-list">
-            {basket.items.map((item) => (
-              <li key={item.productId}>
-                {item.productName} × {item.quantity} —{' '}
-                {formatMoney({ amount: item.lineTotal, currency: item.currency })}
-              </li>
-            ))}
-          </ul>
+            <ul className="plain-list stack--tight">
+              {basket.items.map((item) => (
+                <li key={item.productId} className="row">
+                  <img
+                    className="thumb"
+                    src={item.imageUrl ?? '/img/placeholder.svg'}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    width={40}
+                    height={40}
+                  />
+                  <span>
+                    {item.productName}
+                    {(item.size || item.colourName) &&
+                      ` (${[item.size, item.colourName].filter(Boolean).join(' · ')})`}{' '}
+                    × {item.quantity} —{' '}
+                    {formatMoney({ amount: item.lineTotal, currency: item.currency })}
+                  </span>
+                </li>
+              ))}
+            </ul>
 
-          <p className="lede">
-            Estimated total:{' '}
-            {formatMoney({ amount: basket.estimatedTotal, currency: basket.currency })}
-          </p>
+            <div className="summary">
+              <p className="summary__row">
+                <span>Delivery</span>
+                <span>Free</span>
+              </p>
+              <p className="summary__total">
+                <span>Estimated total</span>
+                <span>
+                  {formatMoney({ amount: basket.estimatedTotal, currency: basket.currency })}
+                </span>
+              </p>
+            </div>
 
-          <p className="muted small">
-            We confirm every price against the catalogue when you place your order, so the amount
-            charged may differ from the estimate above.
-          </p>
+            <p className="muted small">
+              We confirm every price against the catalogue when you place your order, so the amount
+              charged may differ from the estimate above.
+            </p>
 
-          <div>
             <button
               type="submit"
-              className="btn btn--primary"
+              className="btn btn--primary btn--block"
               disabled={!canSubmit || placeOrder.isPending}
             >
               {placeOrder.isPending ? 'Placing your order…' : 'Place order'}
             </button>
-          </div>
-        </section>
+          </section>
+        </aside>
       </form>
     </div>
   );

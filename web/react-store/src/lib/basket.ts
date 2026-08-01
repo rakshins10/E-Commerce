@@ -9,8 +9,11 @@ import { ApiClient } from './api-client';
 
 export interface BasketItem {
   readonly productId: string;
+  /** The VARIANT sku. This identifies the line — two sizes of one shirt are two lines. */
   readonly sku: string;
   readonly productName: string;
+  readonly size: string | null;
+  readonly colourName: string | null;
   readonly imageUrl: string | null;
   readonly unitPrice: number;
   readonly currency: string;
@@ -37,6 +40,8 @@ export interface AddToBasketRequest {
   readonly productId: string;
   readonly sku: string;
   readonly productName: string;
+  readonly size?: string | null;
+  readonly colourName?: string | null;
   readonly imageUrl?: string | null;
   readonly unitPrice: number;
   readonly currency: string;
@@ -47,6 +52,8 @@ export interface OrderItem {
   readonly productId: string;
   readonly sku: string;
   readonly productName: string;
+  readonly size: string | null;
+  readonly colourName: string | null;
   readonly quantity: number;
   readonly unitPrice: number;
   readonly lineTotal: number;
@@ -193,11 +200,13 @@ export function createShopApi(getAccessToken: () => string | null) {
       client.post<Basket>('/api/basket/me/items', item),
 
     /** Quantity 0 removes the line — the server treats it that way, so the UI need not special-case it. */
-    setQuantity: (productId: string, quantity: number) =>
-      client.put<Basket>(`/api/basket/me/items/${productId}`, { quantity }),
+    // Keyed by variant SKU, not product id. A Medium and a Large of one shirt are two lines, and
+    // addressing them by product would change or remove both.
+    setQuantity: (sku: string, quantity: number) =>
+      client.put<Basket>(`/api/basket/me/items/${encodeURIComponent(sku)}`, { quantity }),
 
-    removeFromBasket: (productId: string) =>
-      client.delete<Basket>(`/api/basket/me/items/${productId}`),
+    removeFromBasket: (sku: string) =>
+      client.delete<Basket>(`/api/basket/me/items/${encodeURIComponent(sku)}`),
 
     clearBasket: () => client.delete<Basket>('/api/basket/me'),
 

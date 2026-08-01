@@ -37,11 +37,12 @@ public static class BasketEndpoints
             .RequirePermission(Permissions.Basket.WriteOwn)
             .WithSummary("Adds an item, or increases the quantity if it is already there.");
 
-        group.MapPut("/me/items/{productId:guid}", SetQuantity)
+        // Keyed by variant SKU, not product id: a Medium and a Large of the same shirt are two lines.
+        group.MapPut("/me/items/{sku}", SetQuantity)
             .RequirePermission(Permissions.Basket.WriteOwn)
             .WithSummary("Sets the quantity of a line. Quantity 0 removes it.");
 
-        group.MapDelete("/me/items/{productId:guid}", RemoveItem)
+        group.MapDelete("/me/items/{sku}", RemoveItem)
             .RequirePermission(Permissions.Basket.WriteOwn)
             .WithSummary("Removes a line.");
 
@@ -90,7 +91,8 @@ public static class BasketEndpoints
         CustomerBasket basket = await baskets.GetAsync(user.RequireSubject()).ConfigureAwait(false)
                                 ?? new CustomerBasket { BuyerId = user.RequireSubject() };
 
-        BasketItem? existing = basket.Items.FirstOrDefault(item => item.ProductId == request.ProductId);
+        BasketItem? existing = basket.Items.FirstOrDefault(item =>
+            string.Equals(item.Sku, request.Sku, StringComparison.OrdinalIgnoreCase));
 
         if (existing is not null)
         {
@@ -109,7 +111,7 @@ public static class BasketEndpoints
             if (basket.Items.Count >= CustomerBasket.MaxItems)
             {
                 throw new DomainException(
-                    $"A basket may not hold more than {CustomerBasket.MaxItems} different products.");
+                    $"A basket may not hold more than {CustomerBasket.MaxItems} different items.");
             }
 
             basket.Items.Add(new BasketItem
@@ -117,6 +119,8 @@ public static class BasketEndpoints
                 ProductId = request.ProductId,
                 Sku = request.Sku,
                 ProductName = request.ProductName,
+                Size = request.Size,
+                ColourName = request.ColourName,
                 ImageUrl = request.ImageUrl,
                 UnitPrice = request.UnitPrice,
                 Currency = request.Currency,
@@ -128,7 +132,7 @@ public static class BasketEndpoints
     }
 
     private static async Task<IResult> SetQuantity(
-        Guid productId,
+        string sku,
         SetQuantityRequest request,
         ICurrentUser user,
         BasketRepository baskets)
@@ -146,7 +150,8 @@ public static class BasketEndpoints
             return Results.NotFound();
         }
 
-        BasketItem? item = basket.Items.FirstOrDefault(i => i.ProductId == productId);
+        BasketItem? item = basket.Items.FirstOrDefault(i =>
+            string.Equals(i.Sku, sku, StringComparison.OrdinalIgnoreCase));
 
         if (item is null)
         {
@@ -168,7 +173,7 @@ public static class BasketEndpoints
     }
 
     private static async Task<IResult> RemoveItem(
-        Guid productId,
+        string sku,
         ICurrentUser user,
         BasketRepository baskets)
     {
@@ -179,7 +184,7 @@ public static class BasketEndpoints
             return Results.NotFound();
         }
 
-        basket.Items.RemoveAll(item => item.ProductId == productId);
+        basket.Items.RemoveAll(item => string.Equals(item.Sku, sku, StringComparison.OrdinalIgnoreCase));
 
         return Results.Ok(await baskets.SaveAsync(basket).ConfigureAwait(false));
     }
@@ -221,6 +226,11 @@ public sealed record AddBasketItemRequest
     public required string Sku { get; init; }
 
     public required string ProductName { get; init; }
+
+    /// <summary>The chosen size and colour, for display on the basket line.</summary>
+    public string? Size { get; init; }
+
+    public string? ColourName { get; init; }
 
     public string? ImageUrl { get; init; }
 

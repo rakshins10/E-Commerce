@@ -185,10 +185,53 @@ test.describe('catalogue', () => {
     await page.goto('/catalog');
     await page.getByRole('link', { name: 'NW-TS-001' }).click();
 
+    // Wait for the form to be populated before typing into it. Both apps render the fields first and
+    // fill them when the product resolves, so typing immediately can be overwritten by the load.
+    await expect(page.getByLabel('Name')).toHaveValue('Classic Cotton T-shirt');
+
     await page.getByLabel('Description').fill('Edited by the shared catalogue spec.');
     await page.getByRole('button', { name: 'Save changes' }).click();
 
     await expect(page.getByRole('status')).toContainText('Product saved', { timeout: 15_000 });
+  });
+
+  /**
+   * Editing one field must not erase another.
+   *
+   * This test exists because THIS TEST DID NOT EXIST.
+   *
+   * `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a field
+   * the server sets to NULL. The Angular admin's form had no image control at all, so every run of
+   * the spec above quietly wiped the artwork off NW-TS-001 — and the only symptom was a placeholder
+   * on a storefront page that no admin spec looks at. It survived because "a product can be edited"
+   * asserted that saving *succeeded*, never that saving *preserved anything*.
+   *
+   * A save-and-reload assertion is the cheap general answer to that whole class of bug.
+   */
+  test('editing one field does not erase the others', async ({ page }) => {
+    await signIn(page, 'catalogmgr');
+    await page.goto('/catalog');
+    await page.getByRole('link', { name: 'NW-TS-001' }).click();
+
+    // Wait for the form to be POPULATED, not merely present.
+    //
+    // Both apps render the fields immediately and fill them when the product resolves, so reading a
+    // value straight after the click reads the empty initial state. `toHaveValue` retries;
+    // `inputValue()` does not.
+    await expect(page.getByLabel('Name')).toHaveValue('Classic Cotton T-shirt');
+
+    const before = await page.getByLabel('Image URL').inputValue();
+
+    // Something must actually be there, or this passes by asserting empty === empty.
+    expect(before).not.toBe('');
+
+    await page.getByLabel('Description').fill('Edited again, to prove the image survives.');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(page.getByRole('status')).toContainText('Product saved', { timeout: 15_000 });
+
+    // Reload, so this reads what the SERVER stored rather than what the form still holds in memory.
+    await page.reload();
+    await expect(page.getByLabel('Image URL')).toHaveValue(before);
   });
 
   test('changing a price is a separate action with its own permission', async ({ page }) => {

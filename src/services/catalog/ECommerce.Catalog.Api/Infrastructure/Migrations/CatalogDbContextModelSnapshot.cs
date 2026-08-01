@@ -94,6 +94,12 @@ namespace ECommerce.Catalog.Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("audience");
+
                     b.Property<Guid>("BrandId")
                         .HasColumnType("uuid")
                         .HasColumnName("brand_id");
@@ -154,6 +160,9 @@ namespace ECommerce.Catalog.Api.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_products");
 
+                    b.HasIndex("Audience")
+                        .HasDatabaseName("ix_products_audience");
+
                     b.HasIndex("BrandId")
                         .HasDatabaseName("ix_products_brand_id");
 
@@ -168,6 +177,73 @@ namespace ECommerce.Catalog.Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_products_sku");
 
                     b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("ECommerce.Catalog.Api.Domain.ProductVariant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ColourHex")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("colour_hex");
+
+                    b.Property<string>("ColourName")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("colour_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("product_id");
+
+                    b.Property<string>("Size")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("size");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sku");
+
+                    b.Property<int>("StockOnHand")
+                        .HasColumnType("integer")
+                        .HasColumnName("stock_on_hand");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_product_variants");
+
+                    b.HasIndex("ColourName")
+                        .HasDatabaseName("ix_product_variants_colour_name");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("ix_product_variants_product_id");
+
+                    b.HasIndex("Size")
+                        .HasDatabaseName("ix_product_variants_size");
+
+                    b.HasIndex("Sku")
+                        .IsUnique()
+                        .HasDatabaseName("ix_product_variants_sku");
+
+                    b.ToTable("product_variants", (string)null);
                 });
 
             modelBuilder.Entity("ECommerce.Catalog.Api.Domain.Category", b =>
@@ -202,6 +278,18 @@ namespace ECommerce.Catalog.Api.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("ECommerce.Catalog.Api.Domain.ProductVariant", b =>
+                {
+                    b.HasOne("ECommerce.Catalog.Api.Domain.Product", "Product")
+                        .WithMany("Variants")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_variants_products_product_id");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("ECommerce.Catalog.Api.Domain.Brand", b =>
                 {
                     b.Navigation("Products");
@@ -210,6 +298,11 @@ namespace ECommerce.Catalog.Api.Infrastructure.Migrations
             modelBuilder.Entity("ECommerce.Catalog.Api.Domain.Category", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("ECommerce.Catalog.Api.Domain.Product", b =>
+                {
+                    b.Navigation("Variants");
                 });
 #pragma warning restore 612, 618
         }

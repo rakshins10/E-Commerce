@@ -101,6 +101,31 @@ npm run dev:angular    # :4200
 Sign in with any seed user — password `Passw0rd!`. Try `customer` (5 permissions) then `administrator`
 (15) and watch the page change.
 
+> Changing a front-end file and running `docker compose up -d` shows you the **old** app. The four web
+> services are `build:` targets, so `docker compose build react-store angular-store react-admin
+> angular-admin` comes first.
+
+---
+
+## Product imagery
+
+Twelve products, thirteen SVGs, 53 KB for the lot.
+
+[`scripts/generate-product-images.mjs`](../scripts/generate-product-images.mjs) draws them from three
+category palettes into `web/shared-assets/img`, and
+[`web/scripts/sync-assets.mjs`](scripts/sync-assets.mjs) copies that directory into each app's `public/img`
+on `predev` and `prebuild`. The copies are gitignored.
+
+**Why generated SVG rather than committed photographs.** A photograph of a hoodie is a binary blob that a
+diff cannot show you, weighs more than this entire application's JavaScript, and would have to be licensed.
+These are text: a change to the artwork is a readable diff, and the whole catalogue costs less than one
+JPEG.
+
+**Why a sync script rather than a shared package.** [ADR-0018](../docs/adr/0018-self-contained-frontends.md)
+says each app is self-contained, and a Vite or Angular build can only serve what is inside its own project.
+Copying is the honest version of that constraint: one source directory, four generated copies, and the
+script deletes each target first so a removed image does not linger in three apps.
+
 ---
 
 ## Accessibility is a constraint, not a polish pass

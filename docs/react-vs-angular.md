@@ -609,3 +609,185 @@ Angular's box has solved forms and routing better than anything React ships.** A
 Query and React Hook Form gets the best of both — at the price of two library choices, two upgrade paths
 and two sets of conventions to agree on. A team on Angular gets a good answer to both without deciding
 anything, and pays for it in bundle size and lifecycle subtlety.
+
+---
+
+## The shop UI rebuild — one shared piece of state, two mechanisms
+
+This was not a phase. The storefront worked but looked like a test harness, so both apps were rebuilt
+around real product imagery, a header cart badge, a quantity stepper and a sticky order summary. It
+produced one comparison worth keeping.
+
+### Deriving a header count from a page's data
+
+The header shows how many items are in the basket. The basket page shows the same number. They must
+never disagree — a header reading 2 beside a basket reading 3 is the classic symptom of a count kept in
+its own piece of state, updated by hand in three places and forgotten in a fourth.
+
+**React** declares the same query the basket page declares:
+
+```tsx
+const basketQuery = useQuery({
+  queryKey: ['basket'],       // the SAME key the basket page uses
+  queryFn: () => api.getBasket(),
+  enabled: isAuthenticated,
+});
+
+const itemCount = basketQuery.data?.totalUnits ?? 0;
+```
+
+Two components, one cache entry. Adding an item anywhere writes to `['basket']` and both re-render.
+There is no fetch here at all if the basket page already loaded it.
+
+**Angular** derives from the singleton service:
+
+```ts
+readonly basket = signal<Basket | null>(null);
+readonly itemCount = computed(() => this.basket()?.totalUnits ?? 0);
+```
+
+Two components, one signal. A `computed` **cannot** disagree with its source — it is not a copy, it is a
+function of it.
+
+Both are right, and for once neither is clearly better. What is worth noticing is *why* they are right:
+in both cases the count is **derived**, not stored. The mechanism differs; the rule does not.
+
+The one asymmetry: Angular needs `enabled: isAuthenticated`'s equivalent written out as an effect,
+because sign-in resolves after the shell has already rendered:
+
+```ts
+effect(() => {
+  if (this.auth.isAuthenticated()) void this.basketService.load().catch(() => {});
+});
+```
+
+TanStack Query has a flag for that. Angular has a primitive you assemble it from. That is the same trade
+this document has recorded since Phase 4, appearing in a new place.
+
+### The divergence this found
+
+Angular's `Auth` had no `error` signal. React has rendered `auth.error` on the home page since Phase 3,
+and the Angular home page silently showed nothing, because `angular-auth-oidc-client` reports a failed
+sign-in by resolving `checkAuth()` with `isAuthenticated: false` rather than by throwing — so there was
+nothing obvious to render, and nobody noticed there was nothing.
+
+No spec covered it. A failed sign-in is awkward to provoke on purpose, so this sat undeclared for six
+phases. It is fixed (`Auth.error`, fed from `checkAuth`'s error channel) and recorded as row X10 of the
+parity checklist.
+
+**The lesson is about the shape of the gap, not the gap itself.** The e2e suite catches drift on paths a
+spec walks. It cannot catch drift on a path nobody walks, and the error paths are exactly the paths
+nobody walks. Two independent implementations will diverge there first.
+
+---
+
+## Category browsing — writing a filter into the URL from a link
+
+The products page grew a category rail: every department and everything inside it, laid out instead of
+folded into a `<select>`. Each entry is a real link that sets `?category=`, keeping the other filters.
+
+**React** builds the address by hand and hands it to `<Link>`:
+
+```tsx
+const categoryHref = (slug: string) => {
+  const next = new URLSearchParams(searchParams);
+  if (slug) next.set('category', slug);
+  else next.delete('category');
+  next.delete('page');
+  const query = next.toString();
+  return query ? `/products?${query}` : '/products';
+};
+```
+
+**Angular** declares the change and lets the router merge it:
+
+```html
+<a routerLink="/products"
+   [queryParams]="categoryParams(child.slug)"
+   queryParamsHandling="merge">
+```
+
+```ts
+categoryParams(slug: string): Record<string, string | null> {
+  return { category: slug || null, page: null };
+}
+```
+
+**Angular wins this one clearly.** It says *what changes* — set the category, drop the page — and the
+router works out the rest, including that `null` removes a parameter. React's version has to reconstruct
+the entire query string on every render, and every rule about what survives a category change is written
+out longhand. Both are six lines; only one of them can be read as a sentence.
+
+It is also the first place in this document where Angular's framework-supplied routing beats a React
+idiom on something a real screen needs, rather than on ceremony. React Router has no `queryParamsHandling`
+equivalent — `useSearchParams` gives you the object and leaves the merging to you.
+
+### Where the frameworks did not differ at all
+
+`groupIntoDepartments` — turning the flat category list into a tree — is the same twenty lines in both
+apps, because it is plain TypeScript over plain data. Duplicated per
+[ADR-0018](adr/0018-self-contained-frontends.md), guarded by six identical unit assertions in each suite.
+
+That is worth noticing. The parts of a front end that are genuinely *logic* are framework-shaped only when
+you let them be. Everything above about hooks, signals, `useMemo` and `computed` is about **when code
+runs**; none of it is about what the code does.
+
+---
+
+## Product variants — the same UI state, two ways of holding it
+
+A product page with sizes and colours is a small state machine: which option is chosen, which
+combinations exist, which are sold out, and whether the buy button may be enabled. It is the most
+genuinely *stateful* screen in this application, so it is a fair test.
+
+**React** holds two `useState` values and derives the rest inline:
+
+```tsx
+const [size, setSize] = useState<string | null>(null);
+const [colour, setColour] = useState<string | null>(null);
+
+const variants = query.data?.variants ?? [];
+const sizes = sizesOf(variants);
+const selected = findVariant(variants, size, colour);
+const needsSize = sizes.length > 0 && size === null;
+```
+
+**Angular** holds two signals and derives with `computed`:
+
+```ts
+protected readonly size = signal<string | null>(null);
+protected readonly colour = signal<string | null>(null);
+
+protected readonly variants = computed(() => this.product()?.variants ?? []);
+protected readonly sizes = computed(() => sizesOf(this.variants()));
+protected readonly selected = computed(() => findVariant(this.variants(), this.size(), this.colour()));
+protected readonly needsSize = computed(() => this.sizes().length > 0 && this.size() === null);
+```
+
+**Angular is tidier here, and for a reason that only shows up at this size.** React recomputes all four
+values on every render — cheap, and correct, but they are recomputed whether or not anything they depend
+on changed. Angular's `computed` are memoised on their actual dependencies without a dependency array to
+maintain. With four derivations the difference is aesthetic; the point is that the aesthetic one scales
+and the dependency array does not.
+
+The one place React is clearly ahead is the default-colour effect. Both apps pre-select the first colour
+with stock once the product loads, and React's `useEffect` needs an eslint-disabled dependency array to
+avoid re-running on every keystroke of derived state:
+
+```tsx
+useEffect(() => {
+  if (colours.length === 0 || colour !== null) return;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [query.data]);
+```
+
+Angular does it inside the load, with no lifecycle involved at all. A disabled lint rule is a signal that
+the model and the problem do not quite fit — and that is the honest summary of `useEffect` for anything
+that is not genuinely a subscription.
+
+### What did not differ
+
+`sizesOf`, `coloursOf`, `findVariant`, `sizeHasStock` and `colourHasStock` are the same functions in both
+apps, duplicated per [ADR-0018](adr/0018-self-contained-frontends.md) and guarded by identical unit tests.
+Same conclusion as `groupIntoDepartments`: the parts of a front end that are genuinely *logic* are not
+framework-shaped unless you let them be.

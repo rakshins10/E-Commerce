@@ -200,12 +200,26 @@ public sealed class PlaceOrderHandler(
 
             lines.Add(new OrderLineRequest(
                 price.ProductId,
-                price.Sku,
+                // The VARIANT SKU, from the basket - not price.Sku, which is the style code.
+                //
+                // This is the one field that must come from what the customer chose rather than from
+                // Catalog: the money is per product, but the thing being picked off a shelf is a specific
+                // size and colour. Taking price.Sku here would put "NW-TS-001" on the line, and Inventory
+                // would then have no stock row to reserve against.
+                //
+                // KNOWN GAP: nothing here proves the variant SKU exists or belongs to this product. It
+                // fails safe rather than silently - Inventory rejects an unknown SKU and the saga cancels
+                // the order with compensation - but the rejection arrives seconds later rather than at
+                // checkout. Validating it here would mean widening the Catalog pricing contract to return
+                // variants; recorded in docs/services/ordering.md rather than left to be discovered.
+                item.Sku,
                 // The name is taken from Catalog too, so a renamed product shows its real name on the
                 // invoice rather than whatever the client happened to send.
                 price.Name,
                 new Money(price.UnitPrice, price.Currency),
-                item.Quantity));
+                item.Quantity,
+                item.Size,
+                item.ColourName));
         }
 
         return lines;

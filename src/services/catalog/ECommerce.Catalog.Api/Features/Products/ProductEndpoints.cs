@@ -49,6 +49,12 @@ public static class ProductEndpoints
             .WithSummary("Brands with product counts, for the filter panel")
             .Produces<IReadOnlyList<BrandDto>>();
 
+        group
+            .MapGet("/facets", GetFacets)
+            .WithName("GetFacets")
+            .WithSummary("Audiences, sizes and colours with product counts, for the filter panel")
+            .Produces<FacetsDto>();
+
         // ---------------------------------------------------------------------------------------
         //  Internal: authoritative pricing for checkout.
         // ---------------------------------------------------------------------------------------
@@ -105,6 +111,9 @@ public static class ProductEndpoints
         decimal? minPrice = null,
         decimal? maxPrice = null,
         bool inStockOnly = false,
+        string? audience = null,
+        string? size = null,
+        string? colour = null,
         string? sortBy = null,
         bool sortDescending = false,
         int page = 1,
@@ -113,7 +122,8 @@ public static class ProductEndpoints
         // PageRequest.Normalise() clamps pageSize. An unclamped page size is a denial-of-service vector:
         // ?pageSize=10000000 is a free way to exhaust server memory.
         var query = new ProductQuery(
-            search, category, brand, minPrice, maxPrice, inStockOnly, sortBy, sortDescending, page, pageSize);
+            search, category, brand, minPrice, maxPrice, inStockOnly, sortBy, sortDescending, page, pageSize,
+            audience, size, colour);
 
         PagedResult<ProductSummaryDto> result = await queries.SearchAsync(query, cancellationToken);
 
@@ -141,4 +151,14 @@ public static class ProductEndpoints
 
     private static async Task<IResult> GetBrands(ProductQueries queries, CancellationToken cancellationToken) =>
         Results.Ok(await queries.GetBrandsAsync(cancellationToken));
+
+    /// <summary>
+    /// The size, colour and audience facets.
+    /// </summary>
+    /// <remarks>
+    /// One endpoint for all three rather than three, because a filter panel needs the whole set before it
+    /// can render anything — three requests would mean three loading states for one control.
+    /// </remarks>
+    private static async Task<IResult> GetFacets(ProductQueries queries, CancellationToken cancellationToken) =>
+        Results.Ok(await queries.GetFacetsAsync(cancellationToken));
 }

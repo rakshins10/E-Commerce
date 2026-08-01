@@ -23,6 +23,46 @@ async function signIn(page: Page, username: string) {
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({ timeout: 20_000 });
 }
 
+/**
+ * Chooses a size, if the product has sizes.
+ *
+ * A size is deliberately NOT pre-selected: the product page leaves "Add to basket" disabled until one
+ * is picked, because defaulting a size means somebody buys a Small because it happened to be first.
+ * (A colour IS pre-selected — the photograph already shows one.) So every spec that buys clothing has
+ * to make the choice a customer would.
+ *
+ * Picks the first size that is not sold out. Sold-out sizes render disabled, and clicking a disabled
+ * radio would hang until the timeout rather than fail with something readable.
+ */
+async function chooseAnAvailableSize(page: Page) {
+  const group = page.getByRole('group', { name: 'Size' });
+
+  // No size axis - a mug, a notebook. Nothing to choose.
+  if ((await group.count()) === 0) return;
+
+  const options = group.getByRole('radio');
+  const total = await options.count();
+
+  for (let index = 0; index < total; index++) {
+    const option = options.nth(index);
+
+    if (await option.isEnabled()) {
+      // The LABEL is clicked, not the input. The radio is visually hidden and pointer-events:none -
+      // it exists for the accessibility tree and for keyboard navigation - so the label is the
+      // surface a person actually clicks, and clicking the input hangs until the timeout.
+      //
+      // click() then toBeChecked(), never check(): check() asserts once without retrying, and a
+      // controlled input can be briefly out of step with the DOM mid-re-render.
+      const name = ((await option.getAttribute('value')) ?? '').trim();
+      await group.getByText(name, { exact: true }).click();
+      await expect(option).toBeChecked();
+      return;
+    }
+  }
+
+  throw new Error('Every size is sold out; this product cannot be bought.');
+}
+
 /** Empties the basket so a spec starts from a known state. */
 async function emptyBasket(page: Page) {
   await page.goto('/basket');
@@ -44,7 +84,17 @@ async function addFirstProduct(page: Page): Promise<string> {
   await expect(page.getByRole('status')).toContainText('products');
 
   const firstProduct = page.getByRole('link', { name: /view|details/i }).first();
-  const productLinks = page.getByRole('heading', { level: 3 });
+
+  // Scoped to the product list BY NAME, not to "the first h3 on the page".
+  //
+  // It was the latter, and it worked right up until the products page grew a category rail whose
+  // department names are also h3 — at which point "the first product" became "Accessories", the
+  // click navigated to a filtered list, and the failure surfaced as a missing "Add to basket"
+  // button two assertions later. An unanchored positional selector is a spec that quietly depends on
+  // document order.
+  const productLinks = page
+    .getByRole('list', { name: 'Products' })
+    .getByRole('heading', { level: 3 });
 
   // The card layout differs slightly between the two apps, so navigate by the product heading, which
   // both render. Selecting by role and accessible name rather than by CSS is what makes one spec work
@@ -53,8 +103,15 @@ async function addFirstProduct(page: Page): Promise<string> {
   await productLinks.first().click().catch(async () => firstProduct.click());
 
   await expect(page.getByRole('button', { name: /add to basket|adding/i })).toBeVisible();
+
+  await chooseAnAvailableSize(page);
   await page.getByRole('button', { name: 'Add to basket' }).click();
-  await expect(page.getByRole('status')).toContainText('Added to your basket');
+
+  // Scoped by its text. The product page now has TWO live regions - this confirmation and the
+  // per-variant stock line - and both are legitimately role="status", so the spec has to say which.
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Added to your basket' }),
+  ).toBeVisible();
 
   return name;
 }
@@ -93,11 +150,11 @@ test.describe('basket', () => {
 
   test('the basket and orders links only appear once signed in', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('banner').getByRole('link', { name: 'Basket' })).toBeHidden();
+    await expect(page.getByRole('banner').getByRole('link', { name: /^Basket/ })).toBeHidden();
 
     await signIn(page, 'customer');
 
-    await expect(page.getByRole('banner').getByRole('link', { name: 'Basket' })).toBeVisible();
+    await expect(page.getByRole('banner').getByRole('link', { name: /^Basket/ })).toBeVisible();
     await expect(page.getByRole('banner').getByRole('link', { name: 'Orders' })).toBeVisible();
   });
 
@@ -116,7 +173,15 @@ test.describe('basket', () => {
     const name = await addFirstProduct(page);
 
     await page.goto('/basket');
-    await expect(page.getByRole('cell', { name, exact: false }).first()).toBeVisible();
+
+    // The line links back to the product it came from. Asserted through the list's accessible name
+    // rather than a table cell: the basket is a list of products with pictures, not a grid, and a
+    // spec that asserts the LAYOUT rather than the content breaks every time the design changes
+    // while telling you nothing about whether the basket works.
+    await expect(
+      page.getByRole('list', { name: 'Items in your basket' }).getByRole('link', { name }),
+    ).toBeVisible();
+
     await expect(page.getByRole('status')).toContainText('1 item');
   });
 

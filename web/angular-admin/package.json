@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "description": "Back office - Angular. Functionally identical to @ecommerce/react-admin.",
   "scripts": {
+    "sync:assets": "node ../scripts/sync-assets.mjs",
+    "prestart": "npm run sync:assets",
     "start": "ng serve --port 4201",
+    "prebuild": "npm run sync:assets",
     "build": "ng build",
     "lint": "ng build --configuration development",
     "test": "ng test"

@@ -26,13 +26,6 @@
         >
         @if (auth.isAuthenticated()) {
           <a
-            routerLink="/basket"
-            routerLinkActive="is-active"
-            ariaCurrentWhenActive="page"
-            class="nav-link"
-            >Basket</a
-          >
-          <a
             routerLink="/orders"
             routerLinkActive="is-active"
             ariaCurrentWhenActive="page"
@@ -55,6 +48,25 @@
         <app-theme-toggle />
 
         @if (auth.isAuthenticated()) {
+          <!-- The cart moves out of the text nav and becomes an icon button, which is where a shopper
+               looks for it. The accessible name carries the count, so a screen reader hears
+               "Basket, 3 items" in one go rather than a link and then a stray number. -->
+          <a
+            routerLink="/basket"
+            routerLinkActive="is-active"
+            ariaCurrentWhenActive="page"
+            class="nav-link cart-button"
+            [attr.aria-label]="basketLabel()"
+          >
+            <app-icon name="cart" />
+            @if (itemCount() > 0) {
+              <!-- aria-hidden: the count is already in the link's accessible name above. -->
+              <span class="cart-badge" aria-hidden="true">{{
+                itemCount() > 99 ? '99+' : itemCount()
+              }}</span>
+            }
+          </a>
+
           <span class="muted">{{ auth.displayName() }}</span>
           <button type="button" class="btn btn--secondary" (click)="auth.signOut()">Sign out</button>
         } @else {

@@ -5,6 +5,8 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   getBrands,
   getCategories,
+  getFacets,
+  groupIntoDepartments,
   searchProducts,
   stockLevel,
   type ProductFilters,
@@ -36,6 +38,9 @@ export function ProductsPage() {
       search: searchParams.get('search') ?? '',
       category: searchParams.get('category') ?? '',
       brand: searchParams.get('brand') ?? '',
+      audience: searchParams.get('audience') ?? '',
+      size: searchParams.get('size') ?? '',
+      colour: searchParams.get('colour') ?? '',
       inStockOnly: searchParams.get('inStockOnly') === 'true',
       sortBy: (searchParams.get('sortBy') as ProductFilters['sortBy']) ?? 'name',
       sortDescending: searchParams.get('sortDescending') === 'true',
@@ -92,14 +97,95 @@ export function ProductsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Sizes, colours and audiences. Cached like the taxonomy - it changes just as rarely.
+  const facetsQuery = useQuery({
+    queryKey: ['facets'],
+    queryFn: ({ signal }) => getFacets(signal),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const result = productsQuery.data;
   const hasFilters = Boolean(
-    filters.search || filters.category || filters.brand || filters.inStockOnly,
+    filters.search ||
+      filters.category ||
+      filters.brand ||
+      filters.inStockOnly ||
+      filters.audience ||
+      filters.size ||
+      filters.colour,
   );
+
+  const facets = facetsQuery.data;
+
+  /** The address for an audience, keeping every other filter. Same rule as categoryHref. */
+  const audienceHref = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+
+    if (value) next.set('audience', value);
+    else next.delete('audience');
+
+    next.delete('page');
+
+    const query = next.toString();
+    return query ? `/products?${query}` : '/products';
+  };
+
+  const departments = useMemo(
+    () => groupIntoDepartments(categoriesQuery.data ?? []),
+    [categoriesQuery.data],
+  );
+
+  /**
+   * The address for a category, keeping every other filter.
+   *
+   * The rail writes to the same URL the select does, so a link is not a second code path — it sets
+   * the same `?category=` the dropdown sets. There is still exactly one source of truth, and
+   * anything that survives a refresh in one survives it in the other.
+   */
+  const categoryHref = (slug: string) => {
+    const next = new URLSearchParams(searchParams);
+
+    if (slug) next.set('category', slug);
+    else next.delete('category');
+
+    // Page 3 of Clothing is not page 3 of Hoodies.
+    next.delete('page');
+
+    const query = next.toString();
+    return query ? `/products?${query}` : '/products';
+  };
 
   return (
     <div className="stack">
       <h1 className="page-title">Products</h1>
+
+      {/* --- Who it is for ---------------------------------------------------------------
+          Top-level, above the filter bar, because that is how a clothing shop is organised - a
+          shopper decides "menswear" before they decide "hoodies". It is an attribute rather than a
+          branch of the taxonomy (ADR-0020), but presenting it as a category-level choice is what
+          makes it findable. */}
+      {facets && facets.audiences.length > 1 && (
+        <nav className="audience-tabs" aria-label="Shop for">
+          <Link
+            className="audience-tab"
+            to={audienceHref('')}
+            aria-current={filters.audience === '' ? 'true' : undefined}
+          >
+            Everyone
+          </Link>
+
+          {facets.audiences.map((option) => (
+            <Link
+              key={option.value}
+              className="audience-tab"
+              to={audienceHref(option.value)}
+              aria-current={filters.audience === option.value ? 'true' : undefined}
+            >
+              {option.value}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* --- Filters --- */}
       <section className="card" aria-labelledby="filters-heading">
@@ -120,6 +206,17 @@ export function ProductsPage() {
             />
           </div>
 
+          {/* --- Category ---------------------------------------------------------------------
+              `<optgroup>`, not a hand-drawn indent.
+
+              This used to prefix every child with an em dash — "— T-shirts (3)" — which is what you
+              reach for when you want a tree in a control that does not have one. It renders as a
+              stray character with no meaning, a screen reader announces it, and it still does not
+              say which parent the child belongs to.
+
+              `<optgroup>` is the real thing: the browser indents it, assistive technology announces
+              the group name alongside the option, and the department stops being a selectable row
+              that looked like an option but read like a heading. */}
           <div className="field">
             <label htmlFor="category">Category</label>
             <select
@@ -129,10 +226,21 @@ export function ProductsPage() {
               onChange={(event) => updateParams({ category: event.target.value, page: '1' })}
             >
               <option value="">All categories</option>
-              {categoriesQuery.data?.map((category) => (
-                <option key={category.id} value={category.slug}>
-                  {category.parentSlug ? `— ${category.name}` : category.name} ({category.productCount})
-                </option>
+
+              {departments.map((department) => (
+                <optgroup key={department.id} label={department.name}>
+                  {/* The department itself stays selectable — the server rolls its children up, so
+                      "everything in Clothing" is a real and useful query. */}
+                  <option value={department.slug}>
+                    All {department.name.toLowerCase()} ({department.productCount})
+                  </option>
+
+                  {department.children.map((child) => (
+                    <option key={child.id} value={child.slug}>
+                      {child.name} ({child.productCount})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -153,6 +261,47 @@ export function ProductsPage() {
               ))}
             </select>
           </div>
+
+          {/* Size and colour filter across the WHOLE catalogue, so "show me everything in Large"
+              is one click. The counts are of products, not variants — "Navy (2)" has to mean two
+              things you can click through to. */}
+          {facets && facets.sizes.length > 0 && (
+            <div className="field">
+              <label htmlFor="size">Size</label>
+              <select
+                id="size"
+                className="input"
+                value={filters.size}
+                onChange={(event) => updateParams({ size: event.target.value, page: '1' })}
+              >
+                <option value="">All sizes</option>
+                {facets.sizes.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.productCount})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {facets && facets.colours.length > 0 && (
+            <div className="field">
+              <label htmlFor="colour">Colour</label>
+              <select
+                id="colour"
+                className="input"
+                value={filters.colour}
+                onChange={(event) => updateParams({ colour: event.target.value, page: '1' })}
+              >
+                <option value="">All colours</option>
+                {facets.colours.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.productCount})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="sort">Sort by</label>
@@ -204,10 +353,73 @@ export function ProductsPage() {
         </div>
       </section>
 
-      {/* --- Results ---
-          aria-live so a screen-reader user hears the count change after
-          filtering. Without it, filtering is silent and appears to do nothing. */}
-      <p className="muted" aria-live="polite" role="status">
+      <div className="browse-layout">
+        {/* --- The category rail ------------------------------------------------------------
+            The taxonomy, laid out rather than folded into a dropdown.
+
+            A shopper who has not decided yet cannot browse a `<select>` — it has to be opened, read
+            and closed again to see anything, and it shows one department at a time. This shows the
+            whole shop at once: every department, what is inside it, and how many products each
+            holds.
+
+            They are real links, not click handlers. Middle-click opens a category in a new tab, the
+            status bar shows where each one goes, and every one is an address that can be sent to
+            somebody else — none of which a button gives you. */}
+        <nav className="category-rail" aria-label="Categories">
+          <h2 className="category-rail__title">Categories</h2>
+
+          <ul className="plain-list">
+            <li>
+              <Link
+                className="category-rail__link"
+                to={categoryHref('')}
+                // `aria-current="true"`, not `"page"`: this is the selected filter within the current
+                // page, not a link to the page you are on.
+                aria-current={filters.category === '' ? 'true' : undefined}
+              >
+                All products
+              </Link>
+            </li>
+          </ul>
+
+          {departments.map((department) => (
+            <div key={department.id}>
+              <h3 className="category-rail__heading">
+                <Link
+                  className="category-rail__link"
+                  to={categoryHref(department.slug)}
+                  aria-current={filters.category === department.slug ? 'true' : undefined}
+                >
+                  {department.name}
+                  <span className="category-rail__count">{department.productCount}</span>
+                </Link>
+              </h3>
+
+              {department.children.length > 0 && (
+                <ul className="plain-list">
+                  {department.children.map((child) => (
+                    <li key={child.id}>
+                      <Link
+                        className="category-rail__link"
+                        to={categoryHref(child.slug)}
+                        aria-current={filters.category === child.slug ? 'true' : undefined}
+                      >
+                        {child.name}
+                        <span className="category-rail__count">{child.productCount}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div className="stack">
+          {/* --- Results ---
+              aria-live so a screen-reader user hears the count change after
+              filtering. Without it, filtering is silent and appears to do nothing. */}
+          <p className="muted" aria-live="polite" role="status">
         {productsQuery.isPending
           ? 'Loading products…'
           : result
@@ -242,26 +454,60 @@ export function ProductsPage() {
         </div>
       )}
 
+      {/* Named, so "the products" is a thing that can be pointed at. The page now has product
+          headings AND department headings in the rail, and without a name on this list the only way
+          to say "a product" is by position in the document — which is exactly how a spec ends up
+          clicking a category. */}
       {result && result.items.length > 0 && (
-        <ul className="grid grid--3 product-grid">
+        <ul className="grid grid--3 product-grid" aria-label="Products">
           {result.items.map((product) => {
             const stock = stockLevel(product.stockOnHand);
 
             return (
               <li key={product.id} className="card product-card">
-                <Link to={`/products/${product.id}`} className="product-card__link">
-                  <div className="product-card__image" aria-hidden="true">
-                    {product.name.charAt(0)}
-                  </div>
-                  <h3 className="product-card__name">{product.name}</h3>
-                </Link>
-                <p className="muted product-card__meta">
-                  {product.brandName} · {product.categoryName}
-                </p>
-                <p className="product-card__price">
-                  {formatMoney({ amount: product.price, currency: product.currency })}
-                </p>
-                <span className={`badge badge--${stock.level}`}>{stock.label}</span>
+                <div className="product-media">
+                  {/*
+                    alt="" and aria-hidden: the illustration carries no information the product name
+                    does not already give, and a screen reader announcing "Ceramic Mug illustration"
+                    directly above the text "Ceramic Mug" is repetition, not description.
+
+                    Real photography of a real product would deserve a real alt.
+                  */}
+                  <img
+                    className="product-media__img"
+                    src={product.imageUrl ?? '/img/placeholder.svg'}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    // The frame is already sized by CSS; these stop the browser reflowing the grid
+                    // as each image decodes.
+                    width={400}
+                    height={300}
+                  />
+                </div>
+
+                <div className="product-card__body">
+                  <p className="product-card__brand">{product.brandName}</p>
+
+                  <h3 className="product-card__name">
+                    {/*
+                      Only the NAME is the link, so the accessible name is the product and nothing
+                      else. The ::after in the stylesheet stretches the hit area to the whole card,
+                      which gives a big pointer target without dragging the price and the badge into
+                      what a screen reader reads out.
+                    */}
+                    <Link to={`/products/${product.id}`} className="product-card__link">
+                      {product.name}
+                    </Link>
+                  </h3>
+                </div>
+
+                <div className="product-card__footer">
+                  <span className="price">
+                    {formatMoney({ amount: product.price, currency: product.currency })}
+                  </span>
+                  <span className={`badge badge--${stock.level}`}>{stock.label}</span>
+                </div>
               </li>
             );
           })}
@@ -294,6 +540,8 @@ export function ProductsPage() {
           </button>
         </nav>
       )}
+        </div>
+      </div>
     </div>
   );
 }

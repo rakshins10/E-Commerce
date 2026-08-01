@@ -6,7 +6,12 @@ import { Auth } from '../auth/auth';
 import { AdminApi } from '../core/admin-api';
 import { formatMoney } from '../core/formatting';
 import { Permissions } from '../core/permissions';
-import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-types';
+import type {
+  AdminBrand,
+  AdminCategory,
+  AdminProduct,
+  AdminProductVariant,
+} from '../core/admin-types';
 
 /**
  * The catalogue.
@@ -93,6 +98,7 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                   <th scope="col">SKU</th>
                   <th scope="col">Name</th>
                   <th scope="col">Category</th>
+                  <th scope="col">For</th>
                   <th scope="col">Brand</th>
                   <th scope="col" style="text-align: right">Price</th>
                   <th scope="col" style="text-align: right">Stock</th>
@@ -111,8 +117,25 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                         {{ product.sku }}
                       }
                     </th>
-                    <td>{{ product.name }}</td>
+                    <!-- A thumbnail beside the name, because a catalogue manager recognises the
+                         product long before they finish reading the SKU. Decorative - the name is
+                         right next to it, so a screen reader would only hear the same thing twice. -->
+                    <td>
+                      <span class="cell-with-thumb">
+                        <img
+                          class="thumb"
+                          [src]="product.imageUrl ?? '/img/placeholder.svg'"
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          width="40"
+                          height="40"
+                        />
+                        {{ product.name }}
+                      </span>
+                    </td>
                     <td>{{ product.categoryName }}</td>
+                    <td>{{ product.audience }}</td>
                     <td>{{ product.brandName }}</td>
                     <td style="text-align: right">{{ money(product.price, product.currency) }}</td>
                     <td style="text-align: right">{{ product.stockOnHand }}</td>
@@ -281,12 +304,44 @@ export class CatalogPage {
           </div>
 
           <div class="field">
+            <label for="imageUrl">Image URL</label>
+            <input
+              id="imageUrl"
+              class="input"
+              maxlength="500"
+              placeholder="/img/tshirt-classic.svg"
+              formControlName="imageUrl"
+            />
+            <p class="muted small">
+              A path served by the storefront, such as <code>/img/mug-ceramic.svg</code>. Leave it
+              empty and the shop shows a placeholder.
+            </p>
+
+            @if (form.controls.imageUrl.value; as preview) {
+              <img class="thumb" [src]="preview" alt="" aria-hidden="true" width="40" height="40" />
+            }
+          </div>
+
+          <div class="field">
             <label for="category">Category</label>
             <select id="category" class="input" formControlName="categoryId">
               @for (category of categories(); track category.id) {
                 <option [value]="category.id">{{ category.name }}</option>
               }
             </select>
+          </div>
+
+          <div class="field">
+            <label for="audience">Sold to</label>
+            <select id="audience" class="input" formControlName="audience">
+              <option value="Unisex">Everyone</option>
+              <option value="Men">Men</option>
+              <option value="Women">Women</option>
+            </select>
+            <p class="muted small">
+              An attribute, not a category — the taxonomy says what a thing is, this says who it is
+              for.
+            </p>
           </div>
 
           <div class="field">
@@ -353,6 +408,54 @@ export class CatalogPage {
                 </button>
               }
             </form>
+
+          @if (variants().length > 0) {
+            <section class="card stack" aria-labelledby="variants-heading">
+              <h2 id="variants-heading" style="margin-top: 0">Variants</h2>
+
+              <p class="muted small">
+                What a customer actually buys. Each row has its own SKU, and Inventory holds stock
+                against that SKU rather than against the product — which is why this service needed no
+                schema change when sizes arrived.
+              </p>
+
+              <table class="table">
+                <caption class="visually-hidden">Sellable variants of this product</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">SKU</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Colour</th>
+                    <th scope="col" style="text-align: right">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (variant of variants(); track variant.id) {
+                    <tr>
+                      <th scope="row">{{ variant.sku }}</th>
+                      <td>{{ variant.size ?? '—' }}</td>
+                      <td>
+                        @if (variant.colourName) {
+                          <span class="cell-with-thumb">
+                            <span
+                              class="swatch"
+                              [style.background]="variant.colourHex ?? 'transparent'"
+                              aria-hidden="true"
+                            ></span>
+                            {{ variant.colourName }}
+                          </span>
+                        } @else {
+                          —
+                        }
+                      </td>
+                      <td style="text-align: right">{{ variant.stockOnHand }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          }
+
           </section>
         }
       </div>
@@ -375,6 +478,9 @@ export class ProductEditPage {
   protected readonly saved = signal<string | null>(null);
   protected readonly price = signal(0);
 
+  /** The loaded product's sellable variants. Read-only here — stock is Inventory's to change. */
+  protected readonly variants = signal<readonly AdminProductVariant[]>([]);
+
   protected readonly canOverridePrice = Permissions.Catalog.PriceOverride;
   protected readonly isNew = computed(() => this.id() === 'new');
 
@@ -382,6 +488,19 @@ export class ProductEditPage {
     sku: ['', [Validators.required, Validators.maxLength(64)]],
     name: ['', [Validators.required, Validators.maxLength(200)]],
     description: [''],
+    /**
+     * This control was missing, and its absence cost a product its picture.
+     *
+     * `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a field
+     * the server sets to NULL. React survived it by accident - it kept `imageUrl` in component state
+     * and posted it straight back - while this form did not track it at all, so every run of the
+     * shared "a product can be edited" spec wiped the artwork off NW-TS-001.
+     *
+     * The form is now the fix AND the evidence: a value you can see is a value you notice
+     * disappearing.
+     */
+    imageUrl: ['', Validators.maxLength(500)],
+    audience: ['Unisex', Validators.required],
     price: [0, [Validators.required, Validators.min(0)]],
     categoryId: ['', Validators.required],
     brandId: ['', Validators.required],
@@ -414,6 +533,8 @@ export class ProductEditPage {
           sku: product.sku,
           name: product.name,
           description: product.description,
+          imageUrl: product.imageUrl ?? '',
+          audience: product.audience,
           price: product.price,
           categoryId: categories.find((c) => c.slug === product.categorySlug)?.id ?? '',
           brandId: brands.find((b) => b.slug === product.brandSlug)?.id ?? '',
@@ -421,6 +542,7 @@ export class ProductEditPage {
 
         // Disabled rather than merely readonly, so the value is excluded from getRawValue()'s
         // validation path and the control cannot be edited by a stray script.
+        this.variants.set(product.variants ?? []);
         this.form.controls.sku.disable();
         this.price.set(product.price);
       }
@@ -448,6 +570,8 @@ export class ProductEditPage {
           sku: value.sku,
           name: value.name,
           description: value.description,
+          imageUrl: value.imageUrl || null,
+          audience: value.audience,
           price: value.price,
           currency: 'GBP',
           categoryId: value.categoryId,
@@ -459,6 +583,8 @@ export class ProductEditPage {
         await this.api.updateProduct(this.id(), {
           name: value.name,
           description: value.description,
+          imageUrl: value.imageUrl || null,
+          audience: value.audience,
           categoryId: value.categoryId,
           brandId: value.brandId,
         });

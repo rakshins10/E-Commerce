@@ -12,6 +12,7 @@ import {
 } from '../lib/basket';
 import { formatDateTime, formatMoney } from '../lib/formatting';
 import { useCurrentUser } from '../auth/useCurrentUser';
+import { Icon } from '../components/Icon';
 
 /** The lifecycle, in the order a customer experiences it. Cancelled is not on this path. */
 const TIMELINE: readonly OrderStatus[] = ['Submitted', 'AwaitingPayment', 'Paid', 'Shipped', 'Delivered'];
@@ -91,7 +92,8 @@ export function OrdersPage() {
       <h1 className="page-title">Your orders</h1>
 
       {orders.items.length === 0 ? (
-        <div className="card stack">
+        <div className="card stack empty-state">
+          <Icon name="package" className="empty-state__icon" />
           <p className="lede">You have not placed any orders yet.</p>
           <div>
             <Link className="btn btn--primary" to="/products">
@@ -326,6 +328,7 @@ export function OrderDetailPage() {
           <thead>
             <tr>
               <th scope="col">Product</th>
+              <th scope="col">Option</th>
               <th scope="col">Quantity</th>
               <th scope="col">Price</th>
               <th scope="col">Total</th>
@@ -335,6 +338,9 @@ export function OrderDetailPage() {
             {order.items.map((item) => (
               <tr key={item.productId}>
                 <th scope="row">{item.productName}</th>
+                {/* An em dash rather than an empty cell: "this product has no options" and "we forgot
+                    to record them" look identical when the cell is blank. */}
+                <td>{[item.size, item.colourName].filter(Boolean).join(' · ') || '—'}</td>
                 <td>{item.quantity}</td>
                 <td>{formatMoney({ amount: item.unitPrice, currency: order.currency })}</td>
                 <td>{formatMoney({ amount: item.lineTotal, currency: order.currency })}</td>

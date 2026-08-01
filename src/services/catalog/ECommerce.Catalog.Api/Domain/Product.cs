@@ -38,7 +38,8 @@ public class Product
         string currency,
         Guid categoryId,
         Guid brandId,
-        string? imageUrl = null)
+        string? imageUrl = null,
+        Audience audience = Audience.Unisex)
     {
         Id = Guid.CreateVersion7();
         Sku = Guard.AgainstNullOrWhiteSpace(sku);
@@ -49,6 +50,7 @@ public class Product
         CategoryId = Guard.AgainstEmpty(categoryId);
         BrandId = Guard.AgainstEmpty(brandId);
         ImageUrl = imageUrl;
+        Audience = audience;
         IsActive = true;
         CreatedAt = DateTimeOffset.UtcNow;
     }
@@ -56,11 +58,18 @@ public class Product
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// Stock Keeping Unit — the identifier Catalog and Inventory both agree on.
+    /// The <b>style code</b> — <c>NW-TS-001</c>. Unique, enforced by a database index rather than by hoping.
     /// </summary>
     /// <remarks>
-    /// The one string shared across a context boundary, which makes it the integration key between the two.
-    /// Unique, and enforced by a database index rather than by hoping.
+    /// <para>
+    /// <b>This is no longer the sellable SKU.</b> It identifies the style; what a customer buys is a
+    /// <see cref="ProductVariant"/>, and the variant owns the SKU that Inventory, Basket and Ordering key on
+    /// ([ADR-0020](../../../docs/adr/0020-product-variants.md)).
+    /// </para>
+    /// <para>
+    /// Both indexes exist and they guarantee different things — unique styles here, unique sellable units on
+    /// <c>product_variants.sku</c>. Reading only one of them leads to the wrong conclusion.
+    /// </para>
     /// </remarks>
     public string Sku { get; private set; } = string.Empty;
 
@@ -91,6 +100,20 @@ public class Product
     public Brand? Brand { get; private set; }
 
     public string? ImageUrl { get; private set; }
+
+    /// <summary>
+    /// Who the product is made for. An attribute, not a category — see <see cref="Domain.Audience"/>.
+    /// </summary>
+    public Audience Audience { get; private set; } = Audience.Unisex;
+
+    /// <summary>
+    /// The sellable units: sizes and colours. <b>Never empty.</b>
+    /// </summary>
+    /// <remarks>
+    /// A product with no size and no colour axis still has exactly one variant, so there is no "simple
+    /// product" code path to diverge from the real one.
+    /// </remarks>
+    public List<ProductVariant> Variants { get; private set; } = [];
 
     /// <summary>
     /// A <b>cached, eventually-consistent</b> stock figure for display only.
@@ -158,12 +181,55 @@ public class Product
         Touch();
     }
 
+    /// <summary>Changes who the product is sold to.</summary>
+    public void SetAudience(Audience audience)
+    {
+        Audience = audience;
+        Touch();
+    }
+
     /// <summary>Applies a stock figure received from Inventory. Never sets it authoritatively.</summary>
     public void SyncStock(int stockOnHand)
     {
         StockOnHand = stockOnHand < 0 ? 0 : stockOnHand;
         Touch();
     }
+
+    /// <summary>
+    /// Adds a sellable size/colour combination.
+    /// </summary>
+    /// <remarks>
+    /// Refuses a duplicate combination rather than creating a second row for the same thing: two variants
+    /// both meaning "Medium, Navy" would split one stock figure across two SKUs, and the shop would then
+    /// report less stock than it has while a picker finds the item in one bin.
+    /// </remarks>
+    public ProductVariant AddVariant(string sku, string? size, string? colourName, string? colourHex)
+    {
+        if (Variants.Any(existing =>
+                existing.IsActive
+                && string.Equals(existing.Size, size, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(existing.ColourName, colourName, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new DuplicateVariantException(Sku, size, colourName);
+        }
+
+        var variant = new ProductVariant(Id, sku, size, colourName, colourHex);
+        Variants.Add(variant);
+        Touch();
+
+        return variant;
+    }
+
+    /// <summary>
+    /// The display stock figure: the sum across active variants.
+    /// </summary>
+    /// <remarks>
+    /// Derived rather than stored, for the same reason an order total is — a stored copy is a second source
+    /// of truth that drifts the first time somebody updates one number and not the other. Callers that have
+    /// loaded the variants should prefer this; <see cref="StockOnHand"/> remains for the read model, which
+    /// computes the same sum in SQL.
+    /// </remarks>
+    public int TotalStock() => Variants.Where(variant => variant.IsActive).Sum(variant => variant.StockOnHand);
 
     public void Deactivate()
     {

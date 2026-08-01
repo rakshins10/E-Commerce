@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 
 import { Auth } from '../auth/auth';
-import { BasketService } from '../core/basket';
+import { BasketService, type BasketItem } from '../core/basket';
 import { formatMoney } from '../core/formatting';
+import { Icon } from '../icon';
 
 /**
  * The basket.
@@ -22,7 +23,7 @@ import { formatMoney } from '../core/formatting';
 @Component({
   selector: 'app-basket-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Icon],
   template: `
     @if (auth.isLoading()) {
       <div class="centred" aria-busy="true" aria-live="polite"><p class="lede">Loading…</p></div>
@@ -54,90 +55,152 @@ import { formatMoney } from '../core/formatting';
 
         @if (basket(); as current) {
           @if (current.items.length === 0) {
-            <div class="card stack">
+            <div class="card stack empty-state">
+              <app-icon name="cart" variant="empty-state__icon" />
               <p class="lede">Your basket is empty.</p>
               <div><a class="btn btn--primary" routerLink="/products">Browse products</a></div>
             </div>
           } @else {
-            <!-- A table, because this is tabular data. A list of divs would lose the column headers a
-                 screen reader announces with each cell. -->
-            <div class="card">
-              <table class="table">
-                <caption class="visually-hidden">Items in your basket</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Product</th>
-                    <th scope="col">Price</th>
-                    <th scope="col">Quantity</th>
-                    <th scope="col">Total</th>
-                    <th scope="col"><span class="visually-hidden">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of current.items; track item.productId) {
-                    <tr>
-                      <th scope="row">
-                        <a [routerLink]="['/products', item.productId]">{{ item.productName }}</a>
-                        <div class="muted small">{{ item.sku }}</div>
-                      </th>
-                      <td>{{ money(item.unitPrice, item.currency) }}</td>
-                      <td>
-                        <label class="visually-hidden" [attr.for]="'quantity-' + item.productId">
-                          Quantity for {{ item.productName }}
-                        </label>
-                        <input
-                          [id]="'quantity-' + item.productId"
-                          type="number"
-                          class="input input--narrow"
-                          min="0"
-                          max="100"
-                          [value]="item.quantity"
-                          (input)="onQuantityChange(item.productId, $event)"
+            <div class="checkout-layout">
+              <!-- A list, not a table.
+
+                   This WAS a table, on the reasoning that a basket is tabular data. It is not: each
+                   line is one product with a picture, a price and two controls, and the
+                   "Price/Quantity/Total" headers a screen reader repeated on every cell added nothing
+                   a shopper did not already read. What matters for accessibility is that every control
+                   still names its own product - which the labels below do - not that the layout is a
+                   grid. -->
+              <div class="card">
+                <ul class="plain-list" aria-label="Items in your basket">
+                  @for (item of current.items; track item.sku) {
+                    <li class="line-item">
+                      <a [routerLink]="['/products', item.productId]" tabindex="-1" aria-hidden="true">
+                        <img
+                          class="line-item__media"
+                          [src]="item.imageUrl ?? '/img/placeholder.svg'"
+                          alt=""
+                          loading="lazy"
+                          width="80"
+                          height="80"
                         />
-                      </td>
-                      <td>{{ money(item.lineTotal, item.currency) }}</td>
-                      <td>
-                        <button
-                          type="button"
-                          class="btn btn--secondary"
-                          [disabled]="saving()"
-                          (click)="remove(item.productId)"
-                        >
-                          <!-- The accessible name says WHAT is being removed. Twelve buttons all
-                               called "Remove" are useless to anyone navigating by button. -->
-                          <span aria-hidden="true">Remove</span>
-                          <span class="visually-hidden">Remove {{ item.productName }}</span>
-                        </button>
-                      </td>
-                    </tr>
+                      </a>
+
+                      <div class="line-item__body">
+                        <div class="line-item__top">
+                          <div class="stack--tight">
+                            <a [routerLink]="['/products', item.productId]">{{ item.productName }}</a>
+                            <!-- The option a customer chose, in the words they chose it in. The SKU is
+                                 underneath because it is what support and the warehouse quote. -->
+                            @if (item.size || item.colourName) {
+                              <span class="small">{{ describe(item) }}</span>
+                            }
+                            <span class="muted small">{{ item.sku }}</span>
+                          </div>
+                          <span class="price">{{ money(item.lineTotal, item.currency) }}</span>
+                        </div>
+
+                        <div class="line-item__actions">
+                          <!-- Three real controls, not arrows drawn on a div. The buttons are the fast
+                               path on a phone; the input is still there for someone typing 12. -->
+                          <div class="stepper">
+                            <button
+                              type="button"
+                              class="stepper__btn"
+                              [attr.aria-label]="'Decrease quantity for ' + label(item)"
+                              [disabled]="saving()"
+                              (click)="setQuantity(item.sku, item.quantity - 1)"
+                            >
+                              <span aria-hidden="true">−</span>
+                            </button>
+
+                            <label class="visually-hidden" [attr.for]="'quantity-' + item.sku">
+                              Quantity for {{ label(item) }}
+                            </label>
+                            <input
+                              [id]="'quantity-' + item.sku"
+                              type="number"
+                              class="stepper__input"
+                              min="0"
+                              max="100"
+                              [value]="item.quantity"
+                              (input)="onQuantityChange(item.sku, $event)"
+                            />
+
+                            <button
+                              type="button"
+                              class="stepper__btn"
+                              [attr.aria-label]="'Increase quantity for ' + label(item)"
+                              [disabled]="saving()"
+                              (click)="setQuantity(item.sku, item.quantity + 1)"
+                            >
+                              <span aria-hidden="true">+</span>
+                            </button>
+                          </div>
+
+                          <span class="muted small">
+                            {{ money(item.unitPrice, item.currency) }} each
+                          </span>
+
+                          <button
+                            type="button"
+                            class="btn btn--ghost btn--sm"
+                            [disabled]="saving()"
+                            (click)="remove(item.sku)"
+                          >
+                            <!-- The accessible name says WHAT is being removed. Twelve buttons all
+                                 called "Remove" are useless to anyone navigating by button. -->
+                            <app-icon name="trash" variant="icon--sm" />
+                            <span aria-hidden="true">Remove</span>
+                            <span class="visually-hidden">Remove {{ label(item) }}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </li>
                   }
-                </tbody>
-              </table>
-            </div>
-
-            <div class="card stack">
-              <p class="lede" role="status">
-                {{ current.totalUnits }} {{ current.totalUnits === 1 ? 'item' : 'items' }} ·
-                {{ money(current.estimatedTotal, current.currency) }}
-              </p>
-
-              <!-- Said plainly rather than hidden in small print. Prices are re-checked at checkout,
-                   and a customer who sees a different total deserves to have been warned. -->
-              <p class="muted small">
-                Prices are confirmed when you place your order, so this total may change.
-              </p>
-
-              <div class="row">
-                <a class="btn btn--primary" routerLink="/checkout">Checkout</a>
-                <button
-                  type="button"
-                  class="btn btn--secondary"
-                  [disabled]="saving()"
-                  (click)="clear()"
-                >
-                  Empty basket
-                </button>
+                </ul>
               </div>
+
+              <aside class="checkout-layout__aside" aria-label="Order summary">
+                <div class="card stack">
+                  <h2 style="margin-top: 0">Summary</h2>
+
+                  <div class="summary">
+                    <p class="summary__row" role="status">
+                      <span
+                        >{{ current.totalUnits }}
+                        {{ current.totalUnits === 1 ? 'item' : 'items' }}</span
+                      >
+                      <span>{{ money(current.estimatedTotal, current.currency) }}</span>
+                    </p>
+                    <p class="summary__row">
+                      <span>Delivery</span>
+                      <span>Calculated at checkout</span>
+                    </p>
+                    <p class="summary__total">
+                      <span>Estimated total</span>
+                      <span>{{ money(current.estimatedTotal, current.currency) }}</span>
+                    </p>
+                  </div>
+
+                  <!-- Said plainly rather than hidden in small print. Prices are re-checked at
+                       checkout, and a customer who sees a different total deserves to have been
+                       warned. -->
+                  <p class="muted small">
+                    Prices are confirmed when you place your order, so this total may change.
+                  </p>
+
+                  <a class="btn btn--primary btn--block" routerLink="/checkout">Checkout</a>
+
+                  <button
+                    type="button"
+                    class="btn btn--ghost btn--block"
+                    [disabled]="saving()"
+                    (click)="clear()"
+                  >
+                    Empty basket
+                  </button>
+                </div>
+              </aside>
             </div>
           }
         }
@@ -173,13 +236,34 @@ export class BasketPage {
     }
   }
 
-  protected onQuantityChange(productId: string, event: Event): void {
+  protected onQuantityChange(sku: string, event: Event): void {
     const quantity = Number((event.target as HTMLInputElement).value);
-    void this.run(() => this.baskets.setQuantity(productId, quantity));
+    void this.run(() => this.baskets.setQuantity(sku, quantity));
   }
 
-  protected remove(productId: string): void {
-    void this.run(() => this.baskets.remove(productId));
+  /** "M · Navy" — what the customer chose, shown under the product name. */
+  protected describe(item: BasketItem): string {
+    return [item.size, item.colourName].filter(Boolean).join(' · ');
+  }
+
+  /**
+   * What every control on a line is called.
+   *
+   * "Quantity for Classic Cotton T-shirt" was unique until a basket could hold the same shirt twice. Two
+   * controls with one accessible name is not a cosmetic problem: it is how someone navigating by control
+   * ends up changing the wrong line, and Playwright's strict mode is the cheap version of the same
+   * complaint.
+   */
+  protected label(item: BasketItem): string {
+    return [item.productName, item.size, item.colourName].filter(Boolean).join(', ');
+  }
+
+  protected setQuantity(sku: string, quantity: number): void {
+    void this.run(() => this.baskets.setQuantity(sku, quantity));
+  }
+
+  protected remove(sku: string): void {
+    void this.run(() => this.baskets.remove(sku));
   }
 
   protected clear(): void {

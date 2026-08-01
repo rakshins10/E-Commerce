@@ -39,6 +39,46 @@ async function emptyBasket(page: Page) {
   }
 }
 
+/**
+ * Chooses a size, if the product has sizes.
+ *
+ * A size is deliberately NOT pre-selected: the product page leaves "Add to basket" disabled until one
+ * is picked, because defaulting a size means somebody buys a Small because it happened to be first.
+ * (A colour IS pre-selected — the photograph already shows one.) So every spec that buys clothing has
+ * to make the choice a customer would.
+ *
+ * Picks the first size that is not sold out. Sold-out sizes render disabled, and clicking a disabled
+ * radio would hang until the timeout rather than fail with something readable.
+ */
+async function chooseAnAvailableSize(page: Page) {
+  const group = page.getByRole('group', { name: 'Size' });
+
+  // No size axis - a mug, a notebook. Nothing to choose.
+  if ((await group.count()) === 0) return;
+
+  const options = group.getByRole('radio');
+  const total = await options.count();
+
+  for (let index = 0; index < total; index++) {
+    const option = options.nth(index);
+
+    if (await option.isEnabled()) {
+      // The LABEL is clicked, not the input. The radio is visually hidden and pointer-events:none -
+      // it exists for the accessibility tree and for keyboard navigation - so the label is the
+      // surface a person actually clicks, and clicking the input hangs until the timeout.
+      //
+      // click() then toBeChecked(), never check(): check() asserts once without retrying, and a
+      // controlled input can be briefly out of step with the DOM mid-re-render.
+      const name = ((await option.getAttribute('value')) ?? '').trim();
+      await group.getByText(name, { exact: true }).click();
+      await expect(option).toBeChecked();
+      return;
+    }
+  }
+
+  throw new Error('Every size is sold out; this product cannot be bought.');
+}
+
 /** Adds a named product and checks out. Returns the order reference. */
 async function orderProduct(page: Page, search: string, recipient: string): Promise<string> {
   await emptyBasket(page);
@@ -46,9 +86,19 @@ async function orderProduct(page: Page, search: string, recipient: string): Prom
   await page.goto(`/products?search=${encodeURIComponent(search)}`);
   await expect(page.getByRole('status')).toContainText('product');
 
-  await page.getByRole('heading', { level: 3 }).first().click();
+  // Scoped to the product list by name. "The first h3 on the page" stopped meaning "the first
+  // product" when the products page gained a category rail — see the note in shopping.spec.ts.
+  await page
+    .getByRole('list', { name: 'Products' })
+    .getByRole('heading', { level: 3 })
+    .first()
+    .click();
+
+  await chooseAnAvailableSize(page);
   await page.getByRole('button', { name: 'Add to basket' }).click();
-  await expect(page.getByRole('status')).toContainText('Added to your basket');
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Added to your basket' }),
+  ).toBeVisible();
 
   await page.goto('/checkout');
   await page.getByLabel('Recipient').fill(recipient);
