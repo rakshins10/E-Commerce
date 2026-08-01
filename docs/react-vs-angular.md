@@ -731,3 +731,63 @@ apps, because it is plain TypeScript over plain data. Duplicated per
 That is worth noticing. The parts of a front end that are genuinely *logic* are framework-shaped only when
 you let them be. Everything above about hooks, signals, `useMemo` and `computed` is about **when code
 runs**; none of it is about what the code does.
+
+---
+
+## Product variants — the same UI state, two ways of holding it
+
+A product page with sizes and colours is a small state machine: which option is chosen, which
+combinations exist, which are sold out, and whether the buy button may be enabled. It is the most
+genuinely *stateful* screen in this application, so it is a fair test.
+
+**React** holds two `useState` values and derives the rest inline:
+
+```tsx
+const [size, setSize] = useState<string | null>(null);
+const [colour, setColour] = useState<string | null>(null);
+
+const variants = query.data?.variants ?? [];
+const sizes = sizesOf(variants);
+const selected = findVariant(variants, size, colour);
+const needsSize = sizes.length > 0 && size === null;
+```
+
+**Angular** holds two signals and derives with `computed`:
+
+```ts
+protected readonly size = signal<string | null>(null);
+protected readonly colour = signal<string | null>(null);
+
+protected readonly variants = computed(() => this.product()?.variants ?? []);
+protected readonly sizes = computed(() => sizesOf(this.variants()));
+protected readonly selected = computed(() => findVariant(this.variants(), this.size(), this.colour()));
+protected readonly needsSize = computed(() => this.sizes().length > 0 && this.size() === null);
+```
+
+**Angular is tidier here, and for a reason that only shows up at this size.** React recomputes all four
+values on every render — cheap, and correct, but they are recomputed whether or not anything they depend
+on changed. Angular's `computed` are memoised on their actual dependencies without a dependency array to
+maintain. With four derivations the difference is aesthetic; the point is that the aesthetic one scales
+and the dependency array does not.
+
+The one place React is clearly ahead is the default-colour effect. Both apps pre-select the first colour
+with stock once the product loads, and React's `useEffect` needs an eslint-disabled dependency array to
+avoid re-running on every keystroke of derived state:
+
+```tsx
+useEffect(() => {
+  if (colours.length === 0 || colour !== null) return;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [query.data]);
+```
+
+Angular does it inside the load, with no lifecycle involved at all. A disabled lint rule is a signal that
+the model and the problem do not quite fit — and that is the honest summary of `useEffect` for anything
+that is not genuinely a subscription.
+
+### What did not differ
+
+`sizesOf`, `coloursOf`, `findVariant`, `sizeHasStock` and `colourHasStock` are the same functions in both
+apps, duplicated per [ADR-0018](adr/0018-self-contained-frontends.md) and guarded by identical unit tests.
+Same conclusion as `groupIntoDepartments`: the parts of a front end that are genuinely *logic* are not
+framework-shaped unless you let them be.

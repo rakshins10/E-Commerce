@@ -43,10 +43,11 @@ erDiagram
     CATEGORY ||--o{ PRODUCT : contains
     CATEGORY ||--o{ CATEGORY : "parent of"
     BRAND    ||--o{ PRODUCT : makes
+    PRODUCT  ||--|{ PRODUCT_VARIANT : "is sold as"
 
     PRODUCT {
         uuid    id PK
-        text    sku UK "shared with Inventory"
+        text    sku UK "style code, not the sellable sku"
         text    name
         text    description
         numeric price "numeric(18,2), never float"
@@ -54,10 +55,21 @@ erDiagram
         uuid    category_id FK
         uuid    brand_id FK
         text    image_url
-        int     stock_on_hand "cached from Inventory"
+        text    audience "Men | Women | Unisex"
+        int     stock_on_hand "SUM across variants, cached"
         bool    is_active "soft delete"
         timestamptz created_at
         timestamptz updated_at
+    }
+    PRODUCT_VARIANT {
+        uuid    id PK
+        uuid    product_id FK
+        text    sku UK "the SELLABLE sku, shared with Inventory"
+        text    size "null when unsized"
+        text    colour_name
+        text    colour_hex "swatch only, never the sole signal"
+        int     stock_on_hand "cached from Inventory"
+        bool    is_active
     }
     CATEGORY {
         uuid id PK
@@ -89,6 +101,61 @@ opaque GUID in a query string is a small usability tax paid on every link anyone
 defaults to the .NET property name, and PostgreSQL folds unquoted identifiers to lower case — so
 `StockOnHand` would need quoting in every hand-written query, and a missing quote gives
 `column p.stockonhand does not exist`.
+
+---
+
+## Products and variants
+
+A **product** is a style: a name, a description, a price, a photograph, a category, a brand, and who it
+is sold to. A **variant** is what a customer actually buys — a specific size and colour, with its own SKU
+and its own stock. See [ADR-0020](../adr/0020-product-variants.md) for the argument and what it costs.
+
+```
+products                          product_variants
+  id                                id
+  sku          <- style code        product_id
+  name                              sku        <- the SELLABLE sku, unique catalogue-wide
+  price                             size       <- null when the product has no size axis
+  audience     <- Men|Women|Unisex  colour_name / colour_hex
+  stock_on_hand <- SUM of variants  stock_on_hand
+```
+
+**Two unique indexes, guaranteeing different things.** `products.sku` guarantees unique *styles*;
+`product_variants.sku` guarantees unique *sellable units*. Reading only one of them leads to the wrong
+conclusion, which is why both are named here.
+
+**Every product has at least one variant**, including one with neither a size nor a colour. There is no
+"simple product" path — a special case is a second code path that only the simple products exercise.
+
+**`audience` is an attribute, not a branch of the category tree.** The taxonomy answers *what is this
+thing*; audience answers *who is it for*. They vary independently, so they are two fields. Modelling
+audience as a category means "T-shirts" exists twice, a unisex product must be duplicated to appear under
+both, and adding "Kids" doubles the tree again. It is stored as the enum's **name**, so a row reads
+`'Women'` in psql and survives someone reordering the members.
+
+### Why this touched almost nothing downstream
+
+SKU was already the integration key between Catalog, Inventory, Basket and Ordering — the one string that
+crosses those boundaries. Moving it from the product to the variant meant:
+
+| Service | Change needed |
+|---|---|
+| **Inventory** | **None.** `StockItem` keys on a SKU string; it has more rows and still does not know what a size is |
+| **Basket** | Line identity moved from product id to SKU, plus two display fields |
+| **Ordering** | Line merging moved from product id to SKU, plus two snapshot fields |
+
+That is the payoff for having drawn the boundary at the SKU rather than at the product.
+
+### Known gaps
+
+- **Nothing validates that a variant SKU belongs to its product at checkout.** A forged SKU fails at stock
+  reservation instead — the saga cancels the order and compensates — so it fails safe, but seconds later
+  rather than immediately. Closing it means widening the Catalog pricing contract to return variants.
+- **Facet counts are not filtered by the current selection.** "Navy (2)" is a count across the whole
+  catalogue, not "Navy, given that you have already chosen Medium". Doing that properly needs a query per
+  facet per request, which is the point at which a search index earns its keep.
+- **Variants are read-only in the back office.** Sizes and colours are set by the seeder; the admin panel
+  shows them with their stock but does not add or remove them.
 
 ---
 
@@ -142,6 +209,9 @@ Browse with search, filtering, sorting and paging.
 | `brand` | slug | — | |
 | `minPrice` / `maxPrice` | decimal | — | Inclusive |
 | `inStockOnly` | bool | `false` | |
+| `audience` | `Men` | `Women` | `Unisex` | — | An attribute, not a category |
+| `size` | string | — | Matched against variants |
+| `colour` | string | — | Matched against variants. With `size`, both must be on the **same** variant |
 | `sortBy` | `name` \| `price` \| `brand` \| `newest` | `name` | Anything else falls back to `name` |
 | `sortDescending` | bool | `false` | |
 | `page` | int | `1` | Clamped to ≥ 1 |
@@ -156,7 +226,7 @@ Browse with search, filtering, sorting and paging.
     "price": 18.00, "currency": "GBP",
     "categoryName": "T-shirts", "categorySlug": "t-shirts",
     "brandName": "Northwind", "brandSlug": "northwind",
-    "imageUrl": "/img/tshirt-classic.svg", "stockOnHand": 42
+    "imageUrl": "/img/tshirt-classic.svg", "stockOnHand": 1600, "audience": "Men"
   }],
   "page": 1, "pageSize": 12, "totalCount": 12,
   "totalPages": 1, "hasPrevious": false, "hasNext": false
@@ -167,13 +237,27 @@ Browse with search, filtering, sorting and paging.
 curl "http://localhost:5001/api/catalog/products?search=hoodie&sortBy=price&sortDescending=true"
 ```
 
+---
+
 ### `GET /api/catalog/products/{id}`
 
-**Auth:** anonymous · **200** `ProductDetail` (adds `description`) · **404** `ProblemDetails`
+**Auth:** anonymous · **200** `ProductDetail` · **404** `ProblemDetails`
+
+Returns the product **and its variants**, in two result sets from one round trip. Variants are ordered
+S/M/L/XL via `array_position` — alphabetical would put L before M before S before XL, which reads as a
+bug on every product page in the shop.
 
 ```bash
 curl "http://localhost:5001/api/catalog/products/{id}"
 ```
+
+### `GET /api/catalog/facets`
+
+**Auth:** anonymous · **200** `Facets` — audiences, sizes and colours with **product** counts.
+
+One endpoint for all three rather than three, because a filter panel needs the whole set before it can
+render anything. Counts are of products, not variants: "Navy (2)" has to mean two things you can click
+through to.
 
 ### `GET /api/catalog/categories`
 
@@ -334,6 +418,25 @@ because `dotnet ef` otherwise tries to build the host and fails on the missing c
 
 ## Seed data
 
-12 products across 6 categories and 3 brands, with stock deliberately spread so **in-stock, low-stock and
-out-of-stock states are all reachable** without editing the database. One product is priced at £5,200 — above
-the payment simulator's decline threshold — so the saga's compensation path can be demonstrated on demand.
+12 products and **49 variants** across 6 categories and 3 brands, with stock deliberately spread so every
+state the UI can render is reachable without editing the database:
+
+| State | Where |
+|---|---|
+| In stock in every size | `NW-TS-001`, `NW-HD-001` |
+| **Low in one size, fine in the others** | `CT-TS-003` — 2 left in Black S |
+| One size sold out while the product is not | `CT-TS-003` — Black XL is empty, Ecru XL has one |
+| Low in TOTAL, so the product *card* says so | `CT-HD-002` — 2 altogether |
+| Sold out entirely | `FB-HD-003`, `CT-ST-002` |
+| Colours but no sizes | all drinkware |
+| Neither axis — one variant, no pickers | all stationery |
+
+One product is priced at £5,200 — above the payment simulator's decline threshold — so the saga's
+compensation path can be demonstrated on demand.
+
+**Products the e2e suite buys hold 200 of every variant.** A paid order keeps its stock reservation until
+it ships and nothing here ships automatically, so every run permanently consumes stock; a realistic figure
+on a spec-bought SKU drains within a day and the saga specs then fail with a perfectly correct "Out of
+stock". These figures are mirrored exactly in `InventorySeeder`, and the two lists must be changed
+together — duplicated across the service boundary on purpose, because a shared seed library would couple
+two services that are supposed to own their own data.

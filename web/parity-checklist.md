@@ -77,6 +77,9 @@ link to a justification)
 | X10 | Sign-in failure is rendered rather than swallowed | ✅ | ✅ | Angular's `Auth` gained an `error` signal to close this; React has had `auth.error` since Phase 3 |
 | X11 | Category browsing — department rail, grouped `<optgroup>`, department board | ✅ | ✅ | `groupIntoDepartments` is duplicated per ADR-0018 and guarded by 6 identical unit assertions in each app |
 | X12 | An edit form round-trips every field it does not change | ✅ | ✅ | The Angular admin had no image control and `PUT` nulled it. Guarded by "editing one field does not erase the others" |
+| X13 | Variant pickers — size, colour, per-variant stock, sold-out states | ✅ | ✅ | Native radio groups; a colour is pre-selected and a size deliberately is not ([ADR-0020](../docs/adr/0020-product-variants.md)) |
+| X14 | Facet filtering — audience tabs, size and colour | ✅ | ✅ | `sizesOf`, `coloursOf`, `findVariant`, `sizeHasStock`, `colourHasStock` duplicated per ADR-0018 |
+| X15 | Basket and order lines keyed by variant SKU and labelled with the option | ✅ | ✅ | Two sizes of one shirt are two lines, and every control on a line names its own variant |
 | X4 | WCAG 2.2 AA — keyboard, focus order, contrast, labels | ✅ | ✅ | Live-region result counts, text-not-colour stock, contrast guarded by script |
 | X5 | Correlation id sent on every request | ⬜ | ⬜ | |
 | X6 | `hasPermission()` from the shared layer, never a local copy | ⬜ | ⬜ | |
@@ -86,7 +89,7 @@ link to a justification)
 
 ## Intentional divergences
 
-None. The two apps behave identically on every row above, proven by the same 81 Playwright specs passing
+None. The two apps behave identically on every row above, proven by the same 86 Playwright specs passing
 against both.
 
 One was found and closed during the shop-UI rebuild: React rendered a sign-in failure on the home page and
@@ -118,7 +121,7 @@ code, so structure no longer prevents drift. Four mechanisms replace it:
 
 | Mechanism | Catches |
 |-----------|---------|
-| [`tests/e2e`](../tests/e2e/) — 55 storefront + 26 back-office specs, each run against both apps | Behavioural drift, including differences nobody thought to check |
+| [`tests/e2e`](../tests/e2e/) — 60 storefront + 26 back-office specs, each run against both apps | Behavioural drift, including differences nobody thought to check |
 | **Unit tests — the same 25 assertions in each app** ([react](react-store/src/lib/lib.spec.ts), [angular](angular-store/src/app/core/core.spec.ts)) | Logic drift in the duplicated `permissions` and `formatting` modules — a currency separator, an off-by-one in `truncate`, a permission helper's empty-argument behaviour |
 | [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
 | This checklist | Scope drift — a feature built in one app and not the other |

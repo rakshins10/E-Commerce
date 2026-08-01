@@ -65,6 +65,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
 | 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
 | 9 | Catalogue CRUD in **both** admin panels | ✅ 25 admin e2e specs green on both |
+| 9.5 | Product variants (size, colour, audience) — ADR-0020 | ✅ 60 storefront + 26 admin specs green on both |
 | 10 | Resiliency, observability and security hardening | ⬜ **next** |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
@@ -124,8 +125,8 @@ node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette
 
 ```powershell
 cd tests/e2e
-npm run test:react                                # 55 storefront specs against :3000
-npm run test:angular                              # the SAME 55 against :4200
+npm run test:react                                # 60 storefront specs against :3000
+npm run test:angular                              # the SAME 60 against :4200
 npm run test:react:admin                          # 26 back-office specs against :3001
 npm run test:angular:admin                        # the SAME 26 against :4201
 ```
@@ -165,11 +166,15 @@ run against two independent implementations.
 | **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing — you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
 | **Playwright `getByLabel` is a substring match** | `getByLabel('Email')` also matches "Email me about my orders" | Pass `{ exact: true }` |
 | **`getByRole(role, { name })` is a substring match too** | `getByRole('link', { name: 'Products' })` quietly became five elements when the home page gained "Shop all products", "All products" and two category tiles — a strict-mode violation in a spec that had passed for six phases | Scope to a landmark (`getByRole('banner').getByRole(…)`) **and** pass `{ exact: true }`. A shell spec should be asking about the shell |
-| **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments - write "an optgroup", not the backticked form |
 | **A PUT replaces the whole resource** | A form field that does not exist is a column silently set to NULL. The Angular admin had no image control, so every run of "a product can be edited" wiped the artwork off NW-TS-001 - visible only on a storefront page no admin spec looks at | Assert save-and-RELOAD, not just "saved". `tests/e2e/specs-admin/catalog.spec.ts` has the guard |
 | **An unanchored positional selector depends on document order** | `getByRole('heading', { level: 3 }).first()` meant "the first product" until the products page gained a category rail whose department names are also h3. It then clicked "Accessories" and failed two assertions later on a missing button | Give the container an `aria-label` and scope to it: `getByRole('list', { name: 'Products' })` |
 | **A form field is empty for a moment after navigation** | `inputValue()` reads the initial empty state, because it does not retry. Both apps render fields first and populate them when the query resolves | `await expect(page.getByLabel('Name')).toHaveValue(…)` first - `toHaveValue` retries |
 | **There is no Prettier config in this repo** | Running `npx prettier --write` reformats a file to Prettier's defaults - double quotes throughout - and the diff buries the actual change | Do not run it. `.editorconfig` and `dotnet format` cover .NET; the web apps are formatted by hand |
+| **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments |
+| **Playwright `count()` does not auto-wait** | Returns whatever matches at that instant, so it reads 0 on a page that has not finished rendering — and `toBeGreaterThan(0)` then fails with no clue why | `await expect(something).toBeVisible()` FIRST, then count. Only `expect(locator)` retries |
+| **A visually hidden radio cannot be clicked** | `.option__input` is 1px and `pointer-events: none`, so `click()` on it hangs until the timeout | Click the `<label>` — which is what a person clicks. The input stays for the accessibility tree and keyboard navigation |
+| **A `<legend>` is the group's accessible name** | Putting a "— choose one" hint inside it renamed the fieldset the moment a size was chosen, so `getByRole('group', { name: … })` matched a different thing before and after | Keep the legend a stable noun; put hints in a sibling element |
+| **A Dapper positional record breaks when the SQL returns fewer columns** | `ProductDetailDto` gained `Variants`, which arrives in a SECOND result set — "a parameterless default constructor or one matching signature … is required" | `{ get; init; }` properties on every read DTO. Same trap as the case-sensitivity one, same fix |
 | **`docker compose up -d` does not rebuild a web image** | Front-end changes are invisible; you debug an app that is three commits old | The four web services are `build:` targets. `docker compose build react-store angular-store react-admin angular-admin` first, then `up -d --wait` |
 | **PostgreSQL folds unquoted identifiers to lowercase** | Hand-written SQL fails with `column o.id does not exist` while EF is perfectly happy - EF quotes everything it generates | Name EVERY column explicitly, including keys: `.HasColumnName("id")` |
 | **Dapper matches column names exactly** | No snake_case translation. An unaliased query silently leaves properties at their DEFAULTS - a wrong value, not an error | Alias every column: `SELECT o.order_number AS OrderNumber` |
@@ -224,7 +229,7 @@ invalidates it.
 | [`docs/architecture.md`](docs/architecture.md) | C4 model, service catalogue, sync/async rules |
 | [`docs/domain/bounded-contexts.md`](docs/domain/bounded-contexts.md) | Why each boundary sits where it does |
 | [`docs/authorization-model.md`](docs/authorization-model.md) | Role/permission matrix |
-| [`docs/adr/`](docs/adr/) | 16 ADRs. **Immutable once merged** — supersede, never edit |
+| [`docs/adr/`](docs/adr/) | 20 ADRs. **Immutable once merged** — supersede, never edit |
 | [`web/parity-checklist.md`](web/parity-checklist.md) | React/Angular parity tracking |
 | [`identity/keycloak/realm-export.json`](identity/keycloak/realm-export.json) | The realm, imported on startup |
 | [`Directory.Packages.props`](Directory.Packages.props) | One version per package, solution-wide |
