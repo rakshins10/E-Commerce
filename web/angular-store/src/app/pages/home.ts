@@ -2,7 +2,13 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { RouterLink } from '@angular/router';
 
 import { Auth } from '../auth/auth';
-import { CatalogService, stockLevel, type Category, type ProductSummary } from '../core/catalog';
+import {
+  CatalogService,
+  groupIntoDepartments,
+  stockLevel,
+  type Category,
+  type ProductSummary,
+} from '../core/catalog';
 import { formatMoney } from '../core/formatting';
 import { Icon, type IconName } from '../icon';
 
@@ -95,29 +101,39 @@ const REASSURANCE: readonly { icon: IconName; title: string; detail: string }[] 
           }
         </ul>
 
-        @if (shoppableCategories().length > 0) {
+        @if (departments().length > 0) {
           <section aria-labelledby="categories-heading">
             <div class="section-head">
-              <h2 id="categories-heading">Shop by category</h2>
+              <h2 id="categories-heading">Shop by department</h2>
               <a class="nav-link" routerLink="/products">
                 All products <app-icon name="chevronRight" variant="icon--sm" />
               </a>
             </div>
 
-            <ul class="grid grid--4 plain-list">
-              @for (category of shoppableCategories(); track category.id) {
-                <li>
-                  <a
-                    class="category-tile"
-                    routerLink="/products"
-                    [queryParams]="{ category: category.slug }"
-                  >
-                    <span class="category-tile__name">{{ category.name }}</span>
-                    <span class="category-tile__count">
-                      {{ category.productCount }}
-                      {{ category.productCount === 1 ? 'product' : 'products' }}
-                    </span>
-                  </a>
+            <ul class="grid grid--2 plain-list">
+              @for (department of departments(); track department.id) {
+                <li class="card department">
+                  <h3 class="department__head">
+                    <a routerLink="/products" [queryParams]="{ category: department.slug }">{{
+                      department.name
+                    }}</a>
+                    <span class="muted small">{{ department.productCount }} products</span>
+                  </h3>
+
+                  <!-- The children, so the way in is one click rather than a category page and then
+                       a filter. This is the whole reason a shop shows you its departments at all. -->
+                  <div class="department__links">
+                    @for (child of department.children; track child.id) {
+                      <a
+                        class="department__chip"
+                        routerLink="/products"
+                        [queryParams]="{ category: child.slug }"
+                      >
+                        {{ child.name }}
+                        <span class="category-rail__count">{{ child.productCount }}</span>
+                      </a>
+                    }
+                  </div>
                 </li>
               }
             </ul>
@@ -222,20 +238,17 @@ export class HomePage {
   );
 
   /**
-   * Categories a shopper can actually shop.
+   * The shop, by department.
    *
-   * This started as "top-level categories only", which produced four tiles reading "Clothing, 0
-   * products". Products hang off the LEAF categories - Hoodies and T-shirts sit under Clothing, and
-   * `productCount` counts direct members, not descendants. A tile advertising an empty category is
-   * worse than no tile.
+   * Departments only, each showing what is inside it - the way a shop is actually organised, and the
+   * thing a flat list of six tiles could not express. A customer thinking "I want a hoodie" and one
+   * thinking "show me the clothing" both find their way in one look.
    *
-   * Filtering on the count rather than on the depth also means the page stays right if the taxonomy is
-   * reshaped later: a flat catalogue and a three-level one both render whatever has products in it.
+   * Empty departments are dropped rather than advertised. The counts include children now
+   * (GetCategoriesAsync rolls them up), so a department reading zero genuinely has nothing in it.
    */
-  protected readonly shoppableCategories = computed(() =>
-    this.categories()
-      .filter((category) => category.productCount > 0)
-      .slice(0, 4),
+  protected readonly departments = computed(() =>
+    groupIntoDepartments(this.categories()).filter((department) => department.productCount > 0),
   );
 
   constructor() {

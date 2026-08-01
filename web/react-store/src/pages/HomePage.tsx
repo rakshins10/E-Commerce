@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import { useQuery } from '@tanstack/react-query';
 
-import { getCategories, searchProducts, stockLevel } from '../lib/catalog';
+import { getCategories, groupIntoDepartments, searchProducts, stockLevel } from '../lib/catalog';
 import { formatMoney } from '../lib/formatting';
 import { useCurrentUser } from '../auth/useCurrentUser';
 import { Icon } from '../components/Icon';
@@ -63,19 +63,18 @@ export function HomePage() {
   const featured = featuredQuery.data?.items ?? [];
 
   /**
-   * Categories a shopper can actually shop.
+   * The shop, by department.
    *
-   * This started as "top-level categories only", which produced four tiles reading "Clothing, 0
-   * products". Products hang off the LEAF categories - Hoodies and T-shirts sit under Clothing, and
-   * `productCount` counts direct members, not descendants. A tile advertising an empty category is
-   * worse than no tile.
+   * Departments only, each showing what is inside it — the way a shop is actually organised, and the
+   * thing a flat list of six tiles could not express. A customer thinking "I want a hoodie" and one
+   * thinking "show me the clothing" both find their way in one look.
    *
-   * Filtering on the count rather than on the depth also means the page stays right if the taxonomy
-   * is reshaped later: a flat catalogue and a three-level one both render whatever has products in it.
+   * Empty departments are dropped rather than advertised. The counts include children now
+   * (`GetCategoriesAsync` rolls them up), so a department reading zero genuinely has nothing in it.
    */
-  const shoppableCategories = (categoriesQuery.data ?? [])
-    .filter((category) => category.productCount > 0)
-    .slice(0, 4);
+  const departments = groupIntoDepartments(categoriesQuery.data ?? []).filter(
+    (department) => department.productCount > 0,
+  );
 
   return (
     <div className="stack">
@@ -135,25 +134,38 @@ export function HomePage() {
         ))}
       </ul>
 
-      {/* --- Categories -------------------------------------------------------------------- */}
-      {shoppableCategories.length > 0 && (
+      {/* --- Departments ------------------------------------------------------------------- */}
+      {departments.length > 0 && (
         <section aria-labelledby="categories-heading">
           <div className="section-head">
-            <h2 id="categories-heading">Shop by category</h2>
+            <h2 id="categories-heading">Shop by department</h2>
             <Link className="nav-link" to="/products">
               All products <Icon name="chevronRight" className="icon--sm" />
             </Link>
           </div>
 
-          <ul className="grid grid--4 plain-list">
-            {shoppableCategories.map((category) => (
-              <li key={category.id}>
-                <Link className="category-tile" to={`/products?category=${category.slug}`}>
-                  <span className="category-tile__name">{category.name}</span>
-                  <span className="category-tile__count">
-                    {category.productCount} {category.productCount === 1 ? 'product' : 'products'}
-                  </span>
-                </Link>
+          <ul className="grid grid--2 plain-list">
+            {departments.map((department) => (
+              <li key={department.id} className="card department">
+                <h3 className="department__head">
+                  <Link to={`/products?category=${department.slug}`}>{department.name}</Link>
+                  <span className="muted small">{department.productCount} products</span>
+                </h3>
+
+                {/* The children, so the way in is one click rather than a category page and then a
+                    filter. This is the whole reason a shop shows you its departments at all. */}
+                <div className="department__links">
+                  {department.children.map((child) => (
+                    <Link
+                      key={child.id}
+                      className="department__chip"
+                      to={`/products?category=${child.slug}`}
+                    >
+                      {child.name}
+                      <span className="category-rail__count">{child.productCount}</span>
+                    </Link>
+                  ))}
+                </div>
               </li>
             ))}
           </ul>

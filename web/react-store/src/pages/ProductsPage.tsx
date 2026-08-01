@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   getBrands,
   getCategories,
+  groupIntoDepartments,
   searchProducts,
   stockLevel,
   type ProductFilters,
@@ -97,6 +98,31 @@ export function ProductsPage() {
     filters.search || filters.category || filters.brand || filters.inStockOnly,
   );
 
+  const departments = useMemo(
+    () => groupIntoDepartments(categoriesQuery.data ?? []),
+    [categoriesQuery.data],
+  );
+
+  /**
+   * The address for a category, keeping every other filter.
+   *
+   * The rail writes to the same URL the select does, so a link is not a second code path — it sets
+   * the same `?category=` the dropdown sets. There is still exactly one source of truth, and
+   * anything that survives a refresh in one survives it in the other.
+   */
+  const categoryHref = (slug: string) => {
+    const next = new URLSearchParams(searchParams);
+
+    if (slug) next.set('category', slug);
+    else next.delete('category');
+
+    // Page 3 of Clothing is not page 3 of Hoodies.
+    next.delete('page');
+
+    const query = next.toString();
+    return query ? `/products?${query}` : '/products';
+  };
+
   return (
     <div className="stack">
       <h1 className="page-title">Products</h1>
@@ -120,6 +146,17 @@ export function ProductsPage() {
             />
           </div>
 
+          {/* --- Category ---------------------------------------------------------------------
+              `<optgroup>`, not a hand-drawn indent.
+
+              This used to prefix every child with an em dash — "— T-shirts (3)" — which is what you
+              reach for when you want a tree in a control that does not have one. It renders as a
+              stray character with no meaning, a screen reader announces it, and it still does not
+              say which parent the child belongs to.
+
+              `<optgroup>` is the real thing: the browser indents it, assistive technology announces
+              the group name alongside the option, and the department stops being a selectable row
+              that looked like an option but read like a heading. */}
           <div className="field">
             <label htmlFor="category">Category</label>
             <select
@@ -129,10 +166,21 @@ export function ProductsPage() {
               onChange={(event) => updateParams({ category: event.target.value, page: '1' })}
             >
               <option value="">All categories</option>
-              {categoriesQuery.data?.map((category) => (
-                <option key={category.id} value={category.slug}>
-                  {category.parentSlug ? `— ${category.name}` : category.name} ({category.productCount})
-                </option>
+
+              {departments.map((department) => (
+                <optgroup key={department.id} label={department.name}>
+                  {/* The department itself stays selectable — the server rolls its children up, so
+                      "everything in Clothing" is a real and useful query. */}
+                  <option value={department.slug}>
+                    All {department.name.toLowerCase()} ({department.productCount})
+                  </option>
+
+                  {department.children.map((child) => (
+                    <option key={child.id} value={child.slug}>
+                      {child.name} ({child.productCount})
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -204,10 +252,73 @@ export function ProductsPage() {
         </div>
       </section>
 
-      {/* --- Results ---
-          aria-live so a screen-reader user hears the count change after
-          filtering. Without it, filtering is silent and appears to do nothing. */}
-      <p className="muted" aria-live="polite" role="status">
+      <div className="browse-layout">
+        {/* --- The category rail ------------------------------------------------------------
+            The taxonomy, laid out rather than folded into a dropdown.
+
+            A shopper who has not decided yet cannot browse a `<select>` — it has to be opened, read
+            and closed again to see anything, and it shows one department at a time. This shows the
+            whole shop at once: every department, what is inside it, and how many products each
+            holds.
+
+            They are real links, not click handlers. Middle-click opens a category in a new tab, the
+            status bar shows where each one goes, and every one is an address that can be sent to
+            somebody else — none of which a button gives you. */}
+        <nav className="category-rail" aria-label="Categories">
+          <h2 className="category-rail__title">Categories</h2>
+
+          <ul className="plain-list">
+            <li>
+              <Link
+                className="category-rail__link"
+                to={categoryHref('')}
+                // `aria-current="true"`, not `"page"`: this is the selected filter within the current
+                // page, not a link to the page you are on.
+                aria-current={filters.category === '' ? 'true' : undefined}
+              >
+                All products
+              </Link>
+            </li>
+          </ul>
+
+          {departments.map((department) => (
+            <div key={department.id}>
+              <h3 className="category-rail__heading">
+                <Link
+                  className="category-rail__link"
+                  to={categoryHref(department.slug)}
+                  aria-current={filters.category === department.slug ? 'true' : undefined}
+                >
+                  {department.name}
+                  <span className="category-rail__count">{department.productCount}</span>
+                </Link>
+              </h3>
+
+              {department.children.length > 0 && (
+                <ul className="plain-list">
+                  {department.children.map((child) => (
+                    <li key={child.id}>
+                      <Link
+                        className="category-rail__link"
+                        to={categoryHref(child.slug)}
+                        aria-current={filters.category === child.slug ? 'true' : undefined}
+                      >
+                        {child.name}
+                        <span className="category-rail__count">{child.productCount}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div className="stack">
+          {/* --- Results ---
+              aria-live so a screen-reader user hears the count change after
+              filtering. Without it, filtering is silent and appears to do nothing. */}
+          <p className="muted" aria-live="polite" role="status">
         {productsQuery.isPending
           ? 'Loading products…'
           : result
@@ -242,8 +353,12 @@ export function ProductsPage() {
         </div>
       )}
 
+      {/* Named, so "the products" is a thing that can be pointed at. The page now has product
+          headings AND department headings in the rail, and without a name on this list the only way
+          to say "a product" is by position in the document — which is exactly how a spec ends up
+          clicking a category. */}
       {result && result.items.length > 0 && (
-        <ul className="grid grid--3 product-grid">
+        <ul className="grid grid--3 product-grid" aria-label="Products">
           {result.items.map((product) => {
             const stock = stockLevel(product.stockOnHand);
 
@@ -324,6 +439,8 @@ export function ProductsPage() {
           </button>
         </nav>
       )}
+        </div>
+      </div>
     </div>
   );
 }

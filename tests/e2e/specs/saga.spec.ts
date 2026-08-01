@@ -46,7 +46,13 @@ async function orderProduct(page: Page, search: string, recipient: string): Prom
   await page.goto(`/products?search=${encodeURIComponent(search)}`);
   await expect(page.getByRole('status')).toContainText('product');
 
-  await page.getByRole('heading', { level: 3 }).first().click();
+  // Scoped to the product list by name. "The first h3 on the page" stopped meaning "the first
+  // product" when the products page gained a category rail — see the note in shopping.spec.ts.
+  await page
+    .getByRole('list', { name: 'Products' })
+    .getByRole('heading', { level: 3 })
+    .first()
+    .click();
   await page.getByRole('button', { name: 'Add to basket' }).click();
   await expect(page.getByRole('status')).toContainText('Added to your basket');
 

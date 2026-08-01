@@ -290,18 +290,32 @@ public sealed class ProductQueries(IDbConnection connection)
 
     public async Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken cancellationToken = default)
     {
-        // LEFT JOIN so a category with no products still appears, with a count of zero. An INNER JOIN would
-        // make empty categories vanish from the filter list, which looks like a bug to a user.
+        // The count INCLUDES child categories, because filtering does.
+        //
+        // This used to count direct members only, which meant every top-level category advertised
+        // "0 products" while selecting it returned six - Clothing has no products of its own, it has
+        // T-shirts and Hoodies. A count that disagrees with what clicking it returns is worse than no
+        // count at all, and it looked like an empty shop on the storefront's category tiles.
+        //
+        // The subquery mirrors the filter's predicate in BuildWhere EXACTLY - `own OR direct child`.
+        // If one gains a level of nesting the other must, and they should be changed together.
+        //
+        // A category with genuinely no products still appears, with a count of zero. Hiding it would
+        // make the taxonomy look different from the one the back office edits.
         const string sql = """
             SELECT  c.id                       AS Id,
                     c.name                     AS Name,
                     c.slug                     AS Slug,
                     parent.slug                AS ParentSlug,
-                    COUNT(p.id)::int           AS ProductCount
+                    (
+                        SELECT COUNT(*)::int
+                        FROM products p
+                        JOIN categories pc ON pc.id = p.category_id
+                        WHERE p.is_active = TRUE
+                          AND (pc.id = c.id OR pc.parent_id = c.id)
+                    )                          AS ProductCount
             FROM categories c
             LEFT JOIN categories parent ON parent.id = c.parent_id
-            LEFT JOIN products   p      ON p.category_id = c.id AND p.is_active = TRUE
-            GROUP BY c.id, c.name, c.slug, parent.slug
             ORDER BY parent.slug NULLS FIRST, c.name;
             """;
 

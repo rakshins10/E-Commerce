@@ -678,3 +678,56 @@ parity checklist.
 **The lesson is about the shape of the gap, not the gap itself.** The e2e suite catches drift on paths a
 spec walks. It cannot catch drift on a path nobody walks, and the error paths are exactly the paths
 nobody walks. Two independent implementations will diverge there first.
+
+---
+
+## Category browsing — writing a filter into the URL from a link
+
+The products page grew a category rail: every department and everything inside it, laid out instead of
+folded into a `<select>`. Each entry is a real link that sets `?category=`, keeping the other filters.
+
+**React** builds the address by hand and hands it to `<Link>`:
+
+```tsx
+const categoryHref = (slug: string) => {
+  const next = new URLSearchParams(searchParams);
+  if (slug) next.set('category', slug);
+  else next.delete('category');
+  next.delete('page');
+  const query = next.toString();
+  return query ? `/products?${query}` : '/products';
+};
+```
+
+**Angular** declares the change and lets the router merge it:
+
+```html
+<a routerLink="/products"
+   [queryParams]="categoryParams(child.slug)"
+   queryParamsHandling="merge">
+```
+
+```ts
+categoryParams(slug: string): Record<string, string | null> {
+  return { category: slug || null, page: null };
+}
+```
+
+**Angular wins this one clearly.** It says *what changes* — set the category, drop the page — and the
+router works out the rest, including that `null` removes a parameter. React's version has to reconstruct
+the entire query string on every render, and every rule about what survives a category change is written
+out longhand. Both are six lines; only one of them can be read as a sentence.
+
+It is also the first place in this document where Angular's framework-supplied routing beats a React
+idiom on something a real screen needs, rather than on ceremony. React Router has no `queryParamsHandling`
+equivalent — `useSearchParams` gives you the object and leaves the merging to you.
+
+### Where the frameworks did not differ at all
+
+`groupIntoDepartments` — turning the flat category list into a tree — is the same twenty lines in both
+apps, because it is plain TypeScript over plain data. Duplicated per
+[ADR-0018](adr/0018-self-contained-frontends.md), guarded by six identical unit assertions in each suite.
+
+That is worth noticing. The parts of a front end that are genuinely *logic* are framework-shaped only when
+you let them be. Everything above about hooks, signals, `useMemo` and `computed` is about **when code
+runs**; none of it is about what the code does.

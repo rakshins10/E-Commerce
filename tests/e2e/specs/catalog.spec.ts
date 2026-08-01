@@ -74,6 +74,40 @@ test.describe('product browsing', () => {
     await expect(page.getByRole('status')).toContainText('6 products');
   });
 
+  test('the category rail offers the whole taxonomy without opening a menu', async ({ page }) => {
+    await page.goto('/products');
+
+    const rail = page.getByRole('navigation', { name: 'Categories' });
+
+    // Departments AND what is inside them, visible at once. A dropdown can hold the same
+    // information; it cannot show it.
+    await expect(rail.getByRole('link', { name: 'Clothing' })).toBeVisible();
+    await expect(rail.getByRole('link', { name: 'Hoodies' })).toBeVisible();
+    await expect(rail.getByRole('link', { name: 'T-shirts' })).toBeVisible();
+
+    await rail.getByRole('link', { name: 'Hoodies' }).click();
+
+    // A real link, so the filter is in the address and survives a reload.
+    await expect(page).toHaveURL(/category=hoodies/);
+    await expect(page.getByRole('status')).toContainText('3 products');
+
+    // aria-current marks the selection for a screen reader, not colour alone.
+    await expect(rail.getByRole('link', { name: 'Hoodies' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  test('a department counts the products inside its children', async ({ page }) => {
+    await page.goto('/products');
+
+    // Clothing holds no products directly - T-shirts and Hoodies do. The count has to say 6, the
+    // number selecting it returns, or it advertises an empty shop.
+    await expect(
+      page.getByRole('navigation', { name: 'Categories' }).getByRole('link', { name: 'Clothing' }),
+    ).toContainText('6');
+  });
+
   test('filtering by brand works', async ({ page }) => {
     await page.goto('/products');
     await expect(page.getByRole('status')).toContainText('12 products');

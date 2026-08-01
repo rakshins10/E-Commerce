@@ -297,6 +297,25 @@ export class CatalogPage {
           </div>
 
           <div class="field">
+            <label for="imageUrl">Image URL</label>
+            <input
+              id="imageUrl"
+              class="input"
+              maxlength="500"
+              placeholder="/img/tshirt-classic.svg"
+              formControlName="imageUrl"
+            />
+            <p class="muted small">
+              A path served by the storefront, such as <code>/img/mug-ceramic.svg</code>. Leave it
+              empty and the shop shows a placeholder.
+            </p>
+
+            @if (form.controls.imageUrl.value; as preview) {
+              <img class="thumb" [src]="preview" alt="" aria-hidden="true" width="40" height="40" />
+            }
+          </div>
+
+          <div class="field">
             <label for="category">Category</label>
             <select id="category" class="input" formControlName="categoryId">
               @for (category of categories(); track category.id) {
@@ -398,6 +417,18 @@ export class ProductEditPage {
     sku: ['', [Validators.required, Validators.maxLength(64)]],
     name: ['', [Validators.required, Validators.maxLength(200)]],
     description: [''],
+    /**
+     * This control was missing, and its absence cost a product its picture.
+     *
+     * `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a field
+     * the server sets to NULL. React survived it by accident - it kept `imageUrl` in component state
+     * and posted it straight back - while this form did not track it at all, so every run of the
+     * shared "a product can be edited" spec wiped the artwork off NW-TS-001.
+     *
+     * The form is now the fix AND the evidence: a value you can see is a value you notice
+     * disappearing.
+     */
+    imageUrl: ['', Validators.maxLength(500)],
     price: [0, [Validators.required, Validators.min(0)]],
     categoryId: ['', Validators.required],
     brandId: ['', Validators.required],
@@ -430,6 +461,7 @@ export class ProductEditPage {
           sku: product.sku,
           name: product.name,
           description: product.description,
+          imageUrl: product.imageUrl ?? '',
           price: product.price,
           categoryId: categories.find((c) => c.slug === product.categorySlug)?.id ?? '',
           brandId: brands.find((b) => b.slug === product.brandSlug)?.id ?? '',
@@ -464,6 +496,7 @@ export class ProductEditPage {
           sku: value.sku,
           name: value.name,
           description: value.description,
+          imageUrl: value.imageUrl || null,
           price: value.price,
           currency: 'GBP',
           categoryId: value.categoryId,
@@ -475,6 +508,7 @@ export class ProductEditPage {
         await this.api.updateProduct(this.id(), {
           name: value.name,
           description: value.description,
+          imageUrl: value.imageUrl || null,
           categoryId: value.categoryId,
           brandId: value.brandId,
         });

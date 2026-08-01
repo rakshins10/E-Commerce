@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 
 import {
   CatalogService,
+  groupIntoDepartments,
   stockLevel,
   type PagedResult,
   type ProductFilters,
@@ -54,14 +55,39 @@ import { formatMoney } from '../core/formatting';
             />
           </div>
 
+          <!-- An optgroup, not a hand-drawn indent.
+
+               (No backticks in this comment, or anywhere else in this template: an Angular inline
+               template IS a TypeScript template literal, so one backtick ends the string and the
+               compiler reports NG1010 "template must be a string" pointing at the decorator rather
+               than at the character.)
+
+
+               This used to prefix every child with an em dash - "- T-shirts (3)" - which is what you
+               reach for when you want a tree in a control that does not have one. It renders as a
+               stray character with no meaning, a screen reader announces it, and it still does not
+               say which parent the child belongs to.
+
+               optgroup is the real thing: the browser indents it, assistive technology announces
+               the group name alongside the option, and the department stops being a selectable row
+               that looked like an option but read like a heading. -->
           <div class="field">
             <label for="category">Category</label>
             <select id="category" class="input" [value]="filters().category ?? ''" (change)="onFilter('category', $event)">
               <option value="">All categories</option>
-              @for (category of catalog.categories(); track category.id) {
-                <option [value]="category.slug">
-                  {{ category.parentSlug ? '— ' + category.name : category.name }} ({{ category.productCount }})
-                </option>
+
+              @for (department of departments(); track department.id) {
+                <optgroup [label]="department.name">
+                  <!-- The department itself stays selectable — the server rolls its children up, so
+                       "everything in Clothing" is a real and useful query. -->
+                  <option [value]="department.slug">
+                    All {{ department.name.toLowerCase() }} ({{ department.productCount }})
+                  </option>
+
+                  @for (child of department.children; track child.id) {
+                    <option [value]="child.slug">{{ child.name }} ({{ child.productCount }})</option>
+                  }
+                </optgroup>
               }
             </select>
           </div>
@@ -103,6 +129,71 @@ import { formatMoney } from '../core/formatting';
         </div>
       </section>
 
+      <div class="browse-layout">
+        <!-- The taxonomy, laid out rather than folded into a dropdown.
+
+             A shopper who has not decided yet cannot browse a dropdown — it has to be opened, read
+             and closed again to see anything, and it shows one department at a time. This shows the
+             whole shop at once: every department, what is inside it, and how many products each
+             holds.
+
+             They are real links, not click handlers. Middle-click opens a category in a new tab, the
+             status bar shows where each one goes, and every one is an address that can be sent to
+             somebody else — none of which a button gives you. -->
+        <nav class="category-rail" aria-label="Categories">
+          <h2 class="category-rail__title">Categories</h2>
+
+          <ul class="plain-list">
+            <li>
+              <a
+                class="category-rail__link"
+                routerLink="/products"
+                [queryParams]="categoryParams('')"
+                queryParamsHandling="merge"
+                [attr.aria-current]="filters().category === '' ? 'true' : null"
+                >All products</a
+              >
+            </li>
+          </ul>
+
+          @for (department of departments(); track department.id) {
+            <div>
+              <h3 class="category-rail__heading">
+                <a
+                  class="category-rail__link"
+                  routerLink="/products"
+                  [queryParams]="categoryParams(department.slug)"
+                  queryParamsHandling="merge"
+                  [attr.aria-current]="filters().category === department.slug ? 'true' : null"
+                >
+                  {{ department.name }}
+                  <span class="category-rail__count">{{ department.productCount }}</span>
+                </a>
+              </h3>
+
+              @if (department.children.length > 0) {
+                <ul class="plain-list">
+                  @for (child of department.children; track child.id) {
+                    <li>
+                      <a
+                        class="category-rail__link"
+                        routerLink="/products"
+                        [queryParams]="categoryParams(child.slug)"
+                        queryParamsHandling="merge"
+                        [attr.aria-current]="filters().category === child.slug ? 'true' : null"
+                      >
+                        {{ child.name }}
+                        <span class="category-rail__count">{{ child.productCount }}</span>
+                      </a>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </nav>
+
+        <div class="stack">
       <!-- aria-live so a screen-reader user hears the count change after
            filtering; without it, filtering is silent and appears to do nothing. -->
       <p class="muted" aria-live="polite" role="status">
@@ -136,7 +227,11 @@ import { formatMoney } from '../core/formatting';
             <p class="muted">Try a different search or clear the filters.</p>
           </div>
         } @else {
-          <ul class="grid grid--3 product-grid">
+          <!-- Named, so "the products" is a thing that can be pointed at. The page now has product
+               headings AND department headings in the rail, and without a name on this list the only
+               way to say "a product" is by position in the document - which is exactly how a spec
+               ends up clicking a category. -->
+          <ul class="grid grid--3 product-grid" aria-label="Products">
             @for (product of r.items; track product.id) {
               <li class="card product-card">
                 <div class="product-media">
@@ -191,6 +286,8 @@ import { formatMoney } from '../core/formatting';
           </nav>
         }
       }
+        </div>
+      </div>
     </div>
   `,
 })
@@ -218,6 +315,21 @@ export class ProductsPage {
       pageSize: 12,
     };
   });
+
+  /** The taxonomy, grouped once here rather than unpicked in the template. */
+  protected readonly departments = computed(() => groupIntoDepartments(this.catalog.categories()));
+
+  /**
+   * The query parameters for a category, keeping every other filter.
+   *
+   * Paired with queryParamsHandling="merge", so the rail writes to the same URL the select does -
+   * a link is not a second code path, it sets the same ?category=. null REMOVES a parameter
+   * under merge, which is how "All products" clears the filter and how every link drops the page
+   * number: page 3 of Clothing is not page 3 of Hoodies.
+   */
+  protected categoryParams(slug: string): Record<string, string | null> {
+    return { category: slug || null, page: null };
+  }
 
   protected readonly sortValue = computed(
     () => `${this.filters().sortBy}:${this.filters().sortDescending ? 'desc' : 'asc'}`,

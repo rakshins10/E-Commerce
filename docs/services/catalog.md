@@ -179,8 +179,30 @@ curl "http://localhost:5001/api/catalog/products/{id}"
 
 **Auth:** anonymous · **200** `CategoryDto[]` with `productCount`, ordered parents-first.
 
-Uses a `LEFT JOIN` so an empty category still appears with a count of zero — an `INNER JOIN` would make it
-vanish from the filter list, which looks like a bug.
+An empty category still appears, with a count of zero — hiding it would make the taxonomy the storefront
+shows differ from the one the back office edits.
+
+**`productCount` includes child categories, because filtering does.**
+
+It used to count direct members only, and the result was a shopfront where every department advertised
+*"Clothing — 0 products"* while clicking it returned six. Clothing holds no products itself; T-shirts and
+Hoodies do. A count that disagrees with what selecting it returns is worse than no count at all.
+
+The subquery mirrors the `category` filter's predicate exactly — *own category, or a direct child of it*:
+
+```sql
+(SELECT COUNT(*)::int
+ FROM products p
+ JOIN categories pc ON pc.id = p.category_id
+ WHERE p.is_active = TRUE AND (pc.id = c.id OR pc.parent_id = c.id))
+```
+
+If one gains a level of nesting the other must too. They are two expressions of one rule, and the day they
+disagree the shop lies about itself again.
+
+**Rejected:** a recursive CTE, which would handle any depth. The taxonomy is deliberately two levels
+([`docs/domain/bounded-contexts.md`](../domain/bounded-contexts.md)) and a recursive query that matches a
+non-recursive filter is a different, quieter version of the same inconsistency.
 
 ### `GET /api/catalog/brands`
 

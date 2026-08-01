@@ -37,6 +37,44 @@ export interface Category {
   readonly productCount: number;
 }
 
+/** A top-level category with the categories that live inside it. */
+export interface Department extends Category {
+  readonly children: readonly Category[];
+}
+
+/**
+ * Turns the flat category list into departments.
+ *
+ * The API returns one row per category with a `parentSlug`, because that is what the table holds and
+ * a client that wants a flat list should not have to unpick a tree. Every screen that *displays* the
+ * taxonomy wants it grouped, though, so the grouping happens once here rather than three times in JSX.
+ *
+ * Ordering is preserved from the server (`ORDER BY parent.slug NULLS FIRST, c.name`), so departments
+ * and their children are already alphabetical and this does not sort again.
+ *
+ * A category whose `parentSlug` names a parent that is not in the list is treated as top-level rather
+ * than dropped. Losing a category because its parent was withdrawn would hide products from browsing
+ * while the search still returned them, which is the worst of both.
+ */
+export function groupIntoDepartments(categories: readonly Category[]): readonly Department[] {
+  const bySlug = new Map(categories.map((category) => [category.slug, category]));
+
+  const children = new Map<string, Category[]>();
+  const roots: Category[] = [];
+
+  for (const category of categories) {
+    if (category.parentSlug && bySlug.has(category.parentSlug)) {
+      const siblings = children.get(category.parentSlug);
+      if (siblings) siblings.push(category);
+      else children.set(category.parentSlug, [category]);
+    } else {
+      roots.push(category);
+    }
+  }
+
+  return roots.map((root) => ({ ...root, children: children.get(root.slug) ?? [] }));
+}
+
 export interface Brand {
   readonly id: string;
   readonly name: string;

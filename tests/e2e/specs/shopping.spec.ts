@@ -44,7 +44,17 @@ async function addFirstProduct(page: Page): Promise<string> {
   await expect(page.getByRole('status')).toContainText('products');
 
   const firstProduct = page.getByRole('link', { name: /view|details/i }).first();
-  const productLinks = page.getByRole('heading', { level: 3 });
+
+  // Scoped to the product list BY NAME, not to "the first h3 on the page".
+  //
+  // It was the latter, and it worked right up until the products page grew a category rail whose
+  // department names are also h3 — at which point "the first product" became "Accessories", the
+  // click navigated to a filtered list, and the failure surfaced as a missing "Add to basket"
+  // button two assertions later. An unanchored positional selector is a spec that quietly depends on
+  // document order.
+  const productLinks = page
+    .getByRole('list', { name: 'Products' })
+    .getByRole('heading', { level: 3 });
 
   // The card layout differs slightly between the two apps, so navigate by the product heading, which
   // both render. Selecting by role and accessible name rather than by CSS is what makes one spec work

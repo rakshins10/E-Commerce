@@ -1108,3 +1108,131 @@ body {
   width: 100%;
   justify-content: center;
 }
+
+/* --- Browse layout -------------------------------------------------------
+   A category rail beside the results, the way a real shop organises a
+   department. Below 64rem it becomes a horizontally scrolling strip above the
+   grid: a 15rem sidebar on a phone is most of the screen, and a shopper who
+   came to look at products should see products. */
+.browse-layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 64rem) {
+  .browse-layout {
+    grid-template-columns: 15rem 1fr;
+    align-items: start;
+  }
+}
+
+.category-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (min-width: 64rem) {
+  .category-rail {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+.category-rail__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* The department name. A link too, because "show me everything in Clothing" is
+   a real thing to want and the server rolls child categories up for it. */
+.category-rail__heading {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.category-rail__link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.category-rail__heading .category-rail__link {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+}
+
+.category-rail__link:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+}
+
+/* Current selection is marked with weight and a rule, not colour alone -
+   colour alone fails WCAG 1.4.1 and is invisible to a shopper who cannot
+   distinguish it. */
+.category-rail__link[aria-current] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: inset 3px 0 0 var(--color-brand-500);
+}
+
+.category-rail__count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Department board (home page) ----------------------------------------
+   One card per department listing what is inside it. The same information the
+   rail carries, laid out for somebody who has not chosen anything yet. */
+.department {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.department__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.department__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.department__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-base);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.department__chip:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}

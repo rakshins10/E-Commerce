@@ -115,8 +115,8 @@ cd web
 npm install                                       # npm workspaces - run from web/, not a sub-package
 npm run build --workspace react-store
 npm run build --workspace angular-store
-npm test  --workspace react-store                 # 20 unit tests
-npm test  --workspace angular-store               # the SAME 20 - drift guard
+npm test  --workspace react-store                 # 25 unit tests
+npm test  --workspace angular-store               # the SAME 25 - drift guard
 node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette drift
 ```
 
@@ -124,10 +124,10 @@ node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette
 
 ```powershell
 cd tests/e2e
-npm run test:react                                # 53 storefront specs against :3000
-npm run test:angular                              # the SAME 53 against :4200
-npm run test:react:admin                          # 25 back-office specs against :3001
-npm run test:angular:admin                        # the SAME 25 against :4201
+npm run test:react                                # 55 storefront specs against :3000
+npm run test:angular                              # the SAME 55 against :4200
+npm run test:react:admin                          # 26 back-office specs against :3001
+npm run test:angular:admin                        # the SAME 26 against :4201
 ```
 
 Both must pass. Specs use roles and accessible names only - never CSS selectors or test ids - because they
@@ -165,6 +165,11 @@ run against two independent implementations.
 | **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing — you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
 | **Playwright `getByLabel` is a substring match** | `getByLabel('Email')` also matches "Email me about my orders" | Pass `{ exact: true }` |
 | **`getByRole(role, { name })` is a substring match too** | `getByRole('link', { name: 'Products' })` quietly became five elements when the home page gained "Shop all products", "All products" and two category tiles — a strict-mode violation in a spec that had passed for six phases | Scope to a landmark (`getByRole('banner').getByRole(…)`) **and** pass `{ exact: true }`. A shell spec should be asking about the shell |
+| **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments - write "an optgroup", not the backticked form |
+| **A PUT replaces the whole resource** | A form field that does not exist is a column silently set to NULL. The Angular admin had no image control, so every run of "a product can be edited" wiped the artwork off NW-TS-001 - visible only on a storefront page no admin spec looks at | Assert save-and-RELOAD, not just "saved". `tests/e2e/specs-admin/catalog.spec.ts` has the guard |
+| **An unanchored positional selector depends on document order** | `getByRole('heading', { level: 3 }).first()` meant "the first product" until the products page gained a category rail whose department names are also h3. It then clicked "Accessories" and failed two assertions later on a missing button | Give the container an `aria-label` and scope to it: `getByRole('list', { name: 'Products' })` |
+| **A form field is empty for a moment after navigation** | `inputValue()` reads the initial empty state, because it does not retry. Both apps render fields first and populate them when the query resolves | `await expect(page.getByLabel('Name')).toHaveValue(…)` first - `toHaveValue` retries |
+| **There is no Prettier config in this repo** | Running `npx prettier --write` reformats a file to Prettier's defaults - double quotes throughout - and the diff buries the actual change | Do not run it. `.editorconfig` and `dotnet format` cover .NET; the web apps are formatted by hand |
 | **`docker compose up -d` does not rebuild a web image** | Front-end changes are invisible; you debug an app that is three commits old | The four web services are `build:` targets. `docker compose build react-store angular-store react-admin angular-admin` first, then `up -d --wait` |
 | **PostgreSQL folds unquoted identifiers to lowercase** | Hand-written SQL fails with `column o.id does not exist` while EF is perfectly happy - EF quotes everything it generates | Name EVERY column explicitly, including keys: `.HasColumnName("id")` |
 | **Dapper matches column names exactly** | No snake_case translation. An unaliased query silently leaves properties at their DEFAULTS - a wrong value, not an error | Alias every column: `SELECT o.order_number AS OrderNumber` |

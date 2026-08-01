@@ -444,6 +444,43 @@ export function ProductEditPage() {
           />
         </div>
 
+        {/* --- Image URL -------------------------------------------------------------------
+            This field was missing, and its absence cost a product its picture.
+
+            `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a
+            field the server sets to NULL. React happened to survive it by round-tripping `imageUrl`
+            through component state; Angular did not track it at all, so the shared "a product can be
+            edited" spec wiped the artwork off NW-TS-001 every time it ran against the Angular admin.
+
+            The form is now the fix AND the evidence: a value you can see is a value you notice
+            disappearing. */}
+        <div className="field">
+          <label htmlFor="imageUrl">Image URL</label>
+          <input
+            id="imageUrl"
+            className="input"
+            maxLength={500}
+            placeholder="/img/tshirt-classic.svg"
+            value={form.imageUrl}
+            onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+          />
+          <p className="muted small">
+            A path served by the storefront, such as <code>/img/mug-ceramic.svg</code>. Leave it empty
+            and the shop shows a placeholder.
+          </p>
+
+          {form.imageUrl && (
+            <img
+              className="thumb"
+              src={form.imageUrl}
+              alt=""
+              aria-hidden="true"
+              width={40}
+              height={40}
+            />
+          )}
+        </div>
+
         <div className="field">
           <label htmlFor="category">Category</label>
           <select
