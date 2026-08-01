@@ -213,9 +213,11 @@ export function ProductDetailPage() {
               Never colour alone (WCAG 1.4.1). */}
           {sizes.length > 0 && (
             <fieldset className="option-group">
-              <legend className="option-group__legend">
-                Size {needsSize && <span className="option-group__hint">— choose one</span>}
-              </legend>
+              {/* Just "Size". The legend IS the group's accessible name, so a hint inside it would
+                  rename the group the moment a size was chosen. The prompt lives below instead. */}
+              <legend className="option-group__legend">Size</legend>
+
+              {needsSize && <p className="option-group__hint small">Choose a size</p>}
 
               <div className="option-list">
                 {sizes.map((option) => {

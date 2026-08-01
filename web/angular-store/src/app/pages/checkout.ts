@@ -107,7 +107,7 @@ import { COUNTRIES, ProfileService } from '../core/profile';
               <h2 id="summary-heading" style="margin-top: 0">Order summary</h2>
 
               <ul class="plain-list stack--tight">
-                @for (item of basket()!.items; track item.productId) {
+                @for (item of basket()!.items; track item.sku) {
                   <li class="row">
                     <img
                       class="thumb"
@@ -119,7 +119,8 @@ import { COUNTRIES, ProfileService } from '../core/profile';
                       height="40"
                     />
                     <span>
-                      {{ item.productName }} × {{ item.quantity }} —
+                      {{ item.productName }}{{ describe(item) ? ' (' + describe(item) + ')' : '' }}
+                      × {{ item.quantity }} —
                       {{ money(item.lineTotal, item.currency) }}
                     </span>
                   </li>
@@ -168,6 +169,11 @@ export class CheckoutPage {
 
   protected readonly money = (amount: number, currency: string) =>
     formatMoney({ amount, currency });
+
+  /** "M · Navy" — the option chosen, in the words the customer chose it in. */
+  protected describe(item: { size: string | null; colourName: string | null }): string {
+    return [item.size, item.colourName].filter(Boolean).join(' · ');
+  }
 
   // Typed, with the validators declared once as data. `form.invalid` then answers "can submit"
   // for the whole form, rather than four hand-written emptiness checks that must be kept in step.

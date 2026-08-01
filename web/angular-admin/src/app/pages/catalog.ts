@@ -6,7 +6,12 @@ import { Auth } from '../auth/auth';
 import { AdminApi } from '../core/admin-api';
 import { formatMoney } from '../core/formatting';
 import { Permissions } from '../core/permissions';
-import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-types';
+import type {
+  AdminBrand,
+  AdminCategory,
+  AdminProduct,
+  AdminProductVariant,
+} from '../core/admin-types';
 
 /**
  * The catalogue.
@@ -93,6 +98,7 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                   <th scope="col">SKU</th>
                   <th scope="col">Name</th>
                   <th scope="col">Category</th>
+                  <th scope="col">For</th>
                   <th scope="col">Brand</th>
                   <th scope="col" style="text-align: right">Price</th>
                   <th scope="col" style="text-align: right">Stock</th>
@@ -129,6 +135,7 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                       </span>
                     </td>
                     <td>{{ product.categoryName }}</td>
+                    <td>{{ product.audience }}</td>
                     <td>{{ product.brandName }}</td>
                     <td style="text-align: right">{{ money(product.price, product.currency) }}</td>
                     <td style="text-align: right">{{ product.stockOnHand }}</td>
@@ -325,6 +332,19 @@ export class CatalogPage {
           </div>
 
           <div class="field">
+            <label for="audience">Sold to</label>
+            <select id="audience" class="input" formControlName="audience">
+              <option value="Unisex">Everyone</option>
+              <option value="Men">Men</option>
+              <option value="Women">Women</option>
+            </select>
+            <p class="muted small">
+              An attribute, not a category — the taxonomy says what a thing is, this says who it is
+              for.
+            </p>
+          </div>
+
+          <div class="field">
             <label for="brand">Brand</label>
             <select id="brand" class="input" formControlName="brandId">
               @for (brand of brands(); track brand.id) {
@@ -388,6 +408,54 @@ export class CatalogPage {
                 </button>
               }
             </form>
+
+          @if (variants().length > 0) {
+            <section class="card stack" aria-labelledby="variants-heading">
+              <h2 id="variants-heading" style="margin-top: 0">Variants</h2>
+
+              <p class="muted small">
+                What a customer actually buys. Each row has its own SKU, and Inventory holds stock
+                against that SKU rather than against the product — which is why this service needed no
+                schema change when sizes arrived.
+              </p>
+
+              <table class="table">
+                <caption class="visually-hidden">Sellable variants of this product</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">SKU</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Colour</th>
+                    <th scope="col" style="text-align: right">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (variant of variants(); track variant.id) {
+                    <tr>
+                      <th scope="row">{{ variant.sku }}</th>
+                      <td>{{ variant.size ?? '—' }}</td>
+                      <td>
+                        @if (variant.colourName) {
+                          <span class="cell-with-thumb">
+                            <span
+                              class="swatch"
+                              [style.background]="variant.colourHex ?? 'transparent'"
+                              aria-hidden="true"
+                            ></span>
+                            {{ variant.colourName }}
+                          </span>
+                        } @else {
+                          —
+                        }
+                      </td>
+                      <td style="text-align: right">{{ variant.stockOnHand }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          }
+
           </section>
         }
       </div>
@@ -410,6 +478,9 @@ export class ProductEditPage {
   protected readonly saved = signal<string | null>(null);
   protected readonly price = signal(0);
 
+  /** The loaded product's sellable variants. Read-only here — stock is Inventory's to change. */
+  protected readonly variants = signal<readonly AdminProductVariant[]>([]);
+
   protected readonly canOverridePrice = Permissions.Catalog.PriceOverride;
   protected readonly isNew = computed(() => this.id() === 'new');
 
@@ -429,6 +500,7 @@ export class ProductEditPage {
      * disappearing.
      */
     imageUrl: ['', Validators.maxLength(500)],
+    audience: ['Unisex', Validators.required],
     price: [0, [Validators.required, Validators.min(0)]],
     categoryId: ['', Validators.required],
     brandId: ['', Validators.required],
@@ -462,6 +534,7 @@ export class ProductEditPage {
           name: product.name,
           description: product.description,
           imageUrl: product.imageUrl ?? '',
+          audience: product.audience,
           price: product.price,
           categoryId: categories.find((c) => c.slug === product.categorySlug)?.id ?? '',
           brandId: brands.find((b) => b.slug === product.brandSlug)?.id ?? '',
@@ -469,6 +542,7 @@ export class ProductEditPage {
 
         // Disabled rather than merely readonly, so the value is excluded from getRawValue()'s
         // validation path and the control cannot be edited by a stray script.
+        this.variants.set(product.variants ?? []);
         this.form.controls.sku.disable();
         this.price.set(product.price);
       }
@@ -497,6 +571,7 @@ export class ProductEditPage {
           name: value.name,
           description: value.description,
           imageUrl: value.imageUrl || null,
+          audience: value.audience,
           price: value.price,
           currency: 'GBP',
           categoryId: value.categoryId,
@@ -509,6 +584,7 @@ export class ProductEditPage {
           name: value.name,
           description: value.description,
           imageUrl: value.imageUrl || null,
+          audience: value.audience,
           categoryId: value.categoryId,
           brandId: value.brandId,
         });

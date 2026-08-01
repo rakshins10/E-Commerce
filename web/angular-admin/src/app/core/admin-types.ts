@@ -124,6 +124,9 @@ export interface AdminProduct {
   readonly brandName: string;
   readonly brandSlug: string;
   readonly imageUrl: string | null;
+  readonly audience: string;
+  /** Present on the detail response only — the list projection does not carry them. */
+  readonly variants?: readonly AdminProductVariant[];
   readonly stockOnHand: number;
 }
 
@@ -151,6 +154,7 @@ export interface SaveProductRequest {
   readonly categoryId: string;
   readonly brandId: string;
   readonly imageUrl?: string | null;
+  readonly audience?: string;
 }
 
 /** Roles a manager may assign. Mirrors the server's allow-list — the server is what enforces it. */
@@ -161,3 +165,14 @@ export const ASSIGNABLE_ROLES = [
   'order-manager',
   'admin',
 ] as const;
+
+/** One sellable size-and-colour. The SKU here is what Inventory holds stock against. */
+export interface AdminProductVariant {
+  readonly id: string;
+  readonly productId: string;
+  readonly sku: string;
+  readonly size: string | null;
+  readonly colourName: string | null;
+  readonly colourHex: string | null;
+  readonly stockOnHand: number;
+}

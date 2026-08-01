@@ -23,6 +23,46 @@ async function signIn(page: Page, username: string) {
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible({ timeout: 20_000 });
 }
 
+/**
+ * Chooses a size, if the product has sizes.
+ *
+ * A size is deliberately NOT pre-selected: the product page leaves "Add to basket" disabled until one
+ * is picked, because defaulting a size means somebody buys a Small because it happened to be first.
+ * (A colour IS pre-selected — the photograph already shows one.) So every spec that buys clothing has
+ * to make the choice a customer would.
+ *
+ * Picks the first size that is not sold out. Sold-out sizes render disabled, and clicking a disabled
+ * radio would hang until the timeout rather than fail with something readable.
+ */
+async function chooseAnAvailableSize(page: Page) {
+  const group = page.getByRole('group', { name: 'Size' });
+
+  // No size axis - a mug, a notebook. Nothing to choose.
+  if ((await group.count()) === 0) return;
+
+  const options = group.getByRole('radio');
+  const total = await options.count();
+
+  for (let index = 0; index < total; index++) {
+    const option = options.nth(index);
+
+    if (await option.isEnabled()) {
+      // The LABEL is clicked, not the input. The radio is visually hidden and pointer-events:none -
+      // it exists for the accessibility tree and for keyboard navigation - so the label is the
+      // surface a person actually clicks, and clicking the input hangs until the timeout.
+      //
+      // click() then toBeChecked(), never check(): check() asserts once without retrying, and a
+      // controlled input can be briefly out of step with the DOM mid-re-render.
+      const name = ((await option.getAttribute('value')) ?? '').trim();
+      await group.getByText(name, { exact: true }).click();
+      await expect(option).toBeChecked();
+      return;
+    }
+  }
+
+  throw new Error('Every size is sold out; this product cannot be bought.');
+}
+
 /** Empties the basket so a spec starts from a known state. */
 async function emptyBasket(page: Page) {
   await page.goto('/basket');
@@ -63,8 +103,15 @@ async function addFirstProduct(page: Page): Promise<string> {
   await productLinks.first().click().catch(async () => firstProduct.click());
 
   await expect(page.getByRole('button', { name: /add to basket|adding/i })).toBeVisible();
+
+  await chooseAnAvailableSize(page);
   await page.getByRole('button', { name: 'Add to basket' }).click();
-  await expect(page.getByRole('status')).toContainText('Added to your basket');
+
+  // Scoped by its text. The product page now has TWO live regions - this confirmation and the
+  // per-variant stock line - and both are legitimately role="status", so the spec has to say which.
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Added to your basket' }),
+  ).toBeVisible();
 
   return name;
 }

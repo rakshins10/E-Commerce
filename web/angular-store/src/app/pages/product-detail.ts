@@ -105,12 +105,13 @@ import { Icon } from '../icon';
                  Never colour alone (WCAG 1.4.1). -->
             @if (sizes().length > 0) {
               <fieldset class="option-group">
-                <legend class="option-group__legend">
-                  Size
-                  @if (needsSize()) {
-                    <span class="option-group__hint">— choose one</span>
-                  }
-                </legend>
+                <!-- Just "Size". The legend IS the group's accessible name, so a hint inside it
+                     would rename the group the moment a size was chosen. The prompt lives below. -->
+                <legend class="option-group__legend">Size</legend>
+
+                @if (needsSize()) {
+                  <p class="option-group__hint small">Choose a size</p>
+                }
 
                 <div class="option-list">
                   @for (option of sizes(); track option) {

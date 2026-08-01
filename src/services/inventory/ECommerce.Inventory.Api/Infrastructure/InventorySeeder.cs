@@ -73,7 +73,8 @@ public static class InventorySeeder
         // CT-TS-003 is the one that justifies per-variant stock existing at all: 2 left in Black S, none
         // in Black XL, and the product itself still comfortably in stock.
         ("CT-TS-003", "Graphic Print T-shirt", [new("BLA", true, [2, 14, 10, 0]), new("ECR", true, [8, 6, 5, 1])]),
-        ("CT-HD-002", "Zip-through Hoodie", [new("FOR", true, [1, 4, 3, 2])]),
+        // Total 2: the low-stock CARD state needs a product low in total, not merely in one size.
+        ("CT-HD-002", "Zip-through Hoodie", [new("FOR", true, [1, 1, 0, 0])]),
         ("FB-HD-003", "Heavyweight Hoodie", [new("OAT", true, [0, 0, 0, 0])]),
         ("CT-ST-002", "Fineliner Set", [new(null, false, [0])]),
     ];

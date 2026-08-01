@@ -259,6 +259,7 @@ export class OrdersPage {
             <thead>
               <tr>
                 <th scope="col">Product</th>
+                <th scope="col">Option</th>
                 <th scope="col">Quantity</th>
                 <th scope="col">Price</th>
                 <th scope="col">Total</th>
@@ -268,6 +269,9 @@ export class OrdersPage {
               @for (item of order()!.items; track item.productId) {
                 <tr>
                   <th scope="row">{{ item.productName }}</th>
+                  <!-- An em dash rather than an empty cell: "this product has no options" and "we
+                       forgot to record them" look identical when the cell is blank. -->
+                  <td>{{ describe(item) || '—' }}</td>
                   <td>{{ item.quantity }}</td>
                   <td>{{ money(item.unitPrice, order()!.currency) }}</td>
                   <td>{{ money(item.lineTotal, order()!.currency) }}</td>
@@ -300,6 +304,12 @@ export class OrdersPage {
   `,
 })
 export class OrderDetailPage implements OnDestroy {
+  /** "M · Navy" — the option chosen, in the words the customer chose it in. */
+  protected describe(item: { size: string | null; colourName: string | null }): string {
+    return [item.size, item.colourName].filter(Boolean).join(' · ');
+  }
+
+
   /** Bound from the route by `withComponentInputBinding()`. */
   readonly id = input.required<string>();
 

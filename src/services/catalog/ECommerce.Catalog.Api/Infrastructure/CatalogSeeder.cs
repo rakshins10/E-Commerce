@@ -138,7 +138,10 @@ public static class CatalogSeeder
             new("Navy", "#1e3a8a", true, [200, 200, 200, 200]),
             new("Grey Marl", "#9ca3af", true, [200, 200, 200, 200]),
         ],
-        ["CT-HD-002"] = [new("Forest", "#166534", true, [1, 4, 3, 2])],
+        // Total 2, deliberately. Product-level stock is the SUM across variants, so the low-stock
+        // CARD state needs a product that is low in total - not merely low in one size. Without this
+        // every card reads "In stock" and a whole branch of the UI is unreachable from a clean seed.
+        ["CT-HD-002"] = [new("Forest", "#166534", true, [1, 1, 0, 0])],
 
         // Sold out in every size. The product page must still render, and say so.
         ["FB-HD-003"] = [new("Oatmeal", "#d6d3d1", true, [0, 0, 0, 0])],

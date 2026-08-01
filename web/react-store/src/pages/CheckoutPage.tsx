@@ -273,7 +273,10 @@ export function CheckoutPage() {
                     height={40}
                   />
                   <span>
-                    {item.productName} × {item.quantity} —{' '}
+                    {item.productName}
+                    {(item.size || item.colourName) &&
+                      ` (${[item.size, item.colourName].filter(Boolean).join(' · ')})`}{' '}
+                    × {item.quantity} —{' '}
                     {formatMoney({ amount: item.lineTotal, currency: item.currency })}
                   </span>
                 </li>
