@@ -138,6 +138,11 @@ public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> option
                 item.Property(i => i.Sku).HasColumnName("sku").HasMaxLength(64).IsRequired();
                 item.Property(i => i.ProductName).HasColumnName("product_name")
                     .HasMaxLength(200).IsRequired();
+
+                // Nullable: not every product has a size or a colour axis. Snapshotted like the name and
+                // the price - see OrderItem.
+                item.Property(i => i.Size).HasColumnName("size").HasMaxLength(20);
+                item.Property(i => i.ColourName).HasColumnName("colour_name").HasMaxLength(40);
                 item.Property(i => i.Quantity).HasColumnName("quantity").IsRequired();
 
                 // numeric(18,2), never a floating-point type. Binary floating point cannot represent

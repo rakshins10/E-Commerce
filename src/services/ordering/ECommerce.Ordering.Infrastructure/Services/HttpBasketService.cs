@@ -66,7 +66,9 @@ public sealed class HttpBasketService(HttpClient client, ILogger<HttpBasketServi
                 item.ProductName,
                 item.UnitPrice,
                 item.Currency,
-                item.Quantity)).ToArray());
+                item.Quantity,
+                item.Size,
+                item.ColourName)).ToArray());
     }
 
     public async Task ClearBasketAsync(string buyerId, CancellationToken cancellationToken = default)
@@ -93,6 +95,8 @@ public sealed class HttpBasketService(HttpClient client, ILogger<HttpBasketServi
         Guid ProductId,
         string Sku,
         string ProductName,
+        string? Size,
+        string? ColourName,
         decimal UnitPrice,
         string Currency,
         int Quantity);

@@ -21,22 +21,51 @@ public sealed record ProductSummaryDto(
     int StockOnHand,
     string Audience);
 
-/// <summary>The full product, for a detail page.</summary>
-public sealed record ProductDetailDto(
-    Guid Id,
-    string Sku,
-    string Name,
-    string Description,
-    decimal Price,
-    string Currency,
-    string CategoryName,
-    string CategorySlug,
-    string BrandName,
-    string BrandSlug,
-    string? ImageUrl,
-    int StockOnHand,
-    string Audience,
-    IReadOnlyList<ProductVariantDto> Variants);
+/// <summary>
+/// The full product, for a detail page.
+/// </summary>
+/// <remarks>
+/// Init-only properties, not a positional record — and <see cref="Variants"/> is why.
+///
+/// Dapper materialises by finding a constructor whose parameters match the columns returned. A positional
+/// record's constructor includes <c>Variants</c>, which the first result set does not select (the variants
+/// arrive in a second one), so it fails with "a parameterless default constructor or one matching signature
+/// … is required". Init-only properties have a parameterless constructor and are set by name, so a column
+/// that is not returned simply stays at its default.
+///
+/// This is the same trap as the case-sensitivity one in the gotcha table — both are Dapper's constructor
+/// matching, and both are solved by not having a constructor to match.
+/// </remarks>
+public sealed record ProductDetailDto
+{
+    public Guid Id { get; init; }
+
+    public string Sku { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    public string Description { get; init; } = string.Empty;
+
+    public decimal Price { get; init; }
+
+    public string Currency { get; init; } = "GBP";
+
+    public string CategoryName { get; init; } = string.Empty;
+
+    public string CategorySlug { get; init; } = string.Empty;
+
+    public string BrandName { get; init; } = string.Empty;
+
+    public string BrandSlug { get; init; } = string.Empty;
+
+    public string? ImageUrl { get; init; }
+
+    public int StockOnHand { get; init; }
+
+    public string Audience { get; init; } = "Unisex";
+
+    public IReadOnlyList<ProductVariantDto> Variants { get; init; } = [];
+}
 
 /// <summary>
 /// What a product costs right now, for checkout.

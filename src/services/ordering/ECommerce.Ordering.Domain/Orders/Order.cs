@@ -163,7 +163,8 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
 
         foreach (OrderLineRequest line in lines)
         {
-            order.AddItem(line.ProductId, line.Sku, line.ProductName, line.UnitPrice, line.Quantity);
+            order.AddItem(
+                line.ProductId, line.Sku, line.ProductName, line.UnitPrice, line.Quantity, line.Size, line.ColourName);
         }
 
         if (order._items.Count == 0)
@@ -185,11 +186,25 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
     /// same SKU produce two picking instructions for one shelf, and a customer who cannot understand
     /// their own invoice.
     /// </remarks>
-    private void AddItem(Guid productId, string sku, string productName, Money unitPrice, int quantity)
+    private void AddItem(
+        Guid productId,
+        string sku,
+        string productName,
+        Money unitPrice,
+        int quantity,
+        string? size,
+        string? colourName)
     {
         AssertCurrency(unitPrice);
 
-        OrderItem? existing = _items.FirstOrDefault(item => item.ProductId == productId);
+        // Merged on SKU, not on product id.
+        //
+        // The remark above always SAID "two lines for the same SKU", and before variants the two were the
+        // same thing so nothing noticed. They are not the same thing now: merging on the product would
+        // collapse a Medium and a Large into one line, and the picking instruction would then say "two of
+        // NW-TS-001" without saying which two.
+        OrderItem? existing = _items.FirstOrDefault(item =>
+            string.Equals(item.Sku, sku, StringComparison.OrdinalIgnoreCase));
 
         if (existing is not null)
         {
@@ -202,7 +217,7 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
             throw new DomainException($"An order may not contain more than {MaxItems} distinct items.");
         }
 
-        _items.Add(new OrderItem(productId, sku, productName, unitPrice, quantity));
+        _items.Add(new OrderItem(productId, sku, productName, unitPrice, quantity, size, colourName));
     }
 
     /// <summary>Inventory has reserved the stock. The order now waits to be charged.</summary>
@@ -353,4 +368,6 @@ public sealed record OrderLineRequest(
     string Sku,
     string ProductName,
     Money UnitPrice,
-    int Quantity);
+    int Quantity,
+    string? Size = null,
+    string? ColourName = null);

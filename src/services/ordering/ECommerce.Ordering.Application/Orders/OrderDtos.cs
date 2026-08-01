@@ -107,6 +107,11 @@ public sealed record OrderItemDto
 
     public required string ProductName { get; init; }
 
+    /// <summary>The size and colour bought. Null on a product that has neither axis.</summary>
+    public string? Size { get; init; }
+
+    public string? ColourName { get; init; }
+
     public required int Quantity { get; init; }
 
     public required decimal UnitPrice { get; init; }

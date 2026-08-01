@@ -202,6 +202,8 @@ public sealed class OrderQueries(IDbConnection connection)
             SELECT i.product_id   AS ProductId,
                    i.sku          AS Sku,
                    i.product_name AS ProductName,
+                   i.size         AS Size,
+                   i.colour_name  AS ColourName,
                    i.quantity     AS Quantity,
                    i.unit_price   AS UnitPrice
             FROM   order_items i

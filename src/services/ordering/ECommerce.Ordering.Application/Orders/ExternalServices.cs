@@ -43,7 +43,9 @@ public sealed record BasketLineSnapshot(
     string ProductName,
     decimal UnitPrice,
     string Currency,
-    int Quantity);
+    int Quantity,
+    string? Size = null,
+    string? ColourName = null);
 
 /// <summary>
 /// What Ordering needs from the Catalog service: the <b>authoritative</b> price.

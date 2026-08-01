@@ -38,12 +38,21 @@ public sealed class OrderItem : Entity<Guid>
         // EF Core.
     }
 
-    internal OrderItem(Guid productId, string sku, string productName, Money unitPrice, int quantity)
+    internal OrderItem(
+        Guid productId,
+        string sku,
+        string productName,
+        Money unitPrice,
+        int quantity,
+        string? size = null,
+        string? colourName = null)
     {
         Id = Guid.CreateVersion7();
         ProductId = Guard.AgainstEmpty(productId);
         Sku = Guard.AgainstTooLong(Guard.AgainstNullOrWhiteSpace(sku), 64);
         ProductName = Guard.AgainstTooLong(Guard.AgainstNullOrWhiteSpace(productName), 200);
+        Size = size is null ? null : Guard.AgainstTooLong(size, 20);
+        ColourName = colourName is null ? null : Guard.AgainstTooLong(colourName, 40);
         UnitPrice = Guard.AgainstNull(unitPrice);
         Quantity = Guard.AgainstNonPositive(quantity);
 
@@ -69,6 +78,19 @@ public sealed class OrderItem : Entity<Guid>
     public string Sku { get; private set; } = string.Empty;
 
     public string ProductName { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// The size and colour bought, as text.
+    /// </summary>
+    /// <remarks>
+    /// A snapshot, exactly like <see cref="ProductName"/> and <see cref="UnitPrice"/>. The SKU already
+    /// identifies the variant precisely — the warehouse picks by it — but a customer reading their order
+    /// history needs "Medium, Navy" rather than <c>NW-TS-001-M-NAV</c>, and renaming a colour next year
+    /// must not rewrite what last year's dispatch note said.
+    /// </remarks>
+    public string? Size { get; private set; }
+
+    public string? ColourName { get; private set; }
 
     public Money UnitPrice { get; private set; } = null!;
 
