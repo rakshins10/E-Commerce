@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using System.Text;
 using Dapper;
 using ECommerce.Common.Pagination;
@@ -17,7 +18,8 @@ public sealed record ProductSummaryDto(
     string BrandName,
     string BrandSlug,
     string? ImageUrl,
-    int StockOnHand);
+    int StockOnHand,
+    string Audience);
 
 /// <summary>The full product, for a detail page.</summary>
 public sealed record ProductDetailDto(
@@ -32,7 +34,9 @@ public sealed record ProductDetailDto(
     string BrandName,
     string BrandSlug,
     string? ImageUrl,
-    int StockOnHand);
+    int StockOnHand,
+    string Audience,
+    IReadOnlyList<ProductVariantDto> Variants);
 
 /// <summary>
 /// What a product costs right now, for checkout.
@@ -65,7 +69,58 @@ public sealed record ProductQuery(
     string? SortBy = null,
     bool SortDescending = false,
     int Page = 1,
-    int PageSize = 12);
+    int PageSize = 12,
+    string? Audience = null,
+    string? Size = null,
+    string? Colour = null);
+
+/// <summary>
+/// One sellable size-and-colour of a product.
+/// </summary>
+/// <remarks>
+/// Init-only properties, not a positional record. Dapper matches constructor parameters
+/// <b>case-sensitively</b> and PostgreSQL lower-cases unquoted aliases, so a positional record fails with
+/// "no matching signature" — see the gotcha table in CLAUDE.md.
+/// </remarks>
+public sealed record ProductVariantDto
+{
+    public Guid Id { get; init; }
+
+    public Guid ProductId { get; init; }
+
+    public string Sku { get; init; } = string.Empty;
+
+    public string? Size { get; init; }
+
+    public string? ColourName { get; init; }
+
+    public string? ColourHex { get; init; }
+
+    public int StockOnHand { get; init; }
+}
+
+/// <summary>One value a shopper can filter by, and how many products carry it.</summary>
+public sealed record FacetValueDto
+{
+    public string Value { get; init; } = string.Empty;
+
+    /// <summary>The swatch, for colours. Null for everything else.</summary>
+    public string? Hex { get; init; }
+
+    public int ProductCount { get; init; }
+}
+
+/// <summary>
+/// The axes a shopper can filter the catalogue by, with counts.
+/// </summary>
+/// <remarks>
+/// Fetched once and cached by the client alongside categories and brands, because the taxonomy of a
+/// catalogue changes far more slowly than its stock does.
+/// </remarks>
+public sealed record FacetsDto(
+    IReadOnlyList<FacetValueDto> Audiences,
+    IReadOnlyList<FacetValueDto> Sizes,
+    IReadOnlyList<FacetValueDto> Colours);
 
 /// <summary>
 /// The CQRS <b>read side</b> for Catalog.
@@ -107,7 +162,8 @@ public sealed class ProductQueries(IDbConnection connection)
                 b.name          AS BrandName,
                 b.slug          AS BrandSlug,
                 p.image_url    AS ImageUrl,
-                p.stock_on_hand AS StockOnHand
+                p.stock_on_hand AS StockOnHand,
+                p.audience      AS Audience
         FROM products p
         JOIN categories c ON c.id = p.category_id
         JOIN brands     b ON b.id = p.brand_id
@@ -160,6 +216,47 @@ public sealed class ProductQueries(IDbConnection connection)
         if (query.InStockOnly)
         {
             where.Append(" AND p.stock_on_hand > 0");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Audience))
+        {
+            where.Append(" AND p.audience = @Audience");
+            parameters.Add("Audience", query.Audience.Trim());
+        }
+
+        // --- The variant filters ----------------------------------------------------------------
+        //
+        // EXISTS, not a JOIN. A product has eight variants; joining to filter on size would return the
+        // product once per matching variant, and every one of `SELECT`, `COUNT(*)` and `LIMIT` would then be
+        // counting variants while claiming to count products. `SELECT DISTINCT` would paper over it and break
+        // the count separately. A semi-join asks the question actually being asked: does this product have
+        // one?
+        //
+        // Both are combined against the SAME variant when both are given, which is the difference between
+        // "sold in Medium and also sold in Navy" and "sold in Medium AND Navy". A shopper filtering for both
+        // means the latter.
+        if (!string.IsNullOrWhiteSpace(query.Size) || !string.IsNullOrWhiteSpace(query.Colour))
+        {
+            var variantWhere = new StringBuilder("v.product_id = p.id AND v.is_active = TRUE");
+
+            if (query.InStockOnly)
+            {
+                variantWhere.Append(" AND v.stock_on_hand > 0");
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Size))
+            {
+                variantWhere.Append(" AND UPPER(v.size) = @Size");
+                parameters.Add("Size", query.Size.Trim().ToUpperInvariant());
+            }
+
+            if (!string.IsNullOrWhiteSpace(query.Colour))
+            {
+                variantWhere.Append(" AND LOWER(v.colour_name) = @Colour");
+                parameters.Add("Colour", query.Colour.Trim().ToLowerInvariant());
+            }
+
+            where.Append(CultureInfo.InvariantCulture, $" AND EXISTS (SELECT 1 FROM product_variants v WHERE {variantWhere})");
         }
 
         string orderBy = BuildOrderBy(query.SortBy, query.SortDescending);
@@ -251,7 +348,8 @@ public sealed class ProductQueries(IDbConnection connection)
                     b.name          AS BrandName,
                     b.slug          AS BrandSlug,
                     p.image_url     AS ImageUrl,
-                    p.stock_on_hand AS StockOnHand
+                    p.stock_on_hand AS StockOnHand,
+                    p.audience      AS Audience
             FROM products p
             JOIN categories c ON c.id = p.category_id
             JOIN brands     b ON b.id = p.brand_id
@@ -277,15 +375,104 @@ public sealed class ProductQueries(IDbConnection connection)
                     b.name          AS BrandName,
                     b.slug          AS BrandSlug,
                     p.image_url    AS ImageUrl,
-                    p.stock_on_hand AS StockOnHand
+                    p.stock_on_hand AS StockOnHand,
+                    p.audience      AS Audience
             FROM products p
             JOIN categories c ON c.id = p.category_id
             JOIN brands     b ON b.id = p.brand_id
             WHERE p.id = @Id AND p.is_active = TRUE;
+
+            SELECT  v.id            AS Id,
+                    v.product_id    AS ProductId,
+                    v.sku           AS Sku,
+                    v.size          AS Size,
+                    v.colour_name   AS ColourName,
+                    v.colour_hex    AS ColourHex,
+                    v.stock_on_hand AS StockOnHand
+            FROM product_variants v
+            WHERE v.product_id = @Id AND v.is_active = TRUE
+            -- Sizes in the order a human expects, never alphabetical: alphabetical puts L before M
+            -- before S before XL, which reads as a mistake on every product page in the shop.
+            ORDER BY array_position(ARRAY['S','M','L','XL'], v.size), v.size, v.colour_name;
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<ProductDetailDto>(
+        // Two result sets in ONE round trip. A product page always needs both, and issuing them separately
+        // doubles the latency for nothing - the same reasoning as the page-and-count pair in SearchAsync.
+        await using var multi = await connection.QueryMultipleAsync(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: cancellationToken));
+
+        var product = await multi.ReadSingleOrDefaultAsync<ProductDetailDto>();
+
+        if (product is null)
+        {
+            return null;
+        }
+
+        var variants = (await multi.ReadAsync<ProductVariantDto>()).ToList();
+
+        return product with { Variants = variants };
+    }
+
+    /// <summary>
+    /// The filterable axes across the whole catalogue, with product counts.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Counts are of PRODUCTS, not variants.</b> "Navy (7)" has to mean seven things you can click
+    /// through to, because that is what a shopper reads it as — a count of eleven variants across seven
+    /// products would be a number that matches nothing on the next screen. Hence
+    /// <c>COUNT(DISTINCT v.product_id)</c>.
+    /// </para>
+    /// <para>
+    /// Three result sets, one round trip. Audiences come from <c>products</c>; sizes and colours from
+    /// <c>product_variants</c>, restricted to variants of products still on sale — a withdrawn product must
+    /// not contribute a colour that then returns nothing.
+    /// </para>
+    /// <para>
+    /// <b>Rejected:</b> computing facet counts against the <i>current</i> filter, the way a large retailer
+    /// does ("Navy (3)" once you have already chosen Medium). That needs a query per facet per request and
+    /// is the point at which a search index earns its keep. With twelve products it would be cost without
+    /// benefit, and the honest version of that trade is written down rather than discovered later.
+    /// </para>
+    /// </remarks>
+    public async Task<FacetsDto> GetFacetsAsync(CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT  p.audience      AS Value,
+                    NULL            AS Hex,
+                    COUNT(*)::int   AS ProductCount
+            FROM products p
+            WHERE p.is_active = TRUE
+            GROUP BY p.audience
+            ORDER BY p.audience;
+
+            SELECT  v.size                          AS Value,
+                    NULL                            AS Hex,
+                    COUNT(DISTINCT v.product_id)::int AS ProductCount
+            FROM product_variants v
+            JOIN products p ON p.id = v.product_id AND p.is_active = TRUE
+            WHERE v.is_active = TRUE AND v.size IS NOT NULL
+            GROUP BY v.size
+            ORDER BY array_position(ARRAY['S','M','L','XL'], v.size), v.size;
+
+            SELECT  v.colour_name                   AS Value,
+                    MIN(v.colour_hex)               AS Hex,
+                    COUNT(DISTINCT v.product_id)::int AS ProductCount
+            FROM product_variants v
+            JOIN products p ON p.id = v.product_id AND p.is_active = TRUE
+            WHERE v.is_active = TRUE AND v.colour_name IS NOT NULL
+            GROUP BY v.colour_name
+            ORDER BY v.colour_name;
+            """;
+
+        await using var multi = await connection.QueryMultipleAsync(
+            new CommandDefinition(sql, cancellationToken: cancellationToken));
+
+        var audiences = (await multi.ReadAsync<FacetValueDto>()).ToList();
+        var sizes = (await multi.ReadAsync<FacetValueDto>()).ToList();
+        var colours = (await multi.ReadAsync<FacetValueDto>()).ToList();
+
+        return new FacetsDto(audiences, sizes, colours);
     }
 
     public async Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken cancellationToken = default)

@@ -17,6 +17,8 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
 {
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+
     public DbSet<Category> Categories => Set<Category>();
 
     public DbSet<Brand> Brands => Set<Brand>();
@@ -53,10 +55,45 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
                 .HasForeignKey(p => p.BrandId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Stored as its NAME, not its integer value: a row that says 'Women' can be read with psql and
+            // survives someone reordering the enum. See Domain/Audience.cs.
+            entity.Property(p => p.Audience).HasConversion<string>().HasMaxLength(10).IsRequired();
+
             // Indexes chosen from how the browse endpoint actually filters, not speculatively.
             entity.HasIndex(p => p.CategoryId);
             entity.HasIndex(p => p.BrandId);
             entity.HasIndex(p => p.IsActive);
+            entity.HasIndex(p => p.Audience);
+        });
+
+        modelBuilder.Entity<ProductVariant>(entity =>
+        {
+            entity.ToTable("product_variants");
+            entity.HasKey(v => v.Id);
+
+            // The constraint that matters commercially. `products.sku` is unique too, but it guarantees
+            // unique STYLES; this guarantees unique sellable units, which is what Inventory keys on.
+            entity.HasIndex(v => v.Sku).IsUnique();
+
+            entity.Property(v => v.Sku).HasMaxLength(64).IsRequired();
+            entity.Property(v => v.Size).HasMaxLength(20);
+            entity.Property(v => v.ColourName).HasMaxLength(40);
+            entity.Property(v => v.ColourHex).HasMaxLength(7);
+
+            entity.HasOne(v => v.Product)
+                .WithMany(p => p.Variants)
+                .HasForeignKey(v => v.ProductId)
+                // Cascade here, unlike everywhere else in this file. A variant has no meaning without its
+                // product - it is a child entity, not an independent one - so an orphaned row would be
+                // unreachable rather than merely untidy. Nothing deletes a product anyway; withdrawal is a
+                // soft delete.
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(v => v.ProductId);
+
+            // The size and colour facets filter on these, across the whole catalogue.
+            entity.HasIndex(v => v.Size);
+            entity.HasIndex(v => v.ColourName);
         });
 
         modelBuilder.Entity<Category>(entity =>

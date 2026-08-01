@@ -232,7 +232,15 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-.stack > * + * {
+/* `:not(:first-child)` rather than `* + *`, for SPECIFICITY rather than style.
+   Both select the same elements, but `.stack > * + *` scores (0,1,0) - exactly the
+   same as a plain class - so any child carrying its own margin reset wins on source
+   order alone. `.plain-list { margin: 0 }` is defined 300 lines further down, so
+   every list inside a stack silently lost its top margin and sat jammed against
+   whatever came before it. Visible under "Add to basket" on the product page.
+   `:not(:first-child)` scores (0,2,0), so the container that OWNS the rhythm wins -
+   which is the right way round. An inline `margin-top: 0` still overrides it. */
+.stack > :not(:first-child) {
   margin-block-start: var(--space-4);
 }
 
