@@ -1244,3 +1244,130 @@ body {
   border-color: var(--color-border-strong);
   color: var(--color-text-primary);
 }
+
+/* --- Variant pickers -----------------------------------------------------
+   Radio inputs behind the labels, not buttons. A native radio group gives
+   arrow-key navigation, a single tab stop, and "Size, Medium, 2 of 4" from a
+   screen reader - all of which a div with a click handler has to reimplement
+   and usually does not. The input is visually hidden, never display:none,
+   because display:none removes it from the accessibility tree too. */
+.option-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.option-group__legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.option-group__hint {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.option {
+  position: relative;
+  display: inline-flex;
+}
+
+.option__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 3rem;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.option__input:checked + .option__label {
+  border-color: var(--color-brand-500);
+  box-shadow: inset 0 0 0 1px var(--color-brand-500);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* :focus-visible on the hidden input has to show on the label, or keyboard
+   focus is invisible. */
+.option__input:focus-visible + .option__label {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Sold out. Struck through AND disabled AND labelled - never colour alone,
+   which WCAG 1.4.1 forbids and which is invisible to plenty of people. */
+.option__input:disabled + .option__label {
+  color: var(--color-text-muted);
+  border-color: var(--color-border-subtle);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.swatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-strong);
+  flex: none;
+}
+
+/* The stock line under the pickers. Reserves its height so choosing a size
+   does not shift the Add to basket button out from under the pointer. */
+.variant-stock {
+  min-height: 1.5rem;
+  font-size: var(--font-size-sm);
+}
+
+/* --- Audience -------------------------------------------------------------
+   Men / Women / Unisex as a top-level axis, the way a clothing shop presents
+   it, rather than buried in the filter bar. */
+.audience-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.audience-tab {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.audience-tab:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.audience-tab[aria-current] {
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+  font-weight: var(--font-weight-semibold);
+}

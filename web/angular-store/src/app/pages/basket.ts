@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 
 import { Auth } from '../auth/auth';
-import { BasketService } from '../core/basket';
+import { BasketService, type BasketItem } from '../core/basket';
 import { formatMoney } from '../core/formatting';
 import { Icon } from '../icon';
 
@@ -72,7 +72,7 @@ import { Icon } from '../icon';
                    grid. -->
               <div class="card">
                 <ul class="plain-list" aria-label="Items in your basket">
-                  @for (item of current.items; track item.productId) {
+                  @for (item of current.items; track item.sku) {
                     <li class="line-item">
                       <a [routerLink]="['/products', item.productId]" tabindex="-1" aria-hidden="true">
                         <img
@@ -89,6 +89,11 @@ import { Icon } from '../icon';
                         <div class="line-item__top">
                           <div class="stack--tight">
                             <a [routerLink]="['/products', item.productId]">{{ item.productName }}</a>
+                            <!-- The option a customer chose, in the words they chose it in. The SKU is
+                                 underneath because it is what support and the warehouse quote. -->
+                            @if (item.size || item.colourName) {
+                              <span class="small">{{ describe(item) }}</span>
+                            }
                             <span class="muted small">{{ item.sku }}</span>
                           </div>
                           <span class="price">{{ money(item.lineTotal, item.currency) }}</span>
@@ -101,32 +106,32 @@ import { Icon } from '../icon';
                             <button
                               type="button"
                               class="stepper__btn"
-                              [attr.aria-label]="'Decrease quantity for ' + item.productName"
+                              [attr.aria-label]="'Decrease quantity for ' + label(item)"
                               [disabled]="saving()"
-                              (click)="setQuantity(item.productId, item.quantity - 1)"
+                              (click)="setQuantity(item.sku, item.quantity - 1)"
                             >
                               <span aria-hidden="true">−</span>
                             </button>
 
-                            <label class="visually-hidden" [attr.for]="'quantity-' + item.productId">
-                              Quantity for {{ item.productName }}
+                            <label class="visually-hidden" [attr.for]="'quantity-' + item.sku">
+                              Quantity for {{ label(item) }}
                             </label>
                             <input
-                              [id]="'quantity-' + item.productId"
+                              [id]="'quantity-' + item.sku"
                               type="number"
                               class="stepper__input"
                               min="0"
                               max="100"
                               [value]="item.quantity"
-                              (input)="onQuantityChange(item.productId, $event)"
+                              (input)="onQuantityChange(item.sku, $event)"
                             />
 
                             <button
                               type="button"
                               class="stepper__btn"
-                              [attr.aria-label]="'Increase quantity for ' + item.productName"
+                              [attr.aria-label]="'Increase quantity for ' + label(item)"
                               [disabled]="saving()"
-                              (click)="setQuantity(item.productId, item.quantity + 1)"
+                              (click)="setQuantity(item.sku, item.quantity + 1)"
                             >
                               <span aria-hidden="true">+</span>
                             </button>
@@ -140,13 +145,13 @@ import { Icon } from '../icon';
                             type="button"
                             class="btn btn--ghost btn--sm"
                             [disabled]="saving()"
-                            (click)="remove(item.productId)"
+                            (click)="remove(item.sku)"
                           >
                             <!-- The accessible name says WHAT is being removed. Twelve buttons all
                                  called "Remove" are useless to anyone navigating by button. -->
                             <app-icon name="trash" variant="icon--sm" />
                             <span aria-hidden="true">Remove</span>
-                            <span class="visually-hidden">Remove {{ item.productName }}</span>
+                            <span class="visually-hidden">Remove {{ label(item) }}</span>
                           </button>
                         </div>
                       </div>
@@ -231,17 +236,34 @@ export class BasketPage {
     }
   }
 
-  protected onQuantityChange(productId: string, event: Event): void {
+  protected onQuantityChange(sku: string, event: Event): void {
     const quantity = Number((event.target as HTMLInputElement).value);
-    void this.run(() => this.baskets.setQuantity(productId, quantity));
+    void this.run(() => this.baskets.setQuantity(sku, quantity));
   }
 
-  protected setQuantity(productId: string, quantity: number): void {
-    void this.run(() => this.baskets.setQuantity(productId, quantity));
+  /** "M · Navy" — what the customer chose, shown under the product name. */
+  protected describe(item: BasketItem): string {
+    return [item.size, item.colourName].filter(Boolean).join(' · ');
   }
 
-  protected remove(productId: string): void {
-    void this.run(() => this.baskets.remove(productId));
+  /**
+   * What every control on a line is called.
+   *
+   * "Quantity for Classic Cotton T-shirt" was unique until a basket could hold the same shirt twice. Two
+   * controls with one accessible name is not a cosmetic problem: it is how someone navigating by control
+   * ends up changing the wrong line, and Playwright's strict mode is the cheap version of the same
+   * complaint.
+   */
+  protected label(item: BasketItem): string {
+    return [item.productName, item.size, item.colourName].filter(Boolean).join(', ');
+  }
+
+  protected setQuantity(sku: string, quantity: number): void {
+    void this.run(() => this.baskets.setQuantity(sku, quantity));
+  }
+
+  protected remove(sku: string): void {
+    void this.run(() => this.baskets.remove(sku));
   }
 
   protected clear(): void {

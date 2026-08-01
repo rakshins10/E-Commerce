@@ -43,11 +43,10 @@ export function BasketPage() {
   });
 
   const setQuantity = useMutation({
-    mutationFn: ({ productId, quantity }: { productId: string; quantity: number }) =>
-      api.setQuantity(productId, quantity),
+    mutationFn: ({ sku, quantity }: { sku: string; quantity: number }) => api.setQuantity(sku, quantity),
 
     // --- The optimistic part -------------------------------------------------------------------
-    onMutate: async ({ productId, quantity }) => {
+    onMutate: async ({ sku, quantity }) => {
       // Cancel any in-flight refetch first. Without this, a response that started before this change
       // can land after it and overwrite the optimistic value with the old one.
       await queryClient.cancelQueries({ queryKey: ['basket'] });
@@ -59,9 +58,7 @@ export function BasketPage() {
 
         const items = current.items
           .map((item) =>
-            item.productId === productId
-              ? { ...item, quantity, lineTotal: item.unitPrice * quantity }
-              : item,
+            item.sku === sku ? { ...item, quantity, lineTotal: item.unitPrice * quantity } : item,
           )
           .filter((item) => item.quantity > 0);
 
@@ -89,7 +86,7 @@ export function BasketPage() {
   });
 
   const remove = useMutation({
-    mutationFn: (productId: string) => api.removeFromBasket(productId),
+    mutationFn: (sku: string) => api.removeFromBasket(sku),
     onSuccess: (updated) => queryClient.setQueryData(['basket'], updated),
   });
 
@@ -177,8 +174,21 @@ export function BasketPage() {
               which the labels below do - not that the layout is a grid. */}
           <div className="card">
             <ul className="plain-list" aria-label="Items in your basket">
-              {basket.items.map((item) => (
-                <li key={item.productId} className="line-item">
+              {basket.items.map((item) => {
+                /**
+                 * What every control on this line is called.
+                 *
+                 * "Quantity for Classic Cotton T-shirt" was unique until a basket could hold the same
+                 * shirt twice. Two controls with one accessible name is not a cosmetic problem: it is
+                 * how someone navigating by control ends up changing the wrong line, and Playwright's
+                 * strict mode is the cheap version of the same complaint.
+                 */
+                const label = [item.productName, item.size, item.colourName]
+                  .filter(Boolean)
+                  .join(', ');
+
+                return (
+                <li key={item.sku} className="line-item">
                   <Link to={`/products/${item.productId}`} tabIndex={-1} aria-hidden="true">
                     <img
                       className="line-item__media"
@@ -194,6 +204,13 @@ export function BasketPage() {
                     <div className="line-item__top">
                       <div className="stack--tight">
                         <Link to={`/products/${item.productId}`}>{item.productName}</Link>
+                        {/* The option a customer chose, in the words they chose it in. The SKU is
+                            underneath because it is what support and the warehouse quote. */}
+                        {(item.size || item.colourName) && (
+                          <span className="small">
+                            {[item.size, item.colourName].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
                         <span className="muted small">{item.sku}</span>
                       </div>
                       <span className="price">
@@ -208,23 +225,20 @@ export function BasketPage() {
                         <button
                           type="button"
                           className="stepper__btn"
-                          aria-label={`Decrease quantity for ${item.productName}`}
+                          aria-label={`Decrease quantity for ${label}`}
                           disabled={setQuantity.isPending}
                           onClick={() =>
-                            setQuantity.mutate({
-                              productId: item.productId,
-                              quantity: item.quantity - 1,
-                            })
+                            setQuantity.mutate({ sku: item.sku, quantity: item.quantity - 1 })
                           }
                         >
                           <span aria-hidden="true">−</span>
                         </button>
 
-                        <label className="visually-hidden" htmlFor={`quantity-${item.productId}`}>
-                          Quantity for {item.productName}
+                        <label className="visually-hidden" htmlFor={`quantity-${item.sku}`}>
+                          Quantity for {label}
                         </label>
                         <input
-                          id={`quantity-${item.productId}`}
+                          id={`quantity-${item.sku}`}
                           type="number"
                           className="stepper__input"
                           min={0}
@@ -232,7 +246,7 @@ export function BasketPage() {
                           value={item.quantity}
                           onChange={(event) =>
                             setQuantity.mutate({
-                              productId: item.productId,
+                              sku: item.sku,
                               quantity: Number(event.target.value),
                             })
                           }
@@ -241,13 +255,10 @@ export function BasketPage() {
                         <button
                           type="button"
                           className="stepper__btn"
-                          aria-label={`Increase quantity for ${item.productName}`}
+                          aria-label={`Increase quantity for ${label}`}
                           disabled={setQuantity.isPending}
                           onClick={() =>
-                            setQuantity.mutate({
-                              productId: item.productId,
-                              quantity: item.quantity + 1,
-                            })
+                            setQuantity.mutate({ sku: item.sku, quantity: item.quantity + 1 })
                           }
                         >
                           <span aria-hidden="true">+</span>
@@ -261,19 +272,20 @@ export function BasketPage() {
                       <button
                         type="button"
                         className="btn btn--ghost btn--sm"
-                        onClick={() => remove.mutate(item.productId)}
+                        onClick={() => remove.mutate(item.sku)}
                         disabled={remove.isPending}
                       >
                         {/* The accessible name says WHAT is being removed. Twelve buttons all called
                             "Remove" are useless to anyone navigating by button. */}
                         <Icon name="trash" className="icon--sm" />
                         <span aria-hidden="true">Remove</span>
-                        <span className="visually-hidden">Remove {item.productName}</span>
+                        <span className="visually-hidden">Remove {label}</span>
                       </button>
                     </div>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
 

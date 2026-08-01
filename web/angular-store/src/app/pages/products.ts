@@ -39,6 +39,36 @@ import { formatMoney } from '../core/formatting';
     <div class="stack">
       <h1 class="page-title">Products</h1>
 
+      <!-- Top-level, above the filter bar, because that is how a clothing shop is organised - a
+           shopper decides "menswear" before they decide "hoodies". It is an attribute rather than a
+           branch of the taxonomy (ADR-0020), but presenting it as a category-level choice is what
+           makes it findable. -->
+      @if (facets(); as f) {
+        @if (f.audiences.length > 1) {
+          <nav class="audience-tabs" aria-label="Shop for">
+            <a
+              class="audience-tab"
+              routerLink="/products"
+              [queryParams]="audienceParams('')"
+              queryParamsHandling="merge"
+              [attr.aria-current]="filters().audience === '' ? 'true' : null"
+              >Everyone</a
+            >
+
+            @for (option of f.audiences; track option.value) {
+              <a
+                class="audience-tab"
+                routerLink="/products"
+                [queryParams]="audienceParams(option.value)"
+                queryParamsHandling="merge"
+                [attr.aria-current]="filters().audience === option.value ? 'true' : null"
+                >{{ option.value }}</a
+              >
+            }
+          </nav>
+        }
+      }
+
       <section class="card" aria-labelledby="filters-heading">
         <h2 id="filters-heading" class="visually-hidden">Filter products</h2>
 
@@ -101,6 +131,35 @@ import { formatMoney } from '../core/formatting';
               }
             </select>
           </div>
+
+          <!-- Size and colour filter across the WHOLE catalogue, so "show me everything in Large"
+               is one click. The counts are of products, not variants - "Navy (2)" has to mean two
+               things you can click through to. -->
+          @if (facets(); as f) {
+            @if (f.sizes.length > 0) {
+              <div class="field">
+                <label for="size">Size</label>
+                <select id="size" class="input" [value]="filters().size ?? ''" (change)="onFilter('size', $event)">
+                  <option value="">All sizes</option>
+                  @for (option of f.sizes; track option.value) {
+                    <option [value]="option.value">{{ option.value }} ({{ option.productCount }})</option>
+                  }
+                </select>
+              </div>
+            }
+
+            @if (f.colours.length > 0) {
+              <div class="field">
+                <label for="colour">Colour</label>
+                <select id="colour" class="input" [value]="filters().colour ?? ''" (change)="onFilter('colour', $event)">
+                  <option value="">All colours</option>
+                  @for (option of f.colours; track option.value) {
+                    <option [value]="option.value">{{ option.value }} ({{ option.productCount }})</option>
+                  }
+                </select>
+              </div>
+            }
+          }
 
           <div class="field">
             <label for="sort">Sort by</label>
@@ -308,6 +367,9 @@ export class ProductsPage {
       search: params.get('search') ?? '',
       category: params.get('category') ?? '',
       brand: params.get('brand') ?? '',
+      audience: params.get('audience') ?? '',
+      size: params.get('size') ?? '',
+      colour: params.get('colour') ?? '',
       inStockOnly: params.get('inStockOnly') === 'true',
       sortBy: (params.get('sortBy') as ProductFilters['sortBy']) ?? 'name',
       sortDescending: params.get('sortDescending') === 'true',
@@ -315,6 +377,14 @@ export class ProductsPage {
       pageSize: 12,
     };
   });
+
+  /** Sizes, colours and audiences, from the service's cache. */
+  protected readonly facets = this.catalog.facets;
+
+  /** The query parameters for an audience, keeping every other filter. Same rule as categoryParams. */
+  protected audienceParams(value: string): Record<string, string | null> {
+    return { audience: value || null, page: null };
+  }
 
   /** The taxonomy, grouped once here rather than unpicked in the template. */
   protected readonly departments = computed(() => groupIntoDepartments(this.catalog.categories()));
@@ -337,7 +407,7 @@ export class ProductsPage {
 
   protected readonly hasFilters = computed(() => {
     const f = this.filters();
-    return Boolean(f.search || f.category || f.brand || f.inStockOnly);
+    return Boolean(f.search || f.category || f.brand || f.inStockOnly || f.audience || f.size || f.colour);
   });
 
   // The search box must feel instant, so it is local state debounced into the
@@ -358,6 +428,7 @@ export class ProductsPage {
 
     void this.catalog.loadCategories();
     void this.catalog.loadBrands();
+    void this.catalog.loadFacets();
 
     // Refetch whenever the URL changes. The effect tracks `filters()`
     // automatically - no dependency array to keep in step.
@@ -400,7 +471,7 @@ export class ProductsPage {
     this.searchTimer = setTimeout(() => this.updateParams({ search: value, page: '1' }), 300);
   }
 
-  protected onFilter(key: 'category' | 'brand', event: Event): void {
+  protected onFilter(key: 'category' | 'brand' | 'size' | 'colour', event: Event): void {
     this.updateParams({ [key]: (event.target as HTMLSelectElement).value, page: '1' });
   }
 

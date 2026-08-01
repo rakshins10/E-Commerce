@@ -5,6 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import {
   getBrands,
   getCategories,
+  getFacets,
   groupIntoDepartments,
   searchProducts,
   stockLevel,
@@ -37,6 +38,9 @@ export function ProductsPage() {
       search: searchParams.get('search') ?? '',
       category: searchParams.get('category') ?? '',
       brand: searchParams.get('brand') ?? '',
+      audience: searchParams.get('audience') ?? '',
+      size: searchParams.get('size') ?? '',
+      colour: searchParams.get('colour') ?? '',
       inStockOnly: searchParams.get('inStockOnly') === 'true',
       sortBy: (searchParams.get('sortBy') as ProductFilters['sortBy']) ?? 'name',
       sortDescending: searchParams.get('sortDescending') === 'true',
@@ -93,10 +97,38 @@ export function ProductsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Sizes, colours and audiences. Cached like the taxonomy - it changes just as rarely.
+  const facetsQuery = useQuery({
+    queryKey: ['facets'],
+    queryFn: ({ signal }) => getFacets(signal),
+    staleTime: 5 * 60 * 1000,
+  });
+
   const result = productsQuery.data;
   const hasFilters = Boolean(
-    filters.search || filters.category || filters.brand || filters.inStockOnly,
+    filters.search ||
+      filters.category ||
+      filters.brand ||
+      filters.inStockOnly ||
+      filters.audience ||
+      filters.size ||
+      filters.colour,
   );
+
+  const facets = facetsQuery.data;
+
+  /** The address for an audience, keeping every other filter. Same rule as categoryHref. */
+  const audienceHref = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+
+    if (value) next.set('audience', value);
+    else next.delete('audience');
+
+    next.delete('page');
+
+    const query = next.toString();
+    return query ? `/products?${query}` : '/products';
+  };
 
   const departments = useMemo(
     () => groupIntoDepartments(categoriesQuery.data ?? []),
@@ -126,6 +158,34 @@ export function ProductsPage() {
   return (
     <div className="stack">
       <h1 className="page-title">Products</h1>
+
+      {/* --- Who it is for ---------------------------------------------------------------
+          Top-level, above the filter bar, because that is how a clothing shop is organised - a
+          shopper decides "menswear" before they decide "hoodies". It is an attribute rather than a
+          branch of the taxonomy (ADR-0020), but presenting it as a category-level choice is what
+          makes it findable. */}
+      {facets && facets.audiences.length > 1 && (
+        <nav className="audience-tabs" aria-label="Shop for">
+          <Link
+            className="audience-tab"
+            to={audienceHref('')}
+            aria-current={filters.audience === '' ? 'true' : undefined}
+          >
+            Everyone
+          </Link>
+
+          {facets.audiences.map((option) => (
+            <Link
+              key={option.value}
+              className="audience-tab"
+              to={audienceHref(option.value)}
+              aria-current={filters.audience === option.value ? 'true' : undefined}
+            >
+              {option.value}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* --- Filters --- */}
       <section className="card" aria-labelledby="filters-heading">
@@ -201,6 +261,47 @@ export function ProductsPage() {
               ))}
             </select>
           </div>
+
+          {/* Size and colour filter across the WHOLE catalogue, so "show me everything in Large"
+              is one click. The counts are of products, not variants — "Navy (2)" has to mean two
+              things you can click through to. */}
+          {facets && facets.sizes.length > 0 && (
+            <div className="field">
+              <label htmlFor="size">Size</label>
+              <select
+                id="size"
+                className="input"
+                value={filters.size}
+                onChange={(event) => updateParams({ size: event.target.value, page: '1' })}
+              >
+                <option value="">All sizes</option>
+                {facets.sizes.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.productCount})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {facets && facets.colours.length > 0 && (
+            <div className="field">
+              <label htmlFor="colour">Colour</label>
+              <select
+                id="colour"
+                className="input"
+                value={filters.colour}
+                onChange={(event) => updateParams({ colour: event.target.value, page: '1' })}
+              >
+                <option value="">All colours</option>
+                {facets.colours.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value} ({option.productCount})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="field">
             <label htmlFor="sort">Sort by</label>
