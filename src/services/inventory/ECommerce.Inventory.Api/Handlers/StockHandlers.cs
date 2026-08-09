@@ -17,7 +17,7 @@ namespace ECommerce.Inventory.Api.Handlers;
 /// <para>
 /// <b>All or nothing.</b> A ten-line order where one item is out of stock reserves nothing. Partially
 /// reserving would leave the saga holding stock for an order that cannot be fulfilled, and the customer
-/// would be charged for items they will not receive — while other customers are blocked from buying the
+/// would be charged for items they will not receive - while other customers are blocked from buying the
 /// items now sitting reserved for an order that is about to be cancelled.
 /// </para>
 /// <para>
@@ -126,7 +126,7 @@ public sealed class ReserveStockHandler(
 /// <remarks>
 /// <para>
 /// Everything about this handler is shaped by one fact: <b>it will be retried, possibly long after the
-/// original attempt succeeded.</b> So it is idempotent at two levels — the reservation is marked
+/// original attempt succeeded.</b> So it is idempotent at two levels - the reservation is marked
 /// released and ignored on a second visit, and <c>StockItem.Release</c> clamps at zero even if it is
 /// somehow reached twice.
 /// </para>

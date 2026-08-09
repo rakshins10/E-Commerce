@@ -1,11 +1,11 @@
 /**
  * The admin API.
  *
- * Owned by this application — the Angular admin panel has its own equivalent in `core/admin-api.ts`.
+ * Owned by this application - the Angular admin panel has its own equivalent in `core/admin-api.ts`.
  * See docs/adr/0018-self-contained-frontends.md.
  *
  * Note the base URL: the **admin** BFF on :6002, never the storefront's on :6001. The two gateways are
- * separate on purpose, and pointing this at the wrong one would be a security bug rather than a typo —
+ * separate on purpose, and pointing this at the wrong one would be a security bug rather than a typo -
  * the storefront BFF does not expose these routes at all.
  */
 
@@ -129,7 +129,7 @@ export interface AdminProduct {
   /** The TOTAL across variants. Per-variant figures are on `variants`. */
   readonly stockOnHand: number;
   readonly audience: string;
-  /** Present on the detail response only — the list projection does not carry them. */
+  /** Present on the detail response only - the list projection does not carry them. */
   readonly variants?: readonly AdminProductVariant[];
 }
 
@@ -171,7 +171,7 @@ export interface SaveProductRequest {
   readonly audience?: string;
 }
 
-/** Roles a manager may assign. Mirrors the server's allow-list — the server is what enforces it. */
+/** Roles a manager may assign. Mirrors the server's allow-list - the server is what enforces it. */
 export const ASSIGNABLE_ROLES = [
   'customer',
   'support-agent',

@@ -8,7 +8,7 @@ namespace ECommerce.Common.Results;
 /// <b>Pattern:</b> Result / Railway-oriented programming. See <c>docs/concept-map.md</c>.
 /// </para>
 /// <para>
-/// <b>Why not just throw?</b> Exceptions are for the <i>exceptional</i> — a database that is unreachable, a bug.
+/// <b>Why not just throw?</b> Exceptions are for the <i>exceptional</i> - a database that is unreachable, a bug.
 /// "This order cannot be cancelled because it has shipped" is not exceptional; it is an ordinary, anticipated
 /// outcome that the caller must handle. Modelling it as a return value has three concrete benefits:
 /// </para>
@@ -23,7 +23,7 @@ namespace ECommerce.Common.Results;
 /// <para>
 /// <b>The rule applied in this codebase:</b> expected failures return <see cref="Result"/>; genuine invariant
 /// violations inside an aggregate throw <c>DomainException</c>. An aggregate whose invariant is broken is a bug
-/// — it should never have been reachable, because the application layer should have returned a failed
+/// - it should never have been reachable, because the application layer should have returned a failed
 /// <see cref="Result"/> first. The exception is the last line of defence, not the mechanism.
 /// </para>
 /// </remarks>
@@ -92,7 +92,7 @@ public sealed class Result<TValue> : Result
     public static implicit operator Result<TValue>(TValue value) => Success(value);
 
     /// <summary>
-    /// Collapses both branches into a single value — the exhaustive way to consume a result, since the compiler
+    /// Collapses both branches into a single value - the exhaustive way to consume a result, since the compiler
     /// requires both cases to be supplied.
     /// </summary>
     public TResult Match<TResult>(Func<TValue, TResult> onSuccess, Func<Error, TResult> onFailure) =>

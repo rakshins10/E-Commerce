@@ -24,8 +24,8 @@ import { formatMoney } from '../lib/formatting';
  *    `useState` gives you none of that, and it is the single most common thing missed on a browse
  *    screen.
  *
- * 2. **TanStack Query owns server state.** It caches per filter combination, dedupes, and — via
- *    `keepPreviousData` — keeps the previous page on screen while the next one loads, so paging does
+ * 2. **TanStack Query owns server state.** It caches per filter combination, dedupes, and - via
+ *    `keepPreviousData` - keeps the previous page on screen while the next one loads, so paging does
  *    not flash empty. Angular's equivalent is in `pages/products.ts`, built from signals; the
  *    comparison is in docs/react-vs-angular.md.
  */
@@ -138,7 +138,7 @@ export function ProductsPage() {
   /**
    * The address for a category, keeping every other filter.
    *
-   * The rail writes to the same URL the select does, so a link is not a second code path — it sets
+   * The rail writes to the same URL the select does, so a link is not a second code path - it sets
    * the same `?category=` the dropdown sets. There is still exactly one source of truth, and
    * anything that survives a refresh in one survives it in the other.
    */
@@ -209,7 +209,7 @@ export function ProductsPage() {
           {/* --- Category ---------------------------------------------------------------------
               `<optgroup>`, not a hand-drawn indent.
 
-              This used to prefix every child with an em dash — "— T-shirts (3)" — which is what you
+              This used to prefix every child with an em dash - "- T-shirts (3)" - which is what you
               reach for when you want a tree in a control that does not have one. It renders as a
               stray character with no meaning, a screen reader announces it, and it still does not
               say which parent the child belongs to.
@@ -229,7 +229,7 @@ export function ProductsPage() {
 
               {departments.map((department) => (
                 <optgroup key={department.id} label={department.name}>
-                  {/* The department itself stays selectable — the server rolls its children up, so
+                  {/* The department itself stays selectable - the server rolls its children up, so
                       "everything in Clothing" is a real and useful query. */}
                   <option value={department.slug}>
                     All {department.name.toLowerCase()} ({department.productCount})
@@ -263,7 +263,7 @@ export function ProductsPage() {
           </div>
 
           {/* Size and colour filter across the WHOLE catalogue, so "show me everything in Large"
-              is one click. The counts are of products, not variants — "Navy (2)" has to mean two
+              is one click. The counts are of products, not variants - "Navy (2)" has to mean two
               things you can click through to. */}
           {facets && facets.sizes.length > 0 && (
             <div className="field">
@@ -318,8 +318,8 @@ export function ProductsPage() {
                 });
               }}
             >
-              <option value="name:asc">Name (A–Z)</option>
-              <option value="name:desc">Name (Z–A)</option>
+              <option value="name:asc">Name (A-Z)</option>
+              <option value="name:desc">Name (Z-A)</option>
               <option value="price:asc">Price (low to high)</option>
               <option value="price:desc">Price (high to low)</option>
               <option value="brand:asc">Brand</option>
@@ -357,14 +357,14 @@ export function ProductsPage() {
         {/* --- The category rail ------------------------------------------------------------
             The taxonomy, laid out rather than folded into a dropdown.
 
-            A shopper who has not decided yet cannot browse a `<select>` — it has to be opened, read
+            A shopper who has not decided yet cannot browse a `<select>` - it has to be opened, read
             and closed again to see anything, and it shows one department at a time. This shows the
             whole shop at once: every department, what is inside it, and how many products each
             holds.
 
             They are real links, not click handlers. Middle-click opens a category in a new tab, the
             status bar shows where each one goes, and every one is an address that can be sent to
-            somebody else — none of which a button gives you. */}
+            somebody else - none of which a button gives you. */}
         <nav className="category-rail" aria-label="Categories">
           <h2 className="category-rail__title">Categories</h2>
 
@@ -456,7 +456,7 @@ export function ProductsPage() {
 
       {/* Named, so "the products" is a thing that can be pointed at. The page now has product
           headings AND department headings in the rail, and without a name on this list the only way
-          to say "a product" is by position in the document — which is exactly how a spec ends up
+          to say "a product" is by position in the document - which is exactly how a spec ends up
           clicking a category. */}
       {result && result.items.length > 0 && (
         <ul className="grid grid--3 product-grid" aria-label="Products">

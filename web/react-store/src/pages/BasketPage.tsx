@@ -20,7 +20,7 @@ import { Icon } from '../components/Icon';
  * answer afterwards.
  *
  * My Account deliberately does *not* do this, because there the server's answer legitimately differs
- * from the request — adding your first address silently makes it the default for both shipping and
+ * from the request - adding your first address silently makes it the default for both shipping and
  * billing. Guessing that outcome would mean reimplementing the aggregate's rules in TypeScript.
  *
  * The distinction is the point: optimism is right when you can predict the result, and wrong when you

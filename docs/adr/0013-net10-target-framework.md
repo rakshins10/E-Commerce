@@ -17,17 +17,17 @@ The developer machine had only the 9.0.101 SDK installed, so this was a real cho
 
 ## Options considered
 
-### Option A — .NET 9
+### Option A - .NET 9
 Already installed; no setup step. But it is an **STS release that has passed end of support**, meaning no
 security patches. For a repository whose purpose is to demonstrate current best practice, building on an
 unsupported runtime undercuts the premise, and an interviewer would reasonably ask about it.
 
-### Option B — .NET 8 (previous LTS)
+### Option B - .NET 8 (previous LTS)
 Still supported, still very widely deployed, and the version many enterprises are pinned to. Would require
 installing an SDK anyway. Two LTS generations behind current, so it forgoes several things this project uses
 directly.
 
-### Option C — .NET 10 (current LTS)
+### Option C - .NET 10 (current LTS)
 Supported until late 2028. Matches the current EF Core 10 / ASP.NET Core 10 documentation, which matters
 because a teaching repository is read alongside the docs.
 
@@ -37,14 +37,14 @@ because a teaching repository is read alongside the docs.
 explicit and reproducible rather than "whatever is installed".
 
 The framework version is set **once** in `Directory.Build.props` and inherited by every project. No
-individual `.csproj` declares a `TargetFramework` — a single-line change moves the whole solution, which is
+individual `.csproj` declares a `TargetFramework` - a single-line change moves the whole solution, which is
 exactly the property that makes the next upgrade cheap.
 
 Also set centrally there, because they are decisions rather than defaults:
 
 | Setting | Value | Why |
 |---------|-------|-----|
-| `Nullable` | `enable` | Nullable reference types are the largest single source of null-safety in modern C#. Escalated to *errors* in `.editorconfig` — a warning everyone ignores is not a safety feature. |
+| `Nullable` | `enable` | Nullable reference types are the largest single source of null-safety in modern C#. Escalated to *errors* in `.editorconfig` - a warning everyone ignores is not a safety feature. |
 | `ImplicitUsings` | `enable` | Removes ~10 lines of noise per file. |
 | `TreatWarningsAsErrors` | `true` | Warnings accumulate into background noise; making them fail keeps the signal. |
 | `EnforceCodeStyleInBuild` | `true` | `.editorconfig` style rules are checked at build, not only in the IDE. |
@@ -52,7 +52,7 @@ Also set centrally there, because they are decisions rather than defaults:
 
 Package versions are managed by **Central Package Management** (`Directory.Packages.props`), so a package
 has exactly one version across the entire solution. Without it, forty projects drift into version conflicts
-that only surface at runtime as assembly-binding failures — and diamond dependencies between building
+that only surface at runtime as assembly-binding failures - and diamond dependencies between building
 blocks and services make that near-certain.
 
 ### Installation note
@@ -62,7 +62,7 @@ script, because the session was not elevated. A machine-wide install
 (`winget install Microsoft.DotNet.SDK.10`, from an elevated terminal) is preferable for day-to-day use.
 Documented in [getting-started.md](../getting-started.md).
 
-Containers are unaffected — they build from `mcr.microsoft.com/dotnet/sdk:10.0` and run on
+Containers are unaffected - they build from `mcr.microsoft.com/dotnet/sdk:10.0` and run on
 `aspnet:10.0`, so the local SDK matters only for development outside Docker.
 
 ## Consequences
@@ -74,11 +74,11 @@ Containers are unaffected — they build from `mcr.microsoft.com/dotnet/sdk:10.0
 - One version per package, solution-wide, enforced by the build.
 
 ### What this costs us
-- **An SDK install** was required — the friction that made this a decision at all.
+- **An SDK install** was required - the friction that made this a decision at all.
 - **Enterprise mismatch.** Organisations pinned to .NET 8 cannot run this without retargeting. Mitigated by
   the single-line `Directory.Build.props` change; nothing in the code depends on .NET 10-only APIs in a way
   that would resist a downgrade.
-- **`TreatWarningsAsErrors` will occasionally be obstructive** — a deprecation warning from a transitive
+- **`TreatWarningsAsErrors` will occasionally be obstructive** - a deprecation warning from a transitive
   dependency can block a build. Handled by suppressing specific diagnostics in `.editorconfig` with a
   comment explaining why, never by disabling the setting.
 - **Nullable-as-error is strict**, and integrating a library with poor nullable annotations will require

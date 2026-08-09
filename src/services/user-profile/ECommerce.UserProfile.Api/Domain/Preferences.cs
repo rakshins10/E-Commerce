@@ -10,11 +10,11 @@ namespace ECommerce.UserProfile.Api.Domain;
 /// <para>
 /// A <b>value object</b>: it has no identity of its own, two profiles with identical preferences are
 /// interchangeable in every way that matters, and it is replaced wholesale rather than mutated. Stored as
-/// owned columns on the profile row — a separate table would imply a lifetime it does not have.
+/// owned columns on the profile row - a separate table would imply a lifetime it does not have.
 /// </para>
 /// <para>
 /// <b>These are profile data, not identity data.</b> None of them decides whether a request is allowed, so
-/// none belongs in the token — putting them in claims would bloat every request to every service with data
+/// none belongs in the token - putting them in claims would bloat every request to every service with data
 /// almost none of them care about. See <c>docs/adr/0004</c>.
 /// </para>
 /// </remarks>
@@ -102,7 +102,7 @@ public sealed class Preferences : ValueObject
 }
 
 /// <summary>
-/// An append-only record that a customer agreed to — or withdrew from — something.
+/// An append-only record that a customer agreed to - or withdrew from - something.
 /// </summary>
 /// <remarks>
 /// Records the <b>version</b> of the wording they agreed to, not just the fact of agreement. "They consented"

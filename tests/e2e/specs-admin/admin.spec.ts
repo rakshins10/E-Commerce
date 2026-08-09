@@ -3,7 +3,7 @@ import { expect, request, test, type Page } from '@playwright/test';
 /**
  * The back office.
  *
- * Written ONCE and run against both admin panels — :3001 React, :4201 Angular.
+ * Written ONCE and run against both admin panels - :3001 React, :4201 Angular.
  *
  * These specs exist mainly to prove one thing: **the same application shows different people
  * different things**, and the server refuses what the UI hides. Everything else here is ordinary
@@ -176,7 +176,7 @@ test.describe('orders', () => {
   // passes on a developer's well-used machine is a spec that fails the first time it matters.
   test.beforeAll(ensureAnOrderExists);
 
-  test('lists every order, not just the signed-in user’s', async ({ page }) => {
+  test('lists every order, not just the ones belonging to the signed-in user', async ({ page }) => {
     await signIn(page, 'administrator');
     await page.goto('/orders');
 
@@ -187,7 +187,7 @@ test.describe('orders', () => {
     await expect(page.getByRole('link', { name: /^ORD-/ }).first()).toBeVisible();
   });
 
-  test('an order shows the saga’s own step names for diagnosis', async ({ page }) => {
+  test('an order shows the step names the saga itself uses, for diagnosis', async ({ page }) => {
     await signIn(page, 'administrator');
     await page.goto('/orders');
     await page.getByRole('link', { name: /^ORD-/ }).first().click();

@@ -14,7 +14,7 @@ public sealed record SubscriptionInfo(string EventName, Type EventType, Type Han
 /// <remarks>
 /// <para>
 /// A message arriving from the broker is a routing key and a byte array. Something must decide which type to
-/// deserialise into and which handler to invoke — that is this registry's entire job, and keeping it separate
+/// deserialise into and which handler to invoke - that is this registry's entire job, and keeping it separate
 /// from the transport keeps the RabbitMQ client free of reflection and type lookups.
 /// </para>
 /// <para>
@@ -39,7 +39,7 @@ public interface IEventBusSubscriptionManager
     /// </summary>
     /// <remarks>
     /// A collection rather than a single handler: one service can legitimately react to the same event in
-    /// several unrelated ways. Note that all of them share one delivery — if one throws, the message is
+    /// several unrelated ways. Note that all of them share one delivery - if one throws, the message is
     /// negatively acknowledged and <i>all</i> of them run again on redelivery, which is another reason every
     /// handler must be idempotent.
     /// </remarks>

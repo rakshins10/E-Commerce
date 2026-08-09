@@ -1,6 +1,6 @@
 # Contributing
 
-This repository is built in **phases**, and the commit history is itself a deliverable — it should read as a
+This repository is built in **phases**, and the commit history is itself a deliverable - it should read as a
 coherent narrative of how the system was assembled. These conventions exist to keep it that way.
 
 ---
@@ -60,7 +60,7 @@ the commit message needs the word "and", it is probably two commits.
 
 ## Secrets
 
-**Never commit real secrets** — no `.env`, no certificates, no connection strings pointing at anything real,
+**Never commit real secrets** - no `.env`, no certificates, no connection strings pointing at anything real,
 no Keycloak admin credentials for a non-throwaway instance.
 
 * `deploy/.env.example` holds dev-only placeholder values and is committed. `deploy/.env` is git-ignored.
@@ -83,7 +83,7 @@ dotnet format --verify-no-changes    # .NET
 npm run lint                         # inside each /web/* app
 ```
 
-Line endings are normalised to LF by [`.gitattributes`](.gitattributes) — this matters because shell
+Line endings are normalised to LF by [`.gitattributes`](.gitattributes) - this matters because shell
 scripts and entrypoints are copied into Linux containers.
 
 ---
@@ -101,7 +101,7 @@ Concretely, in the same PR as the code:
 | If the PR adds… | It must also add/update… |
 |-----------------|--------------------------|
 | a backend service | `docs/services/<service>.md` including the full endpoint reference |
-| an endpoint | that service's endpoint reference — method, route, auth + required permission, request/response shapes, validation, status codes, error contract, idempotency, `curl` example |
+| an endpoint | that service's endpoint reference - method, route, auth + required permission, request/response shapes, validation, status codes, error contract, idempotency, `curl` example |
 | an integration event | `docs/events/event-catalogue.md` and the event-flow diagram |
 | a screen | `docs/frontend/<app>/<screen>.md` and the matching `/web/ui-spec` entry |
 | a domain concept | the glossary and the relevant `docs/domain/` page |
@@ -115,18 +115,18 @@ The PR description must state which docs were added or changed.
 **Never build a feature in React and port it to Angular later.** Every UI feature lands in both frameworks
 in the same phase and the same pull request. The sequence for each feature slice is:
 
-1. **Specify once** — write `/web/ui-spec/<feature>.md` first: routes, states, components, validation,
+1. **Specify once** - write `/web/ui-spec/<feature>.md` first: routes, states, components, validation,
    empty/loading/error behaviour, and the permissions gating it. Framework-agnostic; both implementations
    must satisfy it.
-2. **Share once** — design tokens, the generated API client, OIDC config, permission helpers, formatters,
+2. **Share once** - design tokens, the generated API client, OIDC config, permission helpers, formatters,
    and validation schemas live in `/web/shared` as framework-neutral TypeScript. React, Angular, and React
    Native all consume it. Never duplicate this logic per framework.
-3. **Implement both, idiomatically** — use each framework properly. Do not write "Angular that looks like
+3. **Implement both, idiomatically** - use each framework properly. Do not write "Angular that looks like
    React", and do not flatten to a lowest common denominator. Demonstrating fluency in both is the point.
-4. **Prove parity** — update [`web/parity-checklist.md`](web/parity-checklist.md), and make the shared
+4. **Prove parity** - update [`web/parity-checklist.md`](web/parity-checklist.md), and make the shared
    Playwright specs pass against **both** apps (the base URL is parameterised so CI runs the suite twice).
    Attach side-by-side screenshots to the PR.
-5. **Report the divergences** — add a note to [`docs/react-vs-angular.md`](docs/react-vs-angular.md) on where
+5. **Report the divergences** - add a note to [`docs/react-vs-angular.md`](docs/react-vs-angular.md) on where
    each framework was cleaner and what each forced you to work around.
 
 If you run short of room, **finish the current feature in both frameworks rather than starting the next
@@ -137,7 +137,7 @@ feature in one.**
 ## Documenting decisions
 
 **Any non-obvious choice gets an ADR.** Copy [`docs/adr/0000-template.md`](docs/adr/0000-template.md), number
-it sequentially, and keep it short — context, the options considered, the decision, and the consequences you
+it sequentially, and keep it short - context, the options considered, the decision, and the consequences you
 accepted. An ADR is immutable once merged: if a later phase reverses it, write a new ADR that supersedes it
 rather than editing history.
 

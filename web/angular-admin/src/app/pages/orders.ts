@@ -112,7 +112,7 @@ export class AdminOrdersPage {
         <section class="card stack" aria-labelledby="status-heading">
           <h2 id="status-heading">Status</h2>
           <p class="lede" role="status">
-            {{ o.status }}{{ o.cancellationReason ? ' — ' + o.cancellationReason : '' }}
+            {{ o.status }}{{ o.cancellationReason ? ' - ' + o.cancellationReason : '' }}
           </p>
 
           <!-- Each action is gated on its own permission AND on the aggregate's own answer. The server
@@ -151,7 +151,7 @@ export class AdminOrdersPage {
               <ol class="plain-list">
                 @for (step of timeline.steps; track $index) {
                   <li>
-                    <strong>{{ step.name }}</strong> — {{ step.detail }}
+                    <strong>{{ step.name }}</strong> - {{ step.detail }}
                     <span class="muted small"> · {{ dateTime(step.occurredAt) }}</span>
                   </li>
                 }

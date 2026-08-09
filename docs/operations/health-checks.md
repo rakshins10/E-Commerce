@@ -9,20 +9,20 @@ conflating them is one of the more damaging mistakes in container operations.
 | Endpoint | Question | Checks | Failing it means |
 |----------|----------|--------|------------------|
 | `/health/live` | Is this process irrecoverably broken? | Nothing external | **Kill and restart me** |
-| `/health/ready` | Can I serve traffic right now? | Database, broker, cache | **Stop routing to me — but leave me alone** |
+| `/health/ready` | Can I serve traffic right now? | Database, broker, cache | **Stop routing to me - but leave me alone** |
 
 ## Why the distinction is not academic
 
 Put a database check in **liveness**, and this happens: the database has a thirty-second blip. Every replica
 fails its liveness probe simultaneously. The orchestrator kills them all and starts fresh ones. Restarting a
-service does not fix a database — so the new replicas fail too, and you now have a crash loop. Worse, every
+service does not fix a database - so the new replicas fail too, and you now have a crash loop. Worse, every
 restart reopens a connection pool, so the restarts add a connection storm to a database that was already
 struggling.
 
 **A recoverable dependency blip has become a full outage that outlives its cause.**
 
 The rule that prevents it: **liveness must never check anything that a restart cannot fix.** A deadlocked
-thread pool, an unrecoverable `OutOfMemoryException`, a corrupt in-process cache — those a restart fixes. A
+thread pool, an unrecoverable `OutOfMemoryException`, a corrupt in-process cache - those a restart fixes. A
 database being down, it does not.
 
 ## Why the liveness check looks pointless
@@ -34,7 +34,7 @@ services.AddHealthChecks()
 
 A check that always returns healthy appears to test nothing. It is not nothing: **reaching it at all** proves
 the process is running, Kestrel is accepting connections, the request pipeline executes, and the thread pool
-is not starved. That is precisely — and only — what liveness should assert.
+is not starved. That is precisely - and only - what liveness should assert.
 
 ## Readiness and the dependencies each service checks
 
@@ -50,7 +50,7 @@ Registered with the `ready` tag as each service gains them:
 
 Note what is **not** checked: a BFF does not check the services behind it. If Catalog is down, the storefront
 BFF can still serve basket and order routes, and marking it unready would take down functionality that works.
-**Readiness means "can I do my job", not "is everything downstream perfect"** — the alternative propagates a
+**Readiness means "can I do my job", not "is everything downstream perfect"** - the alternative propagates a
 single service's outage across the whole edge.
 
 ## The response body
@@ -89,7 +89,7 @@ depends_on:
 takes fifteen seconds to warm up is not killed for it.
 
 `docker compose up --wait` blocks until everything is healthy and **fails if a service starts and then
-crashes** — which a plain `up -d` reports as success. That is why CI uses it as the "the stack actually boots"
+crashes** - which a plain `up -d` reports as success. That is why CI uses it as the "the stack actually boots"
 gate.
 
 ## Mapping to Kubernetes later

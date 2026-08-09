@@ -1,13 +1,13 @@
 # Web
 
-Two applications, two frameworks, one user experience — and **each one owns every line it needs**.
+Two applications, two frameworks, one user experience - and **each one owns every line it needs**.
 
 | Directory | What it is | Arrives |
 |-----------|-----------|---------|
-| [`react-store/`](react-store/) | Storefront — React 19, Vite, React Router | ✅ shell + OIDC |
-| [`angular-store/`](angular-store/) | Storefront — Angular 22, standalone, signals | ✅ shell + OIDC |
-| `react-admin/` | Admin panel — React | Phase 8 |
-| `angular-admin/` | Admin panel — Angular | Phase 8 |
+| [`react-store/`](react-store/) | Storefront - React 19, Vite, React Router | ✅ shell + OIDC |
+| [`angular-store/`](angular-store/) | Storefront - Angular 22, standalone, signals | ✅ shell + OIDC |
+| `react-admin/` | Admin panel - React | Phase 8 |
+| `angular-admin/` | Admin panel - Angular | Phase 8 |
 | [`ui-spec/`](ui-spec/) | Framework-agnostic screen specs both implementations satisfy | ongoing |
 | [`parity-checklist.md`](parity-checklist.md) | Every screen and behaviour × React status × Angular status | live |
 
@@ -21,7 +21,7 @@ package.
 That is a deliberate reversal of the usual advice, and it is recorded in
 [ADR-0018](../docs/adr/0018-self-contained-frontends.md). The reasoning: this repository exists to be
 *studied*. When code lives in a shared package, understanding how authentication works in the React app
-means reading three places — the component, the hook, and a package outside the application. For a codebase
+means reading three places - the component, the hook, and a package outside the application. For a codebase
 whose job is to be read and explained, that indirection is a cost paid on every reading.
 
 So each app owns its own copy:
@@ -42,7 +42,7 @@ So each app owns its own copy:
 
 Since structure no longer prevents divergence, tests do:
 
-**1. The shared end-to-end suite** — [`tests/e2e`](../tests/e2e/) runs **identical specs against both apps**,
+**1. The shared end-to-end suite** - [`tests/e2e`](../tests/e2e/) runs **identical specs against both apps**,
 with only the base URL differing. It asserts on visible text and accessible names, so a divergence in
 permission parsing, formatting, or labelling fails CI. This tests *behaviour*, which is what actually
 matters, rather than checking that two files match.
@@ -53,7 +53,7 @@ npm run test:react      # 9 specs against :3000
 npm run test:angular    # the same 9 against :4200
 ```
 
-**2. The token guard** — [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) validates
+**2. The token guard** - [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) validates
 both palettes against WCAG 2.2 AA contrast **and** asserts they are byte-identical. Visual drift is the
 hardest for a test to notice and the easiest for a user to.
 
@@ -61,7 +61,7 @@ hardest for a test to notice and the easiest for a user to.
 node scripts/check-design-tokens.mjs
 ```
 
-**3. The parity checklist** — [`parity-checklist.md`](parity-checklist.md), the human record.
+**3. The parity checklist** - [`parity-checklist.md`](parity-checklist.md), the human record.
 
 ---
 
@@ -74,12 +74,12 @@ translated React.
 
 The sequence per feature:
 
-1. **Specify once** — `ui-spec/<feature>.md`: routes, states, components, validation, loading/empty/error
+1. **Specify once** - `ui-spec/<feature>.md`: routes, states, components, validation, loading/empty/error
    behaviour, and the permissions gating it. Written *before* either implementation.
-2. **Implement both, idiomatically** — hooks and TanStack Query on one side; signals, DI and reactive forms
+2. **Implement both, idiomatically** - hooks and TanStack Query on one side; signals, DI and reactive forms
    on the other. Deliberately *not* the same architecture.
-3. **Prove parity** — update the checklist and make the shared specs pass against both.
-4. **Record the divergences** — [`docs/react-vs-angular.md`](../docs/react-vs-angular.md).
+3. **Prove parity** - update the checklist and make the shared specs pass against both.
+4. **Record the divergences** - [`docs/react-vs-angular.md`](../docs/react-vs-angular.md).
 
 ---
 
@@ -98,7 +98,7 @@ npm run dev:react      # :3000
 npm run dev:angular    # :4200
 ```
 
-Sign in with any seed user — password `Passw0rd!`. Try `customer` (5 permissions) then `administrator`
+Sign in with any seed user - password `Passw0rd!`. Try `customer` (5 permissions) then `administrator`
 (15) and watch the page change.
 
 > Changing a front-end file and running `docker compose up -d` shows you the **old** app. The four web
@@ -136,5 +136,5 @@ against both apps, so they are written against **accessible roles and names**
 between two independent implementations.
 
 A suite written that way **cannot pass against a div-soup implementation.** Parity enforcement drags
-accessibility along with it — and in practice it already has: writing the first spec forced the header to be
+accessibility along with it - and in practice it already has: writing the first spec forced the header to be
 a `banner` landmark and the theme toggle to carry a real accessible name.

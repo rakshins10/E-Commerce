@@ -11,13 +11,13 @@ namespace ECommerce.Ordering.Api.Features;
 /// <remarks>
 /// <para>
 /// <b>Read the route table to audit the service.</b> Every endpoint declares its permission on the
-/// route, so the entire authorization surface is visible in one screen — and an unprotected endpoint
+/// route, so the entire authorization surface is visible in one screen - and an unprotected endpoint
 /// shows up as an <i>absence</i>, which is far easier to spot in review than a missing check buried in a
 /// method body.
 /// </para>
 /// <para>
 /// <b>Two kinds of authorization here.</b> The permission answers "may this kind of user do this kind of
-/// thing". Ownership answers "to whose order" — and that cannot be checked until the order is loaded, so
+/// thing". Ownership answers "to whose order" - and that cannot be checked until the order is loaded, so
 /// it happens in the handler and in the query's WHERE clause. Both are needed:
 /// <c>order:read:own</c> without an ownership check would let any customer read any order.
 /// </para>

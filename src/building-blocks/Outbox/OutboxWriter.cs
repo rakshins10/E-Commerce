@@ -12,7 +12,7 @@ namespace ECommerce.Outbox;
 /// <remarks>
 /// <para>
 /// <b>Note what this does not do: it does not save.</b> The row is added to the change tracker and
-/// committed by whoever owns the transaction — the same <c>SaveChangesAsync</c> that writes the order.
+/// committed by whoever owns the transaction - the same <c>SaveChangesAsync</c> that writes the order.
 /// That is the entire point of the pattern, and a <c>SaveChangesAsync</c> in here would quietly destroy
 /// it by creating a second, separate transaction.
 /// </para>

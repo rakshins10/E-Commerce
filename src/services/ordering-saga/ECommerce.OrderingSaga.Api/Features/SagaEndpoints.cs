@@ -13,7 +13,7 @@ namespace ECommerce.OrderingSaga.Api.Features;
 /// <para>
 /// <b>There is no endpoint that changes a saga.</b> A saga advances only in response to what really
 /// happened, and an endpoint that let someone push it forward by hand would let the saga's record
-/// disagree with reality — which is the one thing it exists to prevent.
+/// disagree with reality - which is the one thing it exists to prevent.
 /// </para>
 /// <para>
 /// The read side answers two questions. The customer's storefront asks "what happened to my order?" so

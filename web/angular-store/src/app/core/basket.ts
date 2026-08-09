@@ -7,13 +7,13 @@ import { environment } from '../../environments/environment';
 /**
  * Basket and order API types and access.
  *
- * Owned by this application — the React storefront has its own equivalent in `src/lib/basket.ts`.
+ * Owned by this application - the React storefront has its own equivalent in `src/lib/basket.ts`.
  * See docs/adr/0018-self-contained-frontends.md.
  */
 
 export interface BasketItem {
   readonly productId: string;
-  /** The VARIANT sku. This identifies the line — two sizes of one shirt are two lines. */
+  /** The VARIANT sku. This identifies the line - two sizes of one shirt are two lines. */
   readonly sku: string;
   readonly productName: string;
   readonly size: string | null;
@@ -203,7 +203,7 @@ export const SAGA_STEP_LABELS: Record<string, string> = {
  * The signal is genuinely simpler to read, and it is enough here because every endpoint returns the
  * whole basket and there is one consumer. What it does not give you is the rollback: the optimistic
  * update below is hand-written, including saving and restoring the previous value. That is the shape of
- * this comparison throughout — Angular's primitives are smaller and more predictable, and TanStack
+ * this comparison throughout - Angular's primitives are smaller and more predictable, and TanStack
  * Query has simply already solved more of the problem.
  */
 @Injectable({ providedIn: 'root' })
@@ -230,7 +230,7 @@ export class BasketService {
    * Sets a line's quantity, optimistically.
    *
    * Changing a quantity is a click a customer repeats several times in a row, and the outcome is
-   * completely predictable — setting it to 3 results in 3. So the signal is updated immediately and
+   * completely predictable - setting it to 3 results in 3. So the signal is updated immediately and
    * reconciled with the server's answer afterwards, with the previous value restored on failure.
    *
    * My Account deliberately does NOT do this, because there the server's answer legitimately differs

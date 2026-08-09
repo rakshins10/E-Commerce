@@ -11,7 +11,7 @@
 **/.vscode/
 **/.idea/
 
-# Node / frontend — never needed by a .NET image build
+# Node / frontend - never needed by a .NET image build
 **/node_modules/
 **/dist/
 **/.vite/

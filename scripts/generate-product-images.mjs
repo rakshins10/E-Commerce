@@ -7,7 +7,7 @@
  * source are twelve chances to drift. A generator makes the shared parts literally shared, so adding a
  * thirteenth product is one entry in a table rather than an exercise in matching what came before.
  *
- * **Why SVG.** No binary blobs in git — these diff, review and scale like the Mermaid diagrams do. They
+ * **Why SVG.** No binary blobs in git - these diff, review and scale like the Mermaid diagrams do. They
  * are also a few hundred bytes each, so the storefront ships its whole catalogue of imagery for less
  * than one photograph.
  *
@@ -172,7 +172,7 @@ for (const [index, product] of PRODUCTS.entries()) {
 }
 
 /**
- * A fallback for anything without artwork — a product created through the admin panel, for instance.
+ * A fallback for anything without artwork - a product created through the admin panel, for instance.
  *
  * Every image element needs one: a broken image icon in a shop reads as a broken shop.
  */

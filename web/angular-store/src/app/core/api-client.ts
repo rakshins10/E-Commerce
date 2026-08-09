@@ -8,7 +8,7 @@
  * @see docs/adr/0006-yarp-gateway-and-bff-per-client.md
  */
 
-/** The error contract every service returns — RFC 9457 Problem Details. */
+/** The error contract every service returns - RFC 9457 Problem Details. */
 export interface ProblemDetails {
   readonly type?: string;
   readonly title: string;
@@ -50,7 +50,7 @@ export class ApiError extends Error {
     return this.status === 401;
   }
 
-  /** Signed in, but lacking the permission. Show a 403 view — do not retry. */
+  /** Signed in, but lacking the permission. Show a 403 view - do not retry. */
   get isForbidden(): boolean {
     return this.status === 403;
   }
@@ -59,7 +59,7 @@ export class ApiError extends Error {
     return this.status === 404;
   }
 
-  /** 400 or 422 — the request itself was rejected, so retrying is pointless. */
+  /** 400 or 422 - the request itself was rejected, so retrying is pointless. */
   get isValidationFailure(): boolean {
     return this.status === 400 || this.status === 422;
   }
@@ -70,7 +70,7 @@ export interface ApiClientOptions {
   /**
    * Supplies the current access token, or null when signed out.
    *
-   * A function rather than a value because tokens expire and rotate — capturing
+   * A function rather than a value because tokens expire and rotate - capturing
    * one at construction time would attach a stale token to every later request.
    */
   readonly getAccessToken: () => string | null | Promise<string | null>;
@@ -94,7 +94,7 @@ function newCorrelationId(): string {
 /**
  * A small typed fetch wrapper.
  *
- * Deliberately not a generated client yet — from Phase 4 the request/response
+ * Deliberately not a generated client yet - from Phase 4 the request/response
  * types come from each BFF's OpenAPI document, so a backend contract change
  * breaks the frontend *build* rather than producing a runtime `undefined`.
  * This class remains the transport underneath.

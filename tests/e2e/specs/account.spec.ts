@@ -6,7 +6,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
  * Playwright's `check()` clicks and asserts **once**, without retrying. A
  * controlled input whose value is derived from application state can be
  * momentarily out of step with the DOM while a re-render lands, and `check()`
- * fails on that transient even though the end state is correct — reproducibly
+ * fails on that transient even though the end state is correct - reproducibly
  * so on a slow CI runner. Clicking only when the state is wrong keeps this
  * idempotent for specs that mutate persistent data, and `toBeChecked()` retries.
  */
@@ -19,7 +19,7 @@ async function setChecked(checkbox: Locator, value: boolean): Promise<void> {
 }
 
 /**
- * My Account — profile, addresses and preferences.
+ * My Account - profile, addresses and preferences.
  *
  * Written ONCE and run against both storefronts.
  *

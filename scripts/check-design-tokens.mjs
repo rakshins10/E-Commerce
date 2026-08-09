@@ -122,7 +122,7 @@ for (const file of TOKEN_FILES) {
       const ratio = contrast(foreground, background);
       if (ratio < required) {
         failures.push(
-          `${file} [${theme}]: ${description} — ${fg} (${foreground}) on ${bg} (${background}) ` +
+          `${file} [${theme}]: ${description} - ${fg} (${foreground}) on ${bg} (${background}) ` +
             `is ${ratio.toFixed(2)}:1, needs ${required}:1`,
         );
       }
@@ -137,7 +137,7 @@ for (const other of rest) {
   if (contents.has(first) && contents.has(other) && contents.get(first) !== contents.get(other)) {
     failures.push(
       `token drift: ${other} differs from ${first}. ` +
-        `Both frontends must ship the same palette — copy one over the other.`,
+        `Both frontends must ship the same palette - copy one over the other.`,
     );
   }
 }
@@ -150,6 +150,6 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `✔ Design tokens OK — ${TOKEN_FILES.length} files, ` +
+  `✔ Design tokens OK - ${TOKEN_FILES.length} files, ` +
     `${CONTRAST_PAIRS.length * 2} contrast checks each, palettes identical`,
 );

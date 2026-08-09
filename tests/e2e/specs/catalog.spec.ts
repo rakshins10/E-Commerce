@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Product browsing: search, filter, sort, page, detail.
  *
  * Written ONCE and run against both storefronts. Every selector is a role and
- * an accessible name — never a CSS class or test id — because those differ
+ * an accessible name - never a CSS class or test id - because those differ
  * between two independent implementations.
  *
  * @see docs/adr/0014-react-and-angular-in-lockstep.md
@@ -279,8 +279,8 @@ test.describe('product detail', () => {
     await page.goto('/products?search=Heavyweight');
     await page.getByRole('link', { name: /Heavyweight Hoodie/ }).click();
 
-    // Wait for the page before counting. `count()` does not auto-wait — it returns whatever matches
-    // at that instant — so without this it counts the radios on a page that has not rendered yet.
+    // Wait for the page before counting. `count()` does not auto-wait - it returns whatever matches
+    // at that instant - so without this it counts the radios on a page that has not rendered yet.
     await expect(page.getByRole('heading', { name: 'Heavyweight Hoodie', level: 1 })).toBeVisible();
 
     // Every size disabled, and the page still renders rather than 404ing or showing an empty picker.

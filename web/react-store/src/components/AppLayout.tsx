@@ -15,7 +15,7 @@ import { ThemeToggle } from './ThemeToggle';
  * so navigating between pages does not remount the header.
  *
  * The Angular storefront's shell uses `<router-outlet>` and a `RouterLink`
- * directive. Structurally the same, idiomatically different — which is the
+ * directive. Structurally the same, idiomatically different - which is the
  * point of building both (docs/adr/0014).
  */
 export function AppLayout() {
@@ -144,7 +144,7 @@ export function AppLayout() {
       <footer className="app-footer">
         <div className="container">
           <p style={{ margin: 0 }}>
-            Reference .NET microservices platform — React storefront. The Angular storefront at{' '}
+            Reference .NET microservices platform - React storefront. The Angular storefront at{' '}
             <code>:4200</code> is functionally identical.
           </p>
         </div>

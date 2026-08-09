@@ -61,7 +61,7 @@ import type { AdminUser } from '../core/admin-types';
               @for (user of users(); track user.id) {
                 <tr>
                   <th scope="row"><a [routerLink]="['/users', user.id]">{{ user.username }}</a></th>
-                  <td>{{ user.email ?? '—' }}</td>
+                  <td>{{ user.email ?? '-' }}</td>
                   <td>
                     <span [class]="user.enabled ? 'badge badge--ok' : 'badge badge--low'">
                       {{ user.enabled ? 'Enabled' : 'Disabled' }}

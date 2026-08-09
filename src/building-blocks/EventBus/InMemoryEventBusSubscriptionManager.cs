@@ -8,7 +8,7 @@ namespace ECommerce.EventBus;
 /// <remarks>
 /// <para>
 /// "In memory" is not a limitation here. Subscriptions describe <i>what this process can handle</i>, which is
-/// fixed at compile time and registered at startup. It is not shared state and there is nothing to persist —
+/// fixed at compile time and registered at startup. It is not shared state and there is nothing to persist -
 /// the durable part (queues and bindings) lives in the broker.
 /// </para>
 /// <para>

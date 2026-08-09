@@ -3,12 +3,12 @@
 > **Kind:** Gateway (Backend-for-Frontend) · **Port:** 6002 · **Store:** none
 > **Code:** [`src/gateways/admin-bff/`](../../src/gateways/admin-bff/)
 > **Related:** [Storefront BFF](storefront-bff.md) · [Back-office](back-office.md) ·
-> [ADR-0006 — BFF per client experience](../adr/0006-bff-per-client.md)
+> [ADR-0006 - BFF per client experience](../adr/0006-bff-per-client.md)
 
 ## Why a second gateway at all
 
 The routing is not very different from the storefront's. The reason for a separate one is not technical
-complexity — it is **who can reach it**.
+complexity - it is **who can reach it**.
 
 The storefront BFF is reachable by every customer on the internet. This one exposes stock adjustments,
 refunds and user administration. **One gateway carrying both means a mistake in a shared route table
@@ -34,7 +34,7 @@ The storefront gateway deliberately only requires authentication and lets each s
 This one requires the permission **at the edge as well**, because the blast radius of a mistake is
 larger.
 
-**This is defence in depth, not a replacement.** Every service still checks independently — anything that
+**This is defence in depth, not a replacement.** Every service still checks independently - anything that
 reached them by another path (another gateway, a misconfigured network policy, a developer with `curl`)
 would otherwise be unauthorized.
 
@@ -65,7 +65,7 @@ the permission next to each other**, so the route table can be audited by readin
 The catalogue route is GET-only for the same reason the storefront's is: **catalogue writes arrive in
 Phase 9 and will need their own route**, rather than being let in by a catch-all nobody revisits.
 
-`/api/admin` requires only `user:read` here because Back-office checks a finer permission per endpoint —
+`/api/admin` requires only `user:read` here because Back-office checks a finer permission per endpoint -
 `dashboard:read`, `audit:read`, `user:manage`, `user:roles:manage`. The gateway sets the floor for
 reaching the service at all.
 
@@ -83,7 +83,7 @@ Run against the live stack, four roles against five routes:
   customer         403       403      403      403    403
 ```
 
-**Same application, same build, three different navigation bars** — and a customer locked out entirely.
+**Same application, same build, three different navigation bars** - and a customer locked out entirely.
 That is the payoff of guarding on permissions rather than roles: adding a permission to a composite in
 Keycloak changes what people see with **no deployment**.
 
@@ -115,7 +115,7 @@ authenticated admin calls on a signed-in manager's behalf.
 | Probe | Route | Checks |
 |-------|-------|--------|
 | Liveness | `/health/live` | Process is up |
-| Readiness | `/health/ready` | Self only — **not** downstream services |
+| Readiness | `/health/ready` | Self only - **not** downstream services |
 
 Readiness deliberately does not aggregate downstream health. One sick service marking the gateway
 not-ready would take the *entire* back office dark over a single failing dependency. Per-cluster health

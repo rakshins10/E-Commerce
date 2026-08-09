@@ -10,7 +10,7 @@ import type { Permission } from '../lib/permissions';
  * ---
  * **This is user experience, not security.** It stops an order manager clicking into a users page that
  * would only 403 them. It stops nothing at all from someone who opens devtools, copies the token and
- * calls the API directly — which is why the Admin BFF checks the permission at the edge *and* every
+ * calls the API directly - which is why the Admin BFF checks the permission at the edge *and* every
  * service checks it again.
  *
  * Worth being blunt about, because "the button is hidden" is the most common wrong answer to "how is
@@ -20,7 +20,7 @@ import type { Permission } from '../lib/permissions';
  * ---
  * **Why redirect to /forbidden rather than render an inline message.** A distinct URL is linkable and
  * appears in analytics, so "twelve people a day hit /forbidden on /admin/users" is a fact somebody can
- * act on — usually by fixing the role assignment rather than the code.
+ * act on - usually by fixing the role assignment rather than the code.
  */
 export function RequirePermission({
   permission,

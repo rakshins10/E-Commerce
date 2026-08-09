@@ -25,19 +25,19 @@ public sealed class DuplicateVariantException(string productSku, string? size, s
 }
 
 /// <summary>
-/// One sellable unit of a <see cref="Product"/> — a specific size and colour.
+/// One sellable unit of a <see cref="Product"/> - a specific size and colour.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>This is the thing a customer actually buys</b> ([ADR-0020](../../../docs/adr/0020-product-variants.md)).
-/// A <see cref="Product"/> is the style — the name, the description, the price, the photograph. A variant is
+/// A <see cref="Product"/> is the style - the name, the description, the price, the photograph. A variant is
 /// the medium navy one, of which there are three left.
 /// </para>
 /// <para>
 /// <b>The SKU lives here, and that is the important part.</b> SKU is the string that crosses every context
 /// boundary in this system: Inventory keys its stock on it, Ordering snapshots it onto an order line, Basket
 /// carries it. Moving it down from <see cref="Product"/> to the variant meant no downstream service had to
-/// learn what a size is — Inventory simply has more rows. The boundaries were drawn at the right place.
+/// learn what a size is - Inventory simply has more rows. The boundaries were drawn at the right place.
 /// </para>
 /// <para>
 /// <b>Every product has at least one variant</b>, including a leather portfolio that comes in one size and
@@ -76,7 +76,7 @@ public class ProductVariant
     public Product? Product { get; private set; }
 
     /// <summary>
-    /// The sellable SKU — unique across the whole catalogue, not just within the product.
+    /// The sellable SKU - unique across the whole catalogue, not just within the product.
     /// </summary>
     /// <remarks>
     /// Conventionally <c>{style code}-{size}-{colour}</c>, e.g. <c>NW-TS-001-M-NAV</c>, but the convention is
@@ -94,15 +94,15 @@ public class ProductVariant
     /// </remarks>
     public string? Size { get; private set; }
 
-    /// <summary>The colour as a customer reads it — <c>"Navy"</c>. Null when the product has no colour axis.</summary>
+    /// <summary>The colour as a customer reads it - <c>"Navy"</c>. Null when the product has no colour axis.</summary>
     public string? ColourName { get; private set; }
 
     /// <summary>
-    /// The colour as a swatch — <c>"#1e3a8a"</c>.
+    /// The colour as a swatch - <c>"#1e3a8a"</c>.
     /// </summary>
     /// <remarks>
-    /// Stored beside the name, never instead of it. A swatch alone fails WCAG 1.4.1 — colour is the only
-    /// channel carrying the information — and it is unreadable to anyone who cannot distinguish the two
+    /// Stored beside the name, never instead of it. A swatch alone fails WCAG 1.4.1 - colour is the only
+    /// channel carrying the information - and it is unreadable to anyone who cannot distinguish the two
     /// shades. The name is the accessible fact; the hex is decoration on top of it.
     /// </remarks>
     public string? ColourHex { get; private set; }

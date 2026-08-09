@@ -12,8 +12,8 @@ namespace ECommerce.Contracts.Saga;
 /// <list type="table">
 ///   <listheader><term>Event</term><description>Command</description></listheader>
 ///   <item>
-///     <term>"This happened" — past tense</term>
-///     <description>"Do this" — imperative</description>
+///     <term>"This happened" - past tense</term>
+///     <description>"Do this" - imperative</description>
 ///   </item>
 ///   <item>
 ///     <term>Broadcast; zero or many listeners</term>
@@ -24,7 +24,7 @@ namespace ECommerce.Contracts.Saga;
 ///     <description>The sender expects a specific outcome and waits for it</description>
 ///   </item>
 ///   <item>
-///     <term>Cannot be rejected — it already happened</term>
+///     <term>Cannot be rejected - it already happened</term>
 ///     <description>Can fail, and the failure is meaningful</description>
 ///   </item>
 /// </list>
@@ -43,7 +43,7 @@ namespace ECommerce.Contracts.Saga;
 /// <para>
 /// An orchestrator makes the process an <b>explicit, queryable thing</b>. One row per order says which
 /// step it is on, when each step completed, and what compensation ran. The cost is a service that knows
-/// about all the others — real coupling, accepted deliberately, and confined to one place rather than
+/// about all the others - real coupling, accepted deliberately, and confined to one place rather than
 /// smeared across four.
 /// </para>
 /// </remarks>
@@ -75,10 +75,10 @@ public sealed record ReserveStockLine
 /// A compensating action is not the same as a rollback, and pretending otherwise causes bugs. It must be:
 /// </para>
 /// <list type="bullet">
-///   <item><description><b>Idempotent</b> — it will be retried.</description></item>
-///   <item><description><b>Safe to run when the step never happened</b> — releasing stock that was never
+///   <item><description><b>Idempotent</b> - it will be retried.</description></item>
+///   <item><description><b>Safe to run when the step never happened</b> - releasing stock that was never
 ///   reserved inflates the available count, which is a corruption in the opposite direction.</description></item>
-///   <item><description><b>Semantically honest</b> — the released stock may have been sold to someone
+///   <item><description><b>Semantically honest</b> - the released stock may have been sold to someone
 ///   else in the meantime. The world moved on; you cannot rewind it.</description></item>
 /// </list>
 /// </remarks>
@@ -106,7 +106,7 @@ public sealed record RequestPaymentCommand : IntegrationEvent
 /// <summary>Refund a captured payment. A <b>compensating action</b>.</summary>
 /// <remarks>
 /// Reserved for the case where a later step fails after payment succeeded. Not used in the current flow,
-/// because payment is the last step that can fail — but declared, because the shape of the saga is what
+/// because payment is the last step that can fail - but declared, because the shape of the saga is what
 /// makes adding a step afterwards safe.
 /// </remarks>
 public sealed record RefundPaymentCommand : IntegrationEvent
@@ -121,7 +121,7 @@ public sealed record RefundPaymentCommand : IntegrationEvent
 /// <summary>Move an order to a new state. Sent by the saga to Ordering.</summary>
 /// <remarks>
 /// One command with a discriminator rather than four separate ones. The saga's job is to sequence
-/// transitions, and the aggregate already refuses any that are illegal — so the alternative would be four
+/// transitions, and the aggregate already refuses any that are illegal - so the alternative would be four
 /// nearly-identical records and four handlers doing the same dispatch.
 /// </remarks>
 public sealed record AdvanceOrderCommand : IntegrationEvent

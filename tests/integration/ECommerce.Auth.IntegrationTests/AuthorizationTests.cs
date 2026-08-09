@@ -30,9 +30,9 @@ public class AuthorizationTests(KeycloakFixture keycloak) : IAsyncLifetime
     private HttpClient _client = null!;
 
     /// <summary>
-    /// A miniature API wired up exactly as a real service is — the same
+    /// A miniature API wired up exactly as a real service is - the same
     /// <see cref="AuthenticationExtensions.AddJwtAuthentication"/> and the same
-    /// <c>RequirePermission</c> helper — so what is tested is the shared building block, not a re-creation
+    /// <c>RequirePermission</c> helper - so what is tested is the shared building block, not a re-creation
     /// of it.
     /// </summary>
     public async ValueTask InitializeAsync()

@@ -211,7 +211,7 @@ public class OrderTests
     }
 
     // -------------------------------------------------------------------------
-    //  Idempotency — the rules that make at-least-once delivery survivable
+    //  Idempotency - the rules that make at-least-once delivery survivable
     // -------------------------------------------------------------------------
 
     [Fact]

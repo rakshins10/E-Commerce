@@ -11,19 +11,19 @@ namespace ECommerce.Common.Guards;
 /// <b>Pattern:</b> Guard Clause. See <c>docs/concept-map.md</c>.
 /// </para>
 /// <para>
-/// The value is not brevity — it is that a constructor which guards its arguments can never produce an invalid
+/// The value is not brevity - it is that a constructor which guards its arguments can never produce an invalid
 /// object. Combined with immutability, that means <i>if you are holding one, it is valid</i>, and no downstream
 /// code needs to re-check. This is the "parse, don't validate" idea applied to domain types, and it is what lets
 /// the rest of the codebase stop defensively null-checking.
 /// </para>
 /// <para>
 /// Every method uses <see cref="CallerArgumentExpressionAttribute"/>, so the failure message names the actual
-/// expression at the call site — <c>Guard.AgainstNegative(item.Quantity)</c> reports <c>item.Quantity</c> rather
+/// expression at the call site - <c>Guard.AgainstNegative(item.Quantity)</c> reports <c>item.Quantity</c> rather
 /// than a hand-typed string that will be wrong after the next rename.
 /// </para>
 /// <para>
 /// These throw <see cref="DomainException"/> rather than <see cref="ArgumentException"/> when used inside
-/// aggregates, because reaching one means an invariant was violated — see that type's remarks for why that is a
+/// aggregates, because reaching one means an invariant was violated - see that type's remarks for why that is a
 /// bug rather than an expected outcome.
 /// </para>
 /// </remarks>
@@ -46,7 +46,7 @@ public static class Guard
     public static int AgainstNonPositive(int value, [CallerArgumentExpression(nameof(value))] string? name = null) =>
         value <= 0 ? throw new DomainException($"{name} must be greater than zero, but was {value}.") : value;
 
-    /// <summary>Throws if the value is negative. Zero is allowed — use for amounts and balances.</summary>
+    /// <summary>Throws if the value is negative. Zero is allowed - use for amounts and balances.</summary>
     public static decimal AgainstNegative(
         decimal value,
         [CallerArgumentExpression(nameof(value))] string? name = null) =>
@@ -80,7 +80,7 @@ public static class Guard
 
     /// <summary>Throws with <paramref name="message"/> when <paramref name="condition"/> is true.</summary>
     /// <remarks>
-    /// The escape hatch for rules with no dedicated guard — for example
+    /// The escape hatch for rules with no dedicated guard - for example
     /// <c>Guard.Against(status != OrderStatus.Draft, "Only a draft order may be submitted.")</c>. Prefer a named
     /// guard where one fits; a named guard reads as a rule, whereas this reads as a condition.
     /// </remarks>

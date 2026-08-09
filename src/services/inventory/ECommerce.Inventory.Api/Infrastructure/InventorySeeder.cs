@@ -5,21 +5,21 @@ using Microsoft.EntityFrameworkCore;
 namespace ECommerce.Inventory.Api.Infrastructure;
 
 /// <summary>
-/// Seeds stock for the demo catalogue — one row per sellable <b>variant</b>.
+/// Seeds stock for the demo catalogue - one row per sellable <b>variant</b>.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <b>Stock is held per variant SKU, and always was.</b> <c>StockItem</c> keys on a SKU string, so when
 /// Catalog gained sizes and colours ([ADR-0020](../../../../docs/adr/0020-product-variants.md)) this service
-/// needed no schema change at all — just more rows. Inventory does not know what a size is. That is not
+/// needed no schema change at all - just more rows. Inventory does not know what a size is. That is not
 /// luck; it is what drawing the context boundary at the SKU bought us.
 /// </para>
 /// <para>
 /// <b>These numbers match Catalog's cached <c>stock_on_hand</c> exactly</b>, and the two lists have to be
 /// changed together. Catalog keeps its copy so a product page can say "Only 2 left" without calling
 /// Inventory on every page view; Inventory holds the authoritative figure. Duplicating the seed across the
-/// boundary is deliberate — a shared seed library would couple two services that are supposed to own their
-/// own data — and the cost is exactly this paragraph.
+/// boundary is deliberate - a shared seed library would couple two services that are supposed to own their
+/// own data - and the cost is exactly this paragraph.
 /// </para>
 /// <para>
 /// In a complete implementation Catalog would subscribe to a <c>StockLevelChanged</c> event and update its
@@ -30,7 +30,7 @@ namespace ECommerce.Inventory.Api.Infrastructure;
 /// <para>
 /// The spread is chosen so every UI state is reachable without editing the database: in stock in every
 /// size, <b>low in one size while fine in the others</b>, one size sold out while the product is not, and a
-/// product sold out entirely. <c>FB-ST-003</c> — the £5,200 Leather Portfolio — is stocked precisely so the
+/// product sold out entirely. <c>FB-ST-003</c> - the £5,200 Leather Portfolio - is stocked precisely so the
 /// <b>payment failure and compensation path</b> can be triggered from the storefront: it reserves
 /// successfully and is then declined for exceeding the payment limit.
 /// </para>
@@ -47,7 +47,7 @@ public static class InventorySeeder
     /// The same plan Catalog seeds, expressed as stock rather than as merchandising.
     /// </summary>
     /// <remarks>
-    /// Suffixes are Catalog's colour abbreviations — first three letters of each word, upper-cased. They are
+    /// Suffixes are Catalog's colour abbreviations - first three letters of each word, upper-cased. They are
     /// spelled out here rather than derived, because deriving them would mean copying an algorithm across a
     /// service boundary and quietly depending on it never changing. Copying the OUTPUT is honest; copying
     /// the function would look like sharing without being it.

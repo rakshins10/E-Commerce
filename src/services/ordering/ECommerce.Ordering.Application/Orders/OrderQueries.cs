@@ -13,19 +13,19 @@ namespace ECommerce.Ordering.Application.Orders;
 /// <para>
 /// <b>CQRS as a hard boundary, not a naming convention.</b> Writes go through EF Core and the aggregate;
 /// reads come through here and never touch a domain type. The separation is enforced by the fact that
-/// this class has no way to obtain an <c>Order</c> — it holds an <see cref="IDbConnection"/>, not a
+/// this class has no way to obtain an <c>Order</c> - it holds an <see cref="IDbConnection"/>, not a
 /// <c>DbContext</c>.
 /// </para>
 /// <para>
 /// <b>Why bother.</b> The two sides genuinely want different things. A write needs the whole aggregate
 /// loaded so its invariants can be checked. A read of "my orders" needs a reference, a date, a status
-/// and a total for twenty rows — and materialising twenty aggregates with every line, to display none of
+/// and a total for twenty rows - and materialising twenty aggregates with every line, to display none of
 /// them, is an order of magnitude more work and more data than the screen uses.
 /// </para>
 /// <para>
 /// <b>What it costs.</b> Hand-written SQL is not refactor-safe: rename a column and the compiler says
 /// nothing. That is a real cost, paid deliberately, and the reason the integration tests run against a
-/// real PostgreSQL rather than an in-memory substitute — a typo here can only be caught by executing it.
+/// real PostgreSQL rather than an in-memory substitute - a typo here can only be caught by executing it.
 /// </para>
 /// </remarks>
 public sealed class OrderQueries(IDbConnection connection)
@@ -339,7 +339,7 @@ public sealed class OrderQueries(IDbConnection connection)
 /// Translates the persisted status numbers into names for the API.
 /// </summary>
 /// <remarks>
-/// The read side must not reference the domain enum — that is the boundary CQRS is drawing here — so the
+/// The read side must not reference the domain enum - that is the boundary CQRS is drawing here - so the
 /// mapping is stated explicitly. The duplication is real and small, and a test asserts the two agree, so
 /// a status added to the domain and forgotten here fails the build rather than rendering "Unknown" to a
 /// customer.

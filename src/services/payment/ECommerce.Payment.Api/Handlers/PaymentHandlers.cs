@@ -20,7 +20,7 @@ namespace ECommerce.Payment.Api.Handlers;
 /// triggers compensation elsewhere.
 /// </para>
 /// <para>
-/// A real integration would replace <see cref="AuthoriseAsync"/> and change nothing else — the saga, the
+/// A real integration would replace <see cref="AuthoriseAsync"/> and change nothing else - the saga, the
 /// outbox and the compensation path are all unaffected by where the money actually comes from. That
 /// separation is the point of putting it behind an event boundary.
 /// </para>
@@ -37,7 +37,7 @@ public sealed class RequestPaymentHandler(
     /// <remarks>
     /// <para>
     /// A <b>deterministic</b> rule, not a random failure rate. Random failures make a demo look realistic
-    /// and make the test suite flaky — the compensation path would pass or fail depending on the roll of
+    /// and make the test suite flaky - the compensation path would pass or fail depending on the roll of
     /// a die, which is the fastest way to get a suite ignored.
     /// </para>
     /// <para>
@@ -145,7 +145,7 @@ public sealed class RequestPaymentHandler(
 /// </summary>
 /// <remarks>
 /// Not reached by the current flow, because payment is the last step that can fail. It exists because the
-/// shape of a saga is what makes adding a step afterwards safe — if a shipping-label step were added
+/// shape of a saga is what makes adding a step afterwards safe - if a shipping-label step were added
 /// tomorrow, this is what would undo the charge, and writing it now means the saga's compensation story
 /// is complete rather than aspirational.
 /// </remarks>

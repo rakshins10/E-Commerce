@@ -15,8 +15,8 @@ import { formatMoney } from '../core/formatting';
 /**
  * Product browsing: search, filter, sort, page.
  *
- * Behaviourally identical to the React `ProductsPage` — same URL parameters,
- * same labels, same states — so the shared Playwright specs pass against both.
+ * Behaviourally identical to the React `ProductsPage` - same URL parameters,
+ * same labels, same states - so the shared Playwright specs pass against both.
  *
  * ---
  * **React/Angular divergence** (docs/react-vs-angular.md).
@@ -25,7 +25,7 @@ import { formatMoney } from '../core/formatting';
  * `useSearchParams` and derives with `useMemo`; Angular converts the route's
  * `queryParamMap` observable into a signal with `toSignal`, and everything
  * downstream is `computed`. Angular's version needs no dependency array, which
- * removes a class of stale-closure bug — but it does need the RxJS-to-signal
+ * removes a class of stale-closure bug - but it does need the RxJS-to-signal
  * bridge, because the router is still Observable-based.
  *
  * On data fetching React is ahead: TanStack Query gives caching and
@@ -108,7 +108,7 @@ import { formatMoney } from '../core/formatting';
 
               @for (department of departments(); track department.id) {
                 <optgroup [label]="department.name">
-                  <!-- The department itself stays selectable — the server rolls its children up, so
+                  <!-- The department itself stays selectable - the server rolls its children up, so
                        "everything in Clothing" is a real and useful query. -->
                   <option [value]="department.slug">
                     All {{ department.name.toLowerCase() }} ({{ department.productCount }})
@@ -164,8 +164,8 @@ import { formatMoney } from '../core/formatting';
           <div class="field">
             <label for="sort">Sort by</label>
             <select id="sort" class="input" [value]="sortValue()" (change)="onSort($event)">
-              <option value="name:asc">Name (A–Z)</option>
-              <option value="name:desc">Name (Z–A)</option>
+              <option value="name:asc">Name (A-Z)</option>
+              <option value="name:desc">Name (Z-A)</option>
               <option value="price:asc">Price (low to high)</option>
               <option value="price:desc">Price (high to low)</option>
               <option value="brand:asc">Brand</option>
@@ -191,14 +191,14 @@ import { formatMoney } from '../core/formatting';
       <div class="browse-layout">
         <!-- The taxonomy, laid out rather than folded into a dropdown.
 
-             A shopper who has not decided yet cannot browse a dropdown — it has to be opened, read
+             A shopper who has not decided yet cannot browse a dropdown - it has to be opened, read
              and closed again to see anything, and it shows one department at a time. This shows the
              whole shop at once: every department, what is inside it, and how many products each
              holds.
 
              They are real links, not click handlers. Middle-click opens a category in a new tab, the
              status bar shows where each one goes, and every one is an address that can be sent to
-             somebody else — none of which a button gives you. -->
+             somebody else - none of which a button gives you. -->
         <nav class="category-rail" aria-label="Categories">
           <h2 class="category-rail__title">Categories</h2>
 

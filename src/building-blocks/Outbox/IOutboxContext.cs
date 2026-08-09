@@ -13,7 +13,7 @@ namespace ECommerce.Outbox;
 /// </para>
 /// <para>
 /// Note that <see cref="OutboxMessages"/> is a normal <see cref="DbSet{TEntity}"/> on the service's own
-/// context — that is the point. The outbox rows live in the <i>same database</i> as the business data,
+/// context - that is the point. The outbox rows live in the <i>same database</i> as the business data,
 /// which is what makes writing both in one transaction possible. An outbox in its own database would be
 /// a dual write again, wearing a different hat.
 /// </para>

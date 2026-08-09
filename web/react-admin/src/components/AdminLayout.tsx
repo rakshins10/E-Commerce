@@ -12,7 +12,7 @@ import type { Permission } from '../lib/permissions';
  * ---
  * **Declared as data, not as a wall of `{can(x) && <NavLink/>}`.** With six items the conditional
  * version is already hard to scan, and it is the shape where somebody eventually adds an item and
- * forgets the guard — producing a link that leads straight to a 403.
+ * forgets the guard - producing a link that leads straight to a 403.
  *
  * Keeping the permission next to the label means the two cannot drift apart, and the nav's entire
  * authorization surface is readable in one glance.
@@ -32,7 +32,7 @@ const NAVIGATION: readonly { to: string; label: string; permission: Permission }
  * ---
  * **Different roles see genuinely different navigation.** A support agent signing in sees Orders,
  * Inventory and Users; an order manager sees Orders and Inventory but no Users; an administrator sees
- * everything. Same application, same build — the token decides.
+ * everything. Same application, same build - the token decides.
  *
  * That is the practical payoff of guarding on permissions rather than roles: adding a permission to a
  * composite in Keycloak changes what people see with **no deployment**.
@@ -110,7 +110,7 @@ export function AdminLayout() {
       <footer className="app-footer">
         <div className="container">
           <p style={{ margin: 0 }}>
-            Back office — React. The Angular back office at <code>:4201</code> is functionally
+            Back office - React. The Angular back office at <code>:4201</code> is functionally
             identical.
           </p>
         </div>

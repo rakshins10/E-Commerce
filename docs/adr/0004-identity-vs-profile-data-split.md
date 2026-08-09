@@ -17,12 +17,12 @@ Keycloak can technically store all of it. It has user attributes, and those attr
 token claims. Many teams do exactly this and regret it. Equally, we could keep a full user table in our own
 service including credentials, which is the mistake Keycloak exists to prevent.
 
-The two datasets look similar — they are both "about the user" — which is precisely why the boundary needs
+The two datasets look similar - they are both "about the user" - which is precisely why the boundary needs
 to be argued rather than assumed.
 
 ## Options considered
 
-### Option A — Everything in Keycloak user attributes
+### Option A - Everything in Keycloak user attributes
 One store, no synchronisation, no join key to manage. Attributes are queryable through the Admin API and
 can be mapped into claims.
 
@@ -39,15 +39,15 @@ Where it breaks down:
 - **Wrong lifecycle.** GDPR erasure of marketing preferences and deactivation of credentials are different
   operations with different rules; conflating them makes both harder.
 
-### Option B — Everything in our own service, including credentials
+### Option B - Everything in our own service, including credentials
 Full control, one model, easy to query and validate.
 
 Rejected outright: it reintroduces password hashing, credential-stuffing defence, MFA, session management,
-token signing and rotation, and account recovery — the entire class of problems delegated in
+token signing and rotation, and account recovery - the entire class of problems delegated in
 [ADR-0005](0005-keycloak-as-identity-provider.md), and the class with the worst consequences when done
 slightly wrong.
 
-### Option C — Split by responsibility, joined on `sub`
+### Option C - Split by responsibility, joined on `sub`
 Keycloak owns authentication and authorisation data. A `user-profile` service owns everything else, keyed by
 the Keycloak `sub` claim.
 
@@ -56,14 +56,14 @@ the Keycloak `sub` claim.
 **Split the data by responsibility. Keycloak answers "who are you, and what may you do". The User Profile
 service answers "what do we know about you". The `sub` claim is the only join key.**
 
-The split is not arbitrary — the two datasets differ on every axis that matters:
+The split is not arbitrary - the two datasets differ on every axis that matters:
 
 | | Identity data (Keycloak) | Profile data (User Profile) |
 |---|---|---|
 | Changes | rarely; security-sensitive | often; user-driven, self-service |
 | Read by | the auth layer, on every request | the storefront, per page |
 | Consequence of corruption | account takeover | wrong theme |
-| Belongs in the token | yes — `sub`, roles, permissions | **no** — it would bloat every request |
+| Belongs in the token | yes - `sub`, roles, permissions | **no** - it would bloat every request |
 | Regulatory character | credentials; auditable, retained | personal data; erasable under GDPR |
 | Portability | tied to the IdP | tied to the business |
 | Modelling needs | fixed, standardised (OIDC) | rich, evolving, validated |
@@ -85,11 +85,11 @@ Two reasons, in order of importance:
 
 1. **A slow or failed profile service must never block a login.** Putting a call to our service inside the
    authentication path makes authentication only as available as the least available thing it touches.
-2. It keeps the dependency pointing the right way — Keycloak knows nothing about us.
+2. It keeps the dependency pointing the right way - Keycloak knows nothing about us.
 
 The profile is created lazily and idempotently: the first request carrying an unrecognised `sub` triggers
 provisioning, and re-provisioning the same `sub` is a no-op. Idempotency is required because the trigger may
-fire more than once — see [ADR-0010](0010-transactional-outbox.md) on at-least-once delivery.
+fire more than once - see [ADR-0010](0010-transactional-outbox.md) on at-least-once delivery.
 
 ## Consequences
 
@@ -110,7 +110,7 @@ fire more than once — see [ADR-0010](0010-transactional-outbox.md) on at-least
 - **A referential gap.** A user deleted in Keycloak leaves an orphaned profile unless something reconciles
   it. Handled by consuming Keycloak's user-deletion event; that path must be tested, because it is exactly
   the kind of edge that rots silently.
-- **Eventual consistency on provisioning.** There is a window — milliseconds in practice — where a valid
+- **Eventual consistency on provisioning.** There is a window - milliseconds in practice - where a valid
   token exists but the profile does not. Every profile read must therefore tolerate "not yet provisioned"
   rather than assuming presence.
 - **The join is manual.** No foreign key spans the two stores; the discipline is enforced by convention and
@@ -119,11 +119,11 @@ fire more than once — see [ADR-0010](0010-transactional-outbox.md) on at-least
 ### What we will have to revisit
 If admin screens grow to need heavy cross-cutting queries over identity *and* profile data together
 ("all disabled users with an open order"), the aggregation cost in Back-office will start to hurt. The
-answer then is a read model in Back-office fed by events from both sides — not moving profile data into
+answer then is a read model in Back-office fed by events from both sides - not moving profile data into
 Keycloak.
 
 ## References
 
-- [domain/bounded-contexts.md — Customer Profile](../domain/bounded-contexts.md#customer-profile)
-- [ADR-0005](0005-keycloak-as-identity-provider.md) — the decision that makes this one necessary
-- [authorization-model.md](../authorization-model.md) — what actually is in the token
+- [domain/bounded-contexts.md - Customer Profile](../domain/bounded-contexts.md#customer-profile)
+- [ADR-0005](0005-keycloak-as-identity-provider.md) - the decision that makes this one necessary
+- [authorization-model.md](../authorization-model.md) - what actually is in the token

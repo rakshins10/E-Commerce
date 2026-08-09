@@ -1,4 +1,4 @@
-# ADR-0020 — A product is a style; a variant is what you actually buy
+# ADR-0020 - A product is a style; a variant is what you actually buy
 
 **Status:** Accepted · **Date:** 2026-08-01 · **Supersedes:** nothing
 
@@ -11,7 +11,7 @@ That is enough to demonstrate browse-and-buy, and it is what the first nine phas
 
 It cannot express a t-shirt.
 
-A t-shirt is one product with a name, a description, a price and a photograph — and eight different things
+A t-shirt is one product with a name, a description, a price and a photograph - and eight different things
 you can put in a basket, because it comes in four sizes and two colours, and the warehouse has three of the
 medium navy and none of the small. A shop that cannot say *"only 2 left in Medium"* is not modelling
 clothing; it is modelling a mug.
@@ -29,22 +29,22 @@ Three requirements arrived together:
 ### 1. `ProductVariant` is a child entity of `Product`, and **the SKU moves to it**
 
 ```
-Product     — the style:  name, description, price, image, category, brand, audience
-ProductVariant — the unit: SKU, size, colour, stock
+Product     - the style:  name, description, price, image, category, brand, audience
+ProductVariant - the unit: SKU, size, colour, stock
 ```
 
 `Product.Sku` stays, and is reinterpreted as the **style code** (`NW-TS-001`). Every variant derives its own
-SKU from it (`NW-TS-001-M-NAV`). A product with no size and no colour axis still has exactly one variant —
+SKU from it (`NW-TS-001-M-NAV`). A product with no size and no colour axis still has exactly one variant -
 there is no special case for "simple" products, because a special case is a second code path that only the
 simple products test.
 
 **Why the SKU is the thing that moves.** SKU is already the integration key between Catalog, Inventory,
-Basket and Ordering — it is the one string that crosses those boundaries. Inventory keys `StockItem` on a
+Basket and Ordering - it is the one string that crosses those boundaries. Inventory keys `StockItem` on a
 SKU string. Ordering snapshots a SKU onto an order line. Basket carries a SKU.
 
 So moving the SKU down to the variant means **every downstream service is already correct**. Inventory does
 not learn what a size is; it gets more rows. Ordering does not learn what a colour is; the SKU it records
-just happens to identify one. That is not luck — it is the payoff for having drawn the context boundary at
+just happens to identify one. That is not luck - it is the payoff for having drawn the context boundary at
 the SKU in the first place, and it is the single strongest argument in this document that the boundaries
 were right.
 
@@ -52,7 +52,7 @@ were right.
 
 `Product.Audience` is `Men`, `Women` or `Unisex`.
 
-The obvious alternative is to restructure the taxonomy — `Men > T-shirts`, `Women > T-shirts` — which is
+The obvious alternative is to restructure the taxonomy - `Men > T-shirts`, `Women > T-shirts` - which is
 what the navigation of most clothing retailers *looks* like. It is not what they store. A URL like
 `/men-tshirts` is an **audience × category** facet combination, not a node in a tree, and modelling it as a
 tree means every category exists two or three times, a product cannot be unisex without being duplicated,
@@ -63,7 +63,7 @@ are two fields.
 
 ### 3. Stock is per variant, and the product-level figure is a **sum**
 
-`Product.StockOnHand` becomes derived — the total across active variants — and stays exactly what it always
+`Product.StockOnHand` becomes derived - the total across active variants - and stays exactly what it always
 was: a cached, eventually-consistent display figure that Inventory owns the truth of (ADR unchanged, see
 `docs/services/catalog.md`). A product card says "In stock"; a product page says "Only 2 left" **for the
 size and colour you selected**, because that is the number that decides whether you can buy.
@@ -94,13 +94,13 @@ deliberately: the alternative is a nullable relationship and two rendering paths
 one that would rot.
 
 **The unique index on `Product.Sku` no longer means what it used to.** It now guarantees unique *style*
-codes; the constraint that matters commercially — unique sellable SKUs — moves to `product_variants.sku`.
+codes; the constraint that matters commercially - unique sellable SKUs - moves to `product_variants.sku`.
 Both indexes exist. Anyone reading only one of them will draw the wrong conclusion, which is why this
 paragraph is here.
 
 **Migration is not free for existing orders.** Orders placed before this change reference style codes like
-`NW-TS-001`, which are no longer sellable SKUs. Those orders remain readable — the line snapshots its own
-name and price — but a "buy it again" feature would have to resolve a style code to a variant. Nothing
+`NW-TS-001`, which are no longer sellable SKUs. Those orders remain readable - the line snapshots its own
+name and price - but a "buy it again" feature would have to resolve a style code to a variant. Nothing
 implements that yet, and this is the reason it would not be trivial.
 
 ---
@@ -110,7 +110,7 @@ implements that yet, and this is the reason it would not be trivial.
 **Options as free text on the product** (`sizes: "S,M,L"`). No per-size stock, which fails the actual
 requirement. It also puts a list in a string column, which the database cannot index, constrain or count.
 
-**A generic attribute bag** (`variant_attributes` as key/value rows, or JSONB). Genuinely more flexible —
+**A generic attribute bag** (`variant_attributes` as key/value rows, or JSONB). Genuinely more flexible -
 it would take "material" or "length" without a migration. Rejected because flexibility here is a cost:
 every query becomes a pivot, no column can be typed, and the UI has to render attributes it cannot
 anticipate. Size and colour are the two axes this catalogue has; when a third arrives, adding a column is a
@@ -120,4 +120,4 @@ morning's work and the schema still describes the domain.
 they blur the one distinction that matters: a style is not sellable and a variant is not browsable. Two
 concepts modelled as one type means every query needs a flag to say which kind it is dealing with.
 
-**Audience as a category** — argued above.
+**Audience as a category** - argued above.

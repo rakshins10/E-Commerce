@@ -3,7 +3,7 @@ import { expect, request, test, type Page } from '@playwright/test';
 /**
  * Catalogue management.
  *
- * Written ONCE and run against both admin panels — :3001 React, :4201 Angular.
+ * Written ONCE and run against both admin panels - :3001 React, :4201 Angular.
  *
  * These specs create real products, so each uses a **unique SKU derived from the framework under
  * test**. Two apps running the same spec against one shared database would otherwise collide on the
@@ -11,7 +11,7 @@ import { expect, request, test, type Page } from '@playwright/test';
  *
  * ---
  * **They also withdraw everything they create.** The storefront specs assert on the exact seeded
- * catalogue — "12 products", "3 products match hoodie" — so a product left behind by this suite breaks
+ * catalogue - "12 products", "3 products match hoodie" - so a product left behind by this suite breaks
  * nine assertions in another one. That happened on the first run, and the failures pointed at the
  * storefront rather than at the suite that had actually caused them.
  *
@@ -202,7 +202,7 @@ test.describe('catalogue', () => {
    *
    * `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a field
    * the server sets to NULL. The Angular admin's form had no image control at all, so every run of
-   * the spec above quietly wiped the artwork off NW-TS-001 — and the only symptom was a placeholder
+   * the spec above quietly wiped the artwork off NW-TS-001 - and the only symptom was a placeholder
    * on a storefront page that no admin spec looks at. It survived because "a product can be edited"
    * asserted that saving *succeeded*, never that saving *preserved anything*.
    *

@@ -12,7 +12,7 @@
 #  Built and deployed by .github/workflows/docs.yml.
 # =============================================================================
 
-site_name: E-Commerce — .NET Microservices Reference
+site_name: E-Commerce - .NET Microservices Reference
 site_description: >-
   A production-grade reference platform demonstrating every architectural concept in Microsoft's
   .NET Microservices guide, with the reasoning behind each decision written down.

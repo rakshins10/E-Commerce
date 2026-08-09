@@ -37,7 +37,7 @@ export function ProductDetailPage() {
    * Which size and colour is chosen.
    *
    * `null` means "not chosen yet" for a product that HAS that axis, and also "this product has no such
-   * axis" — the two collapse deliberately, because a mug's variants genuinely have `size: null` and
+   * axis" - the two collapse deliberately, because a mug's variants genuinely have `size: null` and
    * matching on null is then correct rather than a special case.
    */
   const [size, setSize] = useState<string | null>(null);
@@ -206,7 +206,7 @@ export function ProductDetailPage() {
 
           {/* --- Size ------------------------------------------------------------------------
               A real radio group. Arrow-key navigation, one tab stop, and "Size, Medium, 2 of 4"
-              announced by a screen reader — all of which a div with a click handler would have to
+              announced by a screen reader - all of which a div with a click handler would have to
               reimplement, and usually does not.
 
               A sold-out size is disabled AND struck through AND named in the stock line below.
@@ -237,7 +237,7 @@ export function ProductDetailPage() {
                       />
                       <label className="option__label" htmlFor={`size-${option}`}>
                         {option}
-                        {!available && <span className="visually-hidden"> — sold out</span>}
+                        {!available && <span className="visually-hidden">, sold out</span>}
                       </label>
                     </span>
                   );
@@ -276,7 +276,7 @@ export function ProductDetailPage() {
                           aria-hidden="true"
                         />
                         {option.name}
-                        {!available && <span className="visually-hidden"> — sold out</span>}
+                        {!available && <span className="visually-hidden">, sold out</span>}
                       </label>
                     </span>
                   );

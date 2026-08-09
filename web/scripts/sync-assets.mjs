@@ -4,7 +4,7 @@
  *
  * ---
  * **Why a copy rather than a shared import.** [ADR-0018](../../docs/adr/0018-self-contained-frontends.md)
- * says each app owns its own code, and that rule has earned its keep — but it is about *logic*, not
+ * says each app owns its own code, and that rule has earned its keep - but it is about *logic*, not
  * about content. Four checked-in copies of the same thirteen SVGs would drift the first time somebody
  * corrected one, and nothing would catch it.
  *

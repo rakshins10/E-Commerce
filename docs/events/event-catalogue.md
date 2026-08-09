@@ -1,7 +1,7 @@
 # Integration event catalogue
 
-> **Related:** [ADR-0016 — RabbitMQ behind IEventBus](../adr/0016-rabbitmq-behind-ieventbus.md) ·
-> [ADR-0010 — Transactional Outbox](../adr/0010-transactional-outbox.md)
+> **Related:** [ADR-0016 - RabbitMQ behind IEventBus](../adr/0016-rabbitmq-behind-ieventbus.md) ·
+> [ADR-0010 - Transactional Outbox](../adr/0010-transactional-outbox.md)
 
 Every integration event in the system: publisher, subscribers, payload, and failure behaviour.
 
@@ -13,11 +13,11 @@ here does not exist as far as other teams are concerned.
 
 | Rule | Why |
 |------|-----|
-| **Past tense, always** — `OrderConfirmed`, never `ConfirmOrder` | An event reports something that has happened and cannot be refused. A subscriber may react; it may not veto. |
+| **Past tense, always** - `OrderConfirmed`, never `ConfirmOrder` | An event reports something that has happened and cannot be refused. A subscriber may react; it may not veto. |
 | **Primitives and simple DTOs only** | Serialising a domain type exports your internal model as a public contract, so refactoring it breaks a neighbour. |
-| **Additive changes only** | Add optional fields; never remove or repurpose one. Consumers tolerate unknown fields, so additive change needs no coordinated release — which is what makes independent deployability real. |
+| **Additive changes only** | Add optional fields; never remove or repurpose one. Consumers tolerate unknown fields, so additive change needs no coordinated release - which is what makes independent deployability real. |
 | **Delivery is at-least-once** | Every consumer must be idempotent. Not optional: a duplicate `OrderPaymentSucceeded` handled twice charges a customer twice. |
-| **No ordering guarantee** | Concurrent outbox dispatchers can publish out of order. Where order matters, the consumer enforces it with a version number — it is never assumed from the transport. |
+| **No ordering guarantee** | Concurrent outbox dispatchers can publish out of order. Where order matters, the consumer enforces it with a version number - it is never assumed from the transport. |
 | **Published via the outbox** | Never directly from a handler. See [ADR-0010](../adr/0010-transactional-outbox.md). |
 
 ## Template
@@ -80,8 +80,8 @@ sequenceDiagram
     end
 ```
 
-**Note the two kinds of arrow.** The saga sends **commands** — imperative, one recipient, may be refused —
-and consumes **events** — past tense, broadcast, cannot be refused. They travel over the same broker and
+**Note the two kinds of arrow.** The saga sends **commands** - imperative, one recipient, may be refused -
+and consumes **events** - past tense, broadcast, cannot be refused. They travel over the same broker and
 share a base class, so nothing enforces the distinction; keeping it is a discipline. Conflating them is how
 an "event" quietly acquires exactly one required listener and stops being an event at all.
 
@@ -105,7 +105,7 @@ an "event" quietly acquires exactly one required listener and stops being an eve
 | `Lines` | array | `ProductId`, `Sku`, `ProductName`, `Quantity`, `UnitPrice` |
 
 **Why it carries the lines.** An event holding only an order id would force Inventory to call back to
-Ordering — reintroducing the runtime coupling that asynchronous messaging exists to remove, and meaning
+Ordering - reintroducing the runtime coupling that asynchronous messaging exists to remove, and meaning
 Ordering being down stops Inventory working.
 
 **Idempotency:** the saga uses the order id as its primary key, so a duplicate hits the unique constraint
@@ -126,12 +126,12 @@ saga starts, so it sits in `Submitted` forever. The `/api/saga/stuck` query is w
 - **Payload:** `OrderId`, `OrderNumber`, `BuyerId`, `Total`, `Currency`
 
 **Idempotency:** `Order.MarkAsPaid` returns quietly if the order is already paid, so no second event is
-raised. Notification deduplicates on the message id — which matters here more than anywhere, because an
+raised. Notification deduplicates on the message id - which matters here more than anywhere, because an
 email cannot be un-sent.
 
 ### `OrderShippedIntegrationEvent`
 
-- **Publisher:** Ordering · **Subscribers:** Inventory (ships the reservation — the only place `on_hand`
+- **Publisher:** Ordering · **Subscribers:** Inventory (ships the reservation - the only place `on_hand`
   falls) · Notification (dispatch notice)
 - **Payload:** `OrderId`, `OrderNumber`, `BuyerId`
 
@@ -158,7 +158,7 @@ redeployed. An unknown string falls into a default branch; an unknown enum value
 failure. See [ADR-0019](../adr/0019-shared-integration-event-contracts.md).
 
 **Why `StockWasReserved` is on the event.** Releasing stock that was never reserved inflates the available
-count — a corruption in the *opposite* direction from the failure being fixed, and one nobody notices until
+count - a corruption in the *opposite* direction from the failure being fixed, and one nobody notices until
 a stock take disagrees.
 
 ---
@@ -182,7 +182,7 @@ finds the existing reservation and returns without reserving twice.
 items.
 
 **All or nothing:** a ten-line order where one item is unavailable reserves *nothing*. Enforced by the
-transaction — the change tracker is cleared before anything reaches the database, so no compensating action
+transaction - the change tracker is cleared before anything reaches the database, so no compensating action
 is needed.
 
 ### `StockReleasedIntegrationEvent`
@@ -202,7 +202,7 @@ indistinguishable from nothing having happened.**
 - **Publisher:** Payment · **Subscribers:** Ordering Saga
 - **Payload:** `OrderId`, `OrderNumber`, `PaymentReference`, `Amount`, `Currency`
 
-**Idempotency:** a unique index on `payments.order_id`. This is the one that protects real money —
+**Idempotency:** a unique index on `payments.order_id`. This is the one that protects real money -
 charging a customer twice is the worst bug this system could have, so the database backs up the in-code
 check for the case where two replicas handle duplicate deliveries concurrently.
 
@@ -216,7 +216,7 @@ check for the case where two replicas handle duplicate deliveries concurrently.
 - **Publisher:** Payment · **Subscribers:** none yet
 - **Payload:** `OrderId`, `OrderNumber`, `PaymentReference`
 
-Not currently reached — payment is the last step that can fail. Declared so that adding a step afterwards
+Not currently reached - payment is the last step that can fail. Declared so that adding a step afterwards
 has a complete compensation story rather than an aspirational one.
 
 ---
@@ -228,13 +228,13 @@ Commands, not events. Imperative, addressed to one service, and they may fail me
 | Command | To | Purpose |
 |---------|-----|---------|
 | `ReserveStockCommand` | Inventory | Reserve the order's lines |
-| `ReleaseStockCommand` | Inventory | **Compensation** — put reserved stock back |
+| `ReleaseStockCommand` | Inventory | **Compensation** - put reserved stock back |
 | `RequestPaymentCommand` | Payment | Take the money |
-| `RefundPaymentCommand` | Payment | **Compensation** — give it back |
+| `RefundPaymentCommand` | Payment | **Compensation** - give it back |
 | `AdvanceOrderCommand` | Ordering | Apply a state transition (`ConfirmStock`, `MarkPaid`, `Cancel`) |
 
 **`AdvanceOrderCommand` carries a discriminator rather than being four separate commands.** The saga's job
-is to sequence transitions, and the aggregate already refuses any that are illegal — so four
+is to sequence transitions, and the aggregate already refuses any that are illegal - so four
 nearly-identical records and four handlers doing the same dispatch would be repetition without benefit.
 
 **The saga decides *when*; the aggregate decides *whether*.** `Order.MarkAsPaid` refuses if the order is

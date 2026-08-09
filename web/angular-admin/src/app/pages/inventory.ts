@@ -32,7 +32,7 @@ import type { StockItem } from '../core/admin-types';
 
         <p class="muted small">
           On hand is what is physically on the shelf. Reserved is spoken for by an order that has not
-          shipped — still on the shelf. Available is what a new order may take.
+          shipped - still on the shelf. Available is what a new order may take.
         </p>
 
         @if (adjusting(); as sku) {

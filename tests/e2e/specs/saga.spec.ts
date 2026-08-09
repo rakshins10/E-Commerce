@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
  * Written ONCE and run against both storefronts.
  *
  * These are the slowest specs in the suite, and unavoidably so: they wait for real messages to travel
- * through RabbitMQ and be handled by three services. That is the behaviour under test — an order that
+ * through RabbitMQ and be handled by three services. That is the behaviour under test - an order that
  * advanced instantly would mean the saga was not involved.
  */
 
@@ -44,7 +44,7 @@ async function emptyBasket(page: Page) {
  *
  * A size is deliberately NOT pre-selected: the product page leaves "Add to basket" disabled until one
  * is picked, because defaulting a size means somebody buys a Small because it happened to be first.
- * (A colour IS pre-selected — the photograph already shows one.) So every spec that buys clothing has
+ * (A colour IS pre-selected - the photograph already shows one.) So every spec that buys clothing has
  * to make the choice a customer would.
  *
  * Picks the first size that is not sold out. Sold-out sizes render disabled, and clicking a disabled
@@ -87,7 +87,7 @@ async function orderProduct(page: Page, search: string, recipient: string): Prom
   await expect(page.getByRole('status')).toContainText('product');
 
   // Scoped to the product list by name. "The first h3 on the page" stopped meaning "the first
-  // product" when the products page gained a category rail — see the note in shopping.spec.ts.
+  // product" when the products page gained a category rail - see the note in shopping.spec.ts.
   await page
     .getByRole('list', { name: 'Products' })
     .getByRole('heading', { level: 3 })

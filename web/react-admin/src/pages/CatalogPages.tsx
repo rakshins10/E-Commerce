@@ -235,7 +235,7 @@ const EMPTY = {
  * Add or edit a product.
  *
  * ---
- * **Price is handled separately when editing.** Creating a product sets its price in the same request —
+ * **Price is handled separately when editing.** Creating a product sets its price in the same request -
  * there is nothing to override yet. Changing an existing price is a distinct action with a distinct
  * permission, so it gets its own field and its own button, and somebody with `catalog:write` but not
  * `price:override` sees the field disabled rather than the whole form.
@@ -251,7 +251,7 @@ export function ProductEditPage() {
   /**
    * The form, as one object.
    *
-   * Every handler below uses the FUNCTIONAL updater — `setForm((current) => …)` — never
+   * Every handler below uses the FUNCTIONAL updater - `setForm((current) => …)` - never
    * `setForm({ ...form, x })`. The second form captures `form` from the render it was created in, so
    * a value written by an effect between two keystrokes is silently discarded by the next one.
    *
@@ -373,7 +373,7 @@ export function ProductEditPage() {
 
   const taxonomy = taxonomyQuery.data;
 
-  /** Read-only here — stock is Inventory's to change, and options are fixed when a variant is made. */
+  /** Read-only here - stock is Inventory's to change, and options are fixed when a variant is made. */
   const variants = productQuery.data?.variants ?? [];
 
   // Requires the taxonomy too, not just the text fields. Belt and braces after the stale-closure bug
@@ -424,7 +424,7 @@ export function ProductEditPage() {
           />
           {!isNew && (
             <p className="muted small">
-              A SKU cannot be changed — historic orders reference it. Withdraw this product and add a
+              A SKU cannot be changed - historic orders reference it. Withdraw this product and add a
               new one instead.
             </p>
           )}
@@ -535,7 +535,7 @@ export function ProductEditPage() {
             <option value="Women">Women</option>
           </select>
           <p className="muted small">
-            An attribute, not a category — the taxonomy says what a thing is, this says who it is for.
+            An attribute, not a category - the taxonomy says what a thing is, this says who it is for.
           </p>
         </div>
 
@@ -577,7 +577,7 @@ export function ProductEditPage() {
 
           <p className="muted small">
             What a customer actually buys. Each row has its own SKU, and Inventory holds stock against
-            that SKU rather than against the product — which is why that service needed no schema change
+            that SKU rather than against the product - which is why that service needed no schema change
             when sizes arrived.
           </p>
 
@@ -597,7 +597,7 @@ export function ProductEditPage() {
               {variants.map((variant) => (
                 <tr key={variant.id}>
                   <th scope="row">{variant.sku}</th>
-                  <td>{variant.size ?? '—'}</td>
+                  <td>{variant.size ?? '-'}</td>
                   <td>
                     {variant.colourName ? (
                       <span className="cell-with-thumb">
@@ -609,7 +609,7 @@ export function ProductEditPage() {
                         {variant.colourName}
                       </span>
                     ) : (
-                      '—'
+                      '-'
                     )}
                   </td>
                   <td style={{ textAlign: 'right' }}>{variant.stockOnHand}</td>

@@ -4,7 +4,7 @@ import { expect, test, type ConsoleMessage } from '@playwright/test';
  * Sign-in, sign-out, and permission rendering.
  *
  * Written ONCE and run against both storefronts. Every selector is a role and
- * an accessible name — never a CSS class or a test id — because those differ
+ * an accessible name - never a CSS class or a test id - because those differ
  * between two independent implementations. That constraint is what drags
  * accessibility up as a side effect: a div-soup implementation cannot pass.
  *
@@ -25,14 +25,14 @@ function collectFailures(page: import('@playwright/test').Page) {
   });
   page.on('pageerror', (error) => messages.push(`pageerror: ${error.message}`));
   page.on('requestfailed', (request) =>
-    messages.push(`requestfailed: ${request.method()} ${request.url()} — ${request.failure()?.errorText}`),
+    messages.push(`requestfailed: ${request.method()} ${request.url()} - ${request.failure()?.errorText}`),
   );
 
   return messages;
 }
 
 /**
- * Drives the Keycloak login form. Identical for both apps — it is the same realm.
+ * Drives the Keycloak login form. Identical for both apps - it is the same realm.
  *
  * Scoped to the `banner` landmark because the page deliberately has two "Sign in"
  * buttons (the header and the call-to-action card). Scoping by landmark rather

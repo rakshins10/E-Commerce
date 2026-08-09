@@ -192,7 +192,7 @@ export function OrderDetailPage() {
         <h2 id="status-heading">Status</h2>
         <p className="lede" role="status">
           {order.status}
-          {order.cancellationReason ? ` — ${order.cancellationReason}` : ''}
+          {order.cancellationReason ? ` - ${order.cancellationReason}` : ''}
         </p>
 
         {/* Each action is gated on its own permission AND on the aggregate's own answer. The order
@@ -250,7 +250,7 @@ export function OrderDetailPage() {
           <ol className="plain-list">
             {sagaQuery.data.steps.map((step, index) => (
               <li key={`${step.name}-${index}`}>
-                <strong>{step.name}</strong> — {step.detail}
+                <strong>{step.name}</strong> - {step.detail}
                 <span className="muted small"> · {formatDateTime(step.occurredAt)}</span>
               </li>
             ))}
@@ -377,7 +377,7 @@ export function InventoryPage() {
 
       <p className="muted small">
         On hand is what is physically on the shelf. Reserved is spoken for by an order that has not
-        shipped — still on the shelf. Available is what a new order may take.
+        shipped - still on the shelf. Available is what a new order may take.
       </p>
 
       {adjusting && (
@@ -474,7 +474,7 @@ export function UsersPage() {
       isRowHeader: true,
       render: (row) => <Link to={`/users/${row.id}`}>{row.username}</Link>,
     },
-    { header: 'Email', render: (row) => row.email ?? '—' },
+    { header: 'Email', render: (row) => row.email ?? '-' },
     {
       header: 'Status',
       render: (row) => (
@@ -665,7 +665,7 @@ export function AuditPage() {
     { header: 'Who', render: (row) => row.actorName },
     { header: 'Did', render: (row) => row.action },
     { header: 'To', render: (row) => row.target },
-    { header: 'Detail', render: (row) => row.detail ?? '—' },
+    { header: 'Detail', render: (row) => row.detail ?? '-' },
   ];
 
   return (
@@ -673,7 +673,7 @@ export function AuditPage() {
       <h1 className="page-title">Audit log</h1>
 
       <p className="muted small">
-        Append-only. Entries record human decisions — an order the saga cancelled is not audited, an
+        Append-only. Entries record human decisions - an order the saga cancelled is not audited, an
         order a manager cancelled is.
       </p>
 

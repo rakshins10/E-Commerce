@@ -16,7 +16,7 @@
 ARG DOTNET_VERSION=10.0
 
 # -----------------------------------------------------------------------------
-#  Stage 1 — restore
+#  Stage 1 - restore
 # -----------------------------------------------------------------------------
 #  Split from the build stage so that a source-only change reuses the cached
 #  restore layer. Restore is the slow part; source changes are the frequent part.
@@ -46,7 +46,7 @@ ARG PROJECT_PATH
 RUN dotnet restore "${PROJECT_PATH}"
 
 # -----------------------------------------------------------------------------
-#  Stage 2 — publish
+#  Stage 2 - publish
 # -----------------------------------------------------------------------------
 FROM restore AS build
 WORKDIR /src
@@ -60,7 +60,7 @@ RUN dotnet publish "${PROJECT_PATH}" \
     -o /app/publish
 
 # -----------------------------------------------------------------------------
-#  Stage 3 — runtime
+#  Stage 3 - runtime
 # -----------------------------------------------------------------------------
 #  The aspnet image, not the sdk image: ~110 MB instead of ~850 MB, and it
 #  contains no compiler, no NuGet cache and no source. Smaller is faster to pull,

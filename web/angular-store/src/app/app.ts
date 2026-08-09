@@ -9,7 +9,7 @@ import { ThemeToggle } from './theme-toggle';
 /**
  * The application shell: header, navigation, sign-in state, footer.
  *
- * Visually identical to the React `AppLayout`. Structurally the same too —
+ * Visually identical to the React `AppLayout`. Structurally the same too -
  * a persistent shell around a routed outlet.
  *
  * ---
@@ -18,7 +18,7 @@ import { ThemeToggle } from './theme-toggle';
  * React wraps routes in a layout element and renders `<Outlet />`; Angular puts
  * `<router-outlet>` in the root component. React's `NavLink` sets an active
  * class via a render-prop; Angular's `routerLinkActive` is a directive, and
- * `ariaCurrentWhenActive` sets `aria-current="page"` declaratively — which is
+ * `ariaCurrentWhenActive` sets `aria-current="page"` declaratively - which is
  * genuinely tidier, because the accessible state and the visual state come from
  * the same directive and cannot disagree.
  *
@@ -33,7 +33,7 @@ import { ThemeToggle } from './theme-toggle';
  * the same cache entry and one mutation updates both. Angular reads a `computed` off the singleton
  * `BasketService` signal, so both consumers read the same signal and one `set` updates both.
  *
- * Different mechanisms, same rule: **one source of truth, derived in two places** — never a count kept
+ * Different mechanisms, same rule: **one source of truth, derived in two places** - never a count kept
  * in its own piece of state, which is how a header ends up showing 2 while the basket shows 3.
  */
 @Component({
@@ -48,12 +48,12 @@ export class App {
 
   protected readonly itemCount = this.basketService.itemCount;
 
-  /** "Basket, 1 item" rather than "Basket, 1 items" — the count is read aloud, so it has to read. */
+  /** "Basket, 1 item" rather than "Basket, 1 items" - the count is read aloud, so it has to read. */
   protected readonly basketLabel = () =>
     this.itemCount() === 1 ? 'Basket, 1 item' : `Basket, ${this.itemCount()} items`;
 
   constructor() {
-    // Sign-in resolves after the shell has rendered, so the badge needs a load once it does — the
+    // Sign-in resolves after the shell has rendered, so the badge needs a load once it does - the
     // equivalent of React's `enabled: isAuthenticated`. The effect re-runs on sign-out too, where the
     // guard leaves the previous basket in place; navigating anywhere would 401 first anyway.
     effect(() => {

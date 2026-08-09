@@ -17,7 +17,7 @@ public static class DependencyInjection
     /// <param name="configuration">Configuration root, read for the <c>Outbox</c> section.</param>
     /// <param name="eventAssemblies">
     /// Assemblies to scan for integration events. Only types in these can ever be deserialised from the
-    /// outbox — see <see cref="IOutboxEventResolver"/> for why that restriction matters.
+    /// outbox - see <see cref="IOutboxEventResolver"/> for why that restriction matters.
     /// </param>
     public static IServiceCollection AddOutbox<TContext>(
         this IServiceCollection services,

@@ -2,12 +2,12 @@
 
 > **Bounded context:** Catalog (supporting) · **Port:** 5001 · **Store:** PostgreSQL
 > **Code:** [`src/services/catalog/ECommerce.Catalog.Api`](../../src/services/catalog/ECommerce.Catalog.Api/)
-> **Related:** [Bounded contexts](../domain/bounded-contexts.md#catalog) · [ADR-0012 — CQRS](../adr/0012-cqrs-with-mediatr.md)
+> **Related:** [Bounded contexts](../domain/bounded-contexts.md#catalog) · [ADR-0012 - CQRS](../adr/0012-cqrs-with-mediatr.md)
 
 ## Purpose
 
 Owns everything *merchandising* means: products, variants-by-SKU, categories, brands, descriptions, images,
-and **list prices**. It is the read-heavy front of the shop — browse traffic dwarfs every other service by
+and **list prices**. It is the read-heavy front of the shop - browse traffic dwarfs every other service by
 orders of magnitude.
 
 ### What it deliberately does not own
@@ -27,7 +27,7 @@ subscribing to Inventory's events (Phase 7).
 authoritative check happens when stock is *reserved* during checkout. The place you must be exactly right is
 the reservation, not the browse page.
 
-That is the whole lesson about choosing where eventual consistency is acceptable — same domain, both halves,
+That is the whole lesson about choosing where eventual consistency is acceptable - same domain, both halves,
 opposite answers.
 
 ---
@@ -35,7 +35,7 @@ opposite answers.
 ## Domain model
 
 Deliberately plain. Catalog is a **supporting** subdomain, so it gets entities with guarded constructors and
-nothing more — no aggregate roots, no domain events, no four-layer split. Compare `Ordering`, the **core**
+nothing more - no aggregate roots, no domain events, no four-layer split. Compare `Ordering`, the **core**
 subdomain, which gets the full DDD treatment.
 
 ```mermaid
@@ -87,7 +87,7 @@ erDiagram
 ### Schema decisions worth defending
 
 **`numeric(18,2)`, never `float`/`double`.** Binary floating point cannot represent `0.10` exactly, so money
-in a double accumulates rounding error — the classic "totals are off by a penny" bug.
+in a double accumulates rounding error - the classic "totals are off by a penny" bug.
 
 **`sku` is unique at the database**, not just in code. A uniqueness rule enforced only in application code is
 one that two concurrent requests can both pass.
@@ -98,7 +98,7 @@ opaque GUID in a query string is a small usability tax paid on every link anyone
 **Soft delete (`is_active`)**, not `DELETE`. Historic orders reference this SKU and must stay meaningful.
 
 **`snake_case` column names**, applied as a convention in `OnModelCreating` rather than per property. EF Core
-defaults to the .NET property name, and PostgreSQL folds unquoted identifiers to lower case — so
+defaults to the .NET property name, and PostgreSQL folds unquoted identifiers to lower case - so
 `StockOnHand` would need quoting in every hand-written query, and a missing quote gives
 `column p.stockonhand does not exist`.
 
@@ -107,7 +107,7 @@ defaults to the .NET property name, and PostgreSQL folds unquoted identifiers to
 ## Products and variants
 
 A **product** is a style: a name, a description, a price, a photograph, a category, a brand, and who it
-is sold to. A **variant** is what a customer actually buys — a specific size and colour, with its own SKU
+is sold to. A **variant** is what a customer actually buys - a specific size and colour, with its own SKU
 and its own stock. See [ADR-0020](../adr/0020-product-variants.md) for the argument and what it costs.
 
 ```
@@ -125,7 +125,7 @@ products                          product_variants
 conclusion, which is why both are named here.
 
 **Every product has at least one variant**, including one with neither a size nor a colour. There is no
-"simple product" path — a special case is a second code path that only the simple products exercise.
+"simple product" path - a special case is a second code path that only the simple products exercise.
 
 **`audience` is an attribute, not a branch of the category tree.** The taxonomy answers *what is this
 thing*; audience answers *who is it for*. They vary independently, so they are two fields. Modelling
@@ -135,7 +135,7 @@ both, and adding "Kids" doubles the tree again. It is stored as the enum's **nam
 
 ### Why this touched almost nothing downstream
 
-SKU was already the integration key between Catalog, Inventory, Basket and Ordering — the one string that
+SKU was already the integration key between Catalog, Inventory, Basket and Ordering - the one string that
 crosses those boundaries. Moving it from the product to the variant meant:
 
 | Service | Change needed |
@@ -149,7 +149,7 @@ That is the payoff for having drawn the boundary at the SKU rather than at the p
 ### Known gaps
 
 - **Nothing validates that a variant SKU belongs to its product at checkout.** A forged SKU fails at stock
-  reservation instead — the saga cancels the order and compensates — so it fails safe, but seconds later
+  reservation instead - the saga cancels the order and compensates - so it fails safe, but seconds later
   rather than immediately. Closing it means widening the Catalog pricing contract to return variants.
 - **Facet counts are not filtered by the current selection.** "Navy (2)" is a count across the whole
   catalogue, not "Navy, given that you have already chosen Medium". Doing that properly needs a query per
@@ -170,7 +170,7 @@ That is the payoff for having drawn the boundary at the SKU rather than at the p
 | Code | `Domain/`, `Infrastructure/` | [`Features/Products/ProductQueries.cs`](../../src/services/catalog/ECommerce.Catalog.Api/Features/Products/ProductQueries.cs) |
 
 **Why Dapper rather than `AsNoTracking()`.** `AsNoTracking()` removes the tracking cost but keeps you in the
-entity's shape, which quietly invites navigation properties added *for reads* — and those corrupt the write
+entity's shape, which quietly invites navigation properties added *for reads* - and those corrupt the write
 model. Hand-written SQL returning DTOs makes it structurally impossible for a query to touch a domain type.
 
 **The honest cost:** this SQL is not refactoring-safe. Rename a column and nothing breaks until a test runs.
@@ -181,11 +181,11 @@ That is precisely why the read side needs integration tests against a real datab
 Three things in the browse query that are easy to get wrong:
 
 **`ORDER BY` uses an allow-list.** `ORDER BY` cannot be parameterised, so a caller-supplied sort field
-concatenated into SQL is a direct injection route — one of the few places Dapper's parameterisation cannot
+concatenated into SQL is a direct injection route - one of the few places Dapper's parameterisation cannot
 save you.
 
 **Paging has an id tiebreaker.** Without `ORDER BY <col>, id`, two products sharing a sort value can swap
-between page 1 and page 2 — so one is shown twice and another never.
+between page 1 and page 2 - so one is shown twice and another never.
 
 **Category filtering includes children.** `?category=clothing` matches t-shirts and hoodies too. Without it a
 top-level category looks empty, which reads as a bug.
@@ -204,20 +204,20 @@ Browse with search, filtering, sorting and paging.
 
 | Parameter | Type | Default | Notes |
 |-----------|------|---------|-------|
-| `search` | string | — | Case-insensitive across name, SKU and description |
-| `category` | slug | — | Includes child categories |
-| `brand` | slug | — | |
-| `minPrice` / `maxPrice` | decimal | — | Inclusive |
+| `search` | string | - | Case-insensitive across name, SKU and description |
+| `category` | slug | - | Includes child categories |
+| `brand` | slug | - | |
+| `minPrice` / `maxPrice` | decimal | - | Inclusive |
 | `inStockOnly` | bool | `false` | |
-| `audience` | `Men` | `Women` | `Unisex` | — | An attribute, not a category |
-| `size` | string | — | Matched against variants |
-| `colour` | string | — | Matched against variants. With `size`, both must be on the **same** variant |
+| `audience` | `Men` | `Women` | `Unisex` | - | An attribute, not a category |
+| `size` | string | - | Matched against variants |
+| `colour` | string | - | Matched against variants. With `size`, both must be on the **same** variant |
 | `sortBy` | `name` \| `price` \| `brand` \| `newest` | `name` | Anything else falls back to `name` |
 | `sortDescending` | bool | `false` | |
 | `page` | int | `1` | Clamped to ≥ 1 |
-| `pageSize` | int | `12` | **Clamped to 200** — unclamped is a DoS vector |
+| `pageSize` | int | `12` | **Clamped to 200** - unclamped is a DoS vector |
 
-**200** — `PagedResult<ProductSummary>`:
+**200** - `PagedResult<ProductSummary>`:
 
 ```json
 {
@@ -244,7 +244,7 @@ curl "http://localhost:5001/api/catalog/products?search=hoodie&sortBy=price&sort
 **Auth:** anonymous · **200** `ProductDetail` · **404** `ProblemDetails`
 
 Returns the product **and its variants**, in two result sets from one round trip. Variants are ordered
-S/M/L/XL via `array_position` — alphabetical would put L before M before S before XL, which reads as a
+S/M/L/XL via `array_position` - alphabetical would put L before M before S before XL, which reads as a
 bug on every product page in the shop.
 
 ```bash
@@ -253,7 +253,7 @@ curl "http://localhost:5001/api/catalog/products/{id}"
 
 ### `GET /api/catalog/facets`
 
-**Auth:** anonymous · **200** `Facets` — audiences, sizes and colours with **product** counts.
+**Auth:** anonymous · **200** `Facets` - audiences, sizes and colours with **product** counts.
 
 One endpoint for all three rather than three, because a filter panel needs the whole set before it can
 render anything. Counts are of products, not variants: "Navy (2)" has to mean two things you can click
@@ -263,16 +263,16 @@ through to.
 
 **Auth:** anonymous · **200** `CategoryDto[]` with `productCount`, ordered parents-first.
 
-An empty category still appears, with a count of zero — hiding it would make the taxonomy the storefront
+An empty category still appears, with a count of zero - hiding it would make the taxonomy the storefront
 shows differ from the one the back office edits.
 
 **`productCount` includes child categories, because filtering does.**
 
 It used to count direct members only, and the result was a shopfront where every department advertised
-*"Clothing — 0 products"* while clicking it returned six. Clothing holds no products itself; T-shirts and
+*"Clothing - 0 products"* while clicking it returned six. Clothing holds no products itself; T-shirts and
 Hoodies do. A count that disagrees with what selecting it returns is worse than no count at all.
 
-The subquery mirrors the `category` filter's predicate exactly — *own category, or a direct child of it*:
+The subquery mirrors the `category` filter's predicate exactly - *own category, or a direct child of it*:
 
 ```sql
 (SELECT COUNT(*)::int
@@ -302,8 +302,8 @@ so the entire write surface is visible at once.
 |----------|-----------|-------|
 | `POST /api/catalog/products` | `catalog:write` | |
 | `PUT /api/catalog/products/{id}` | `catalog:write` | Name, description, image, category, brand |
-| `PUT /api/catalog/products/{id}/price` | **`price:override`** | Separate on purpose — see below |
-| `DELETE /api/catalog/products/{id}` | `catalog:delete` | **Does not delete** — see below |
+| `PUT /api/catalog/products/{id}/price` | **`price:override`** | Separate on purpose - see below |
+| `DELETE /api/catalog/products/{id}` | `catalog:delete` | **Does not delete** - see below |
 | `POST /api/catalog/products/{id}/restore` | `catalog:delete` | Puts it back on sale |
 | `GET /api/catalog/products/withdrawn` | `catalog:write` | Withdrawn products, invisible everywhere else |
 
@@ -314,14 +314,14 @@ people**. A merchandiser writes copy; changing what customers are charged is the
 organisation wants separately grantable and separately auditable.
 
 That is why price is its own endpoint rather than a field on the update. Folding it in would mean anyone
-who can fix a typo can reprice the shop — and the permission could not be checked on the route, which is
+who can fix a typo can reprice the shop - and the permission could not be checked on the route, which is
 where the whole authorization surface is meant to be readable.
 
 Verified: `catalogmgr` succeeds; `support` and `ordermgr` both get **403** on price.
 
 #### `DELETE` does not delete
 
-The route is `DELETE` and the row survives. That is not a compromise — it is the correct behaviour, and
+The route is `DELETE` and the row survives. That is not a compromise - it is the correct behaviour, and
 the verb is kept because *withdrawing* is what "delete" means to the person clicking it.
 
 Hard-deleting a product **breaks history**. Orders copy the product name and price onto their own lines
@@ -362,7 +362,7 @@ the body. Both together give a merchandiser a sentence they can act on:
 }
 ```
 
-That translation is not local to this service — see
+That translation is not local to this service - see
 [`DomainExceptionHandler`](../../src/building-blocks/Observability/DomainExceptionHandler.cs), applied by
 `AddObservability` so every service behaves the same way.
 
@@ -393,7 +393,7 @@ See the [event catalogue](../events/event-catalogue.md).
 
 | Endpoint | Checks |
 |----------|--------|
-| `/health/live` | Self only — a database blip must never trigger a restart |
+| `/health/live` | Self only - a database blip must never trigger a restart |
 | `/health/ready` | PostgreSQL |
 
 ## Migrations
@@ -408,7 +408,7 @@ Applied automatically on startup by
 [`CatalogSeeder`](../../src/services/catalog/ECommerce.Catalog.Api/Infrastructure/CatalogSeeder.cs), which
 also seeds 12 products, 6 categories and 3 brands so `docker compose up` produces a browsable shop.
 
-> **Simplified for this repo.** Production would not migrate from application startup — several replicas
+> **Simplified for this repo.** Production would not migrate from application startup - several replicas
 > would race, and a failed migration would crash every instance rather than one deployment step. See
 > [deployment](../operations/deployment.md).
 
@@ -424,19 +424,19 @@ state the UI can render is reachable without editing the database:
 | State | Where |
 |---|---|
 | In stock in every size | `NW-TS-001`, `NW-HD-001` |
-| **Low in one size, fine in the others** | `CT-TS-003` — 2 left in Black S |
-| One size sold out while the product is not | `CT-TS-003` — Black XL is empty, Ecru XL has one |
-| Low in TOTAL, so the product *card* says so | `CT-HD-002` — 2 altogether |
+| **Low in one size, fine in the others** | `CT-TS-003` - 2 left in Black S |
+| One size sold out while the product is not | `CT-TS-003` - Black XL is empty, Ecru XL has one |
+| Low in TOTAL, so the product *card* says so | `CT-HD-002` - 2 altogether |
 | Sold out entirely | `FB-HD-003`, `CT-ST-002` |
 | Colours but no sizes | all drinkware |
-| Neither axis — one variant, no pickers | all stationery |
+| Neither axis - one variant, no pickers | all stationery |
 
-One product is priced at £5,200 — above the payment simulator's decline threshold — so the saga's
+One product is priced at £5,200 - above the payment simulator's decline threshold - so the saga's
 compensation path can be demonstrated on demand.
 
 **Products the e2e suite buys hold 200 of every variant.** A paid order keeps its stock reservation until
 it ships and nothing here ships automatically, so every run permanently consumes stock; a realistic figure
 on a spec-bought SKU drains within a day and the saga specs then fail with a perfectly correct "Out of
 stock". These figures are mirrored exactly in `InventorySeeder`, and the two lists must be changed
-together — duplicated across the service boundary on purpose, because a shared seed library would couple
+together - duplicated across the service boundary on purpose, because a shared seed library would couple
 two services that are supposed to own their own data.

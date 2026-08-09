@@ -13,12 +13,12 @@ namespace ECommerce.UserProfile.Api.Domain;
 /// <para>
 /// Note the contrast with Ordering: when an order is placed, the address is copied onto it as an immutable
 /// <b>value object</b>. Editing this one afterwards must not change where a past order was shipped. Same
-/// concept, different lifetime, different modelling — which is exactly what the bounded-context boundary is
+/// concept, different lifetime, different modelling - which is exactly what the bounded-context boundary is
 /// for.
 /// </para>
 /// <para>
 /// Reached only through <see cref="UserProfile"/>, which is what lets the aggregate guarantee "at most one
-/// default shipping address". There is deliberately no <c>IAddressRepository</c> — that would be a hole
+/// default shipping address". There is deliberately no <c>IAddressRepository</c> - that would be a hole
 /// straight through the boundary.
 /// </para>
 /// </remarks>
@@ -58,7 +58,7 @@ public class Address
 
     public Guid UserProfileId { get; private set; }
 
-    /// <summary>What the customer calls it — "Home", "Work". Their word, not ours.</summary>
+    /// <summary>What the customer calls it - "Home", "Work". Their word, not ours.</summary>
     public string Label { get; private set; } = string.Empty;
 
     public string Line1 { get; private set; } = string.Empty;

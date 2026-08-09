@@ -17,13 +17,13 @@ public sealed class AuthOptions
     public const string SectionName = "Auth";
 
     /// <summary>
-    /// The expected <c>iss</c> claim — the URL <b>the browser used</b> to reach Keycloak.
+    /// The expected <c>iss</c> claim - the URL <b>the browser used</b> to reach Keycloak.
     /// </summary>
     /// <remarks>
     /// <b>The single most common Keycloak-in-Docker failure.</b> Inside the compose network Keycloak is
     /// <c>http://keycloak:8080</c>, but to the browser it is <c>http://localhost:8080</c>. The <c>iss</c>
     /// claim records whichever the client used, so a service validating against the internal hostname
-    /// rejects every browser-issued token — while both are the same server. Pin one public URL and use it
+    /// rejects every browser-issued token - while both are the same server. Pin one public URL and use it
     /// here. See <c>docs/getting-started.md#troubleshooting</c>.
     /// </remarks>
     [Required(AllowEmptyStrings = false)]
@@ -64,12 +64,12 @@ public sealed class AuthOptions
 /// <para>
 /// <b>Why this is a shared building block.</b> Security must be uniform. Nine services each configuring
 /// token validation by hand means nine chances to omit audience validation, nine clock-skew settings, and
-/// nine subtly different claim mappings. When one drifts, it becomes the way in — and nothing reports it,
+/// nine subtly different claim mappings. When one drifts, it becomes the way in - and nothing reports it,
 /// because the service still works.
 /// </para>
 /// <para>
 /// <b>Defence in depth:</b> tokens are validated here <i>and</i> again at the BFF. The gateway is not a trust
-/// boundary worth betting everything on — a misconfiguration, a future internal caller, or a compromised
+/// boundary worth betting everything on - a misconfiguration, a future internal caller, or a compromised
 /// container must still meet authentication at the service. See
 /// <c>docs/adr/0005-keycloak-as-identity-provider.md</c>.
 /// </para>

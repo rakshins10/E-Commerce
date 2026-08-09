@@ -14,7 +14,7 @@ const STORAGE_KEY = 'ecommerce.theme';
  * The mechanism is one attribute on `<html>`. The design tokens define both
  * palettes and the CSS picks by `prefers-color-scheme` *and* by
  * `[data-theme]`, so removing the attribute falls back to the OS setting.
- * No JavaScript reads a colour — see web/design-tokens/build.mjs.
+ * No JavaScript reads a colour - see web/design-tokens/build.mjs.
  *
  * The Angular storefront implements this with a signal and an effect. Same
  * behaviour, same attribute, same tokens; different idiom.

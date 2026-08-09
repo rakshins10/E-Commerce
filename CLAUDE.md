@@ -13,12 +13,12 @@ preparation**, not shipping. It demonstrates every concept in Microsoft's
 **Correctness and explicit reasoning matter more than speed.** Every non-trivial decision is argued in an ADR
 before the code is written. Do not cut corners with `TODO` stubs on core patterns.
 
-**The reader may be new to microservices.** Explanations should assume no prior knowledge of jargon — see
+**The reader may be new to microservices.** Explanations should assume no prior knowledge of jargon - see
 [`docs/concepts-explained.md`](docs/concepts-explained.md) for the register to write in.
 
 ---
 
-## Hard rules — these block a merge
+## Hard rules - these block a merge
 
 1. **`main` must always be a state where `docker compose up` works.** CI enforces this with a job that boots
    all 27 containers and waits for health.
@@ -27,7 +27,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 3. **React and Angular move in lockstep.** Every UI feature lands in *both* frameworks in the *same* PR,
    proven by one Playwright suite run against both. Never build React first and port later
    ([ADR-0014](docs/adr/0014-react-and-angular-in-lockstep.md)).
-   **Each app is self-contained** — no shared package; `react-store` and `angular-store` each own their
+   **Each app is self-contained** - no shared package; `react-store` and `angular-store` each own their
    permissions, auth, formatting, API client and design tokens
    ([ADR-0018](docs/adr/0018-self-contained-frontends.md)). A change to shared logic must be applied
    **twice**, and the e2e suite is what catches it if you forget.
@@ -36,10 +36,14 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
    directly; provider selection happens once, in the composition root.
 4. **Never commit real secrets.** Committed dev fixtures must be prefixed `dev_only_` and be worthless
    outside a throwaway local container ([ADR-0009](docs/adr/0009-secrets-management.md)).
-5. **Endpoints are guarded by permissions, never roles** — `RequirePermission(Permissions.Order.Refund)`,
+5. **Endpoints are guarded by permissions, never roles** - `RequirePermission(Permissions.Order.Refund)`,
    not `[Authorize(Roles = "admin")]` ([`docs/authorization-model.md`](docs/authorization-model.md)).
+8. **ASCII punctuation in source, comments, docs and UI strings.** No em dash, en dash or curly quote -
+   they have plain ASCII equivalents doing the same job, they render inconsistently across terminals and
+   diff tools, and prose that uses them uniformly reads as machine-written. `£`, `…`, `·` and `×` are
+   fine and are allowed deliberately; see `scripts/check-ascii-punctuation.mjs`. CI fails on a violation.
 6. **No service project may reference another service project**, and only `EventBus.RabbitMQ` may reference
-   `RabbitMQ.Client`. Asserted by `tests/unit/ECommerce.Architecture.Tests` — it breaks the build.
+   `RabbitMQ.Client`. Asserted by `tests/unit/ECommerce.Architecture.Tests` - it breaks the build.
 
 ---
 
@@ -49,7 +53,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 - Branch per phase: `phase/NN-short-name`. Branch from the previous phase branch if its PR is not yet merged.
 - **Conventional Commits**, scoped: `feat(ordering): add Order aggregate root with invariants`.
 - Commit in small increments and **push after each meaningful unit of work**. Never squash a phase into one
-  commit — the history is part of the deliverable.
+  commit - the history is part of the deliverable.
 - At the end of each phase, state the concepts now demonstrated and the interview questions the code answers.
 
 ### Phase plan
@@ -59,19 +63,19 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 1 | Repo, solution skeleton, building blocks, compose, CI | ✅ merged |
 | 2 | Keycloak realm, `Auth` building block, authorization model | ✅ merged |
 | 3 | **Both** storefront shells with OIDC login; self-contained frontends (ADR-0018) | ✅ merged |
-| 4 | Catalog + Storefront BFF + browse/search/detail — **both frameworks** | ✅ merged |
-| 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ 34 e2e specs green on both |
-| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout — **both** | ✅ 49 e2e specs green on both |
+| 4 | Catalog + Storefront BFF + browse/search/detail - **both frameworks** | ✅ merged |
+| 5 | User Profile + My Account (profile, addresses, preferences) - **both** | ✅ 34 e2e specs green on both |
+| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout - **both** | ✅ 49 e2e specs green on both |
 | 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
 | 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
 | 9 | Catalogue CRUD in **both** admin panels | ✅ 25 admin e2e specs green on both |
-| 9.5 | Product variants (size, colour, audience) — ADR-0020 | ✅ 60 storefront + 26 admin specs green on both |
+| 9.5 | Product variants (size, colour, audience) - ADR-0020 | ✅ 60 storefront + 26 admin specs green on both |
 | 10 | Resiliency, observability and security hardening | ⬜ **next** |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
-| 13 | Final pass — coverage, docs audit, fresh-machine walkthrough | ⬜ |
+| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ⬜ |
 
-Mobile (React Native) and Kubernetes are explicitly **deferred** — the user asked to finish everything
+Mobile (React Native) and Kubernetes are explicitly **deferred** - the user asked to finish everything
 else first. That is now true.
 
 **Phase 10 starts here:** everything functional is built. What remains is hardening - the resiliency,
@@ -119,6 +123,7 @@ npm run build --workspace angular-store
 npm test  --workspace react-store                 # 25 unit tests
 npm test  --workspace angular-store               # the SAME 25 - drift guard
 node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette drift
+node ../scripts/check-ascii-punctuation.mjs       # no em dashes or curly quotes
 ```
 
 ### End-to-end (the parity proof)
@@ -143,7 +148,7 @@ run against two independent implementations.
 
 ---
 
-## Environment gotchas — learned the hard way, do not rediscover
+## Environment gotchas - learned the hard way, do not rediscover
 
 | Gotcha | What happens | Fix |
 |---|---|---|
@@ -160,21 +165,21 @@ run against two independent implementations.
 | **Central Package Management** | `NU1109` downgrade errors when a transitive package is newer | Bump the version in `Directory.Packages.props`; never add `Version=` to a `PackageReference` |
 | **Issuer vs metadata address** | Every token rejected, though both URLs are the same server | `Auth__Issuer` = the URL the **browser** used (`localhost`); `Auth__MetadataAddress` = the internal one (`keycloak:8080`) |
 | **Keycloak imports the realm only on FIRST start** | Editing `realm-export.json` and restarting changes nothing | `docker compose rm -sf keycloak keycloak-db` + `docker volume rm ecommerce_keycloak-db-data`, then `up -d --wait keycloak` |
-| **A re-imported realm has NEW signing keys** | Every request `401` afterwards; services cached the old JWKS at startup | `docker compose restart catalog-api user-profile-api storefront-bff` — this is exactly what an IdP key rotation looks like |
+| **A re-imported realm has NEW signing keys** | Every request `401` afterwards; services cached the old JWKS at startup | `docker compose restart catalog-api user-profile-api storefront-bff` - this is exactly what an IdP key rotation looks like |
 | **EF infers entity state from the key** | `DbUpdateConcurrencyException: expected to affect 1 row(s), but actually affected 0` on an INSERT | The domain sets `Guid.CreateVersion7()` in constructors, so a non-default key reads as "exists". Mark every such key `ValueGeneratedNever()` |
-| **A snake_case naming convention breaks owned types** | `OwnsOne` mapping fails — the shadow key must match the owner's PK column | Only apply the convention where hand-written SQL needs it (Catalog); not in EF-only services |
-| **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing — you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
+| **A snake_case naming convention breaks owned types** | `OwnsOne` mapping fails - the shadow key must match the owner's PK column | Only apply the convention where hand-written SQL needs it (Catalog); not in EF-only services |
+| **Serilog `MinimumLevel.Override` must precede `ReadFrom.Configuration`** | `Serilog__MinimumLevel__Override__*` env vars silently do nothing - you debug blind | Already fixed in `ObservabilityExtensions.cs`; do not reorder |
 | **Playwright `getByLabel` is a substring match** | `getByLabel('Email')` also matches "Email me about my orders" | Pass `{ exact: true }` |
-| **`getByRole(role, { name })` is a substring match too** | `getByRole('link', { name: 'Products' })` quietly became five elements when the home page gained "Shop all products", "All products" and two category tiles — a strict-mode violation in a spec that had passed for six phases | Scope to a landmark (`getByRole('banner').getByRole(…)`) **and** pass `{ exact: true }`. A shell spec should be asking about the shell |
+| **`getByRole(role, { name })` is a substring match too** | `getByRole('link', { name: 'Products' })` quietly became five elements when the home page gained "Shop all products", "All products" and two category tiles - a strict-mode violation in a spec that had passed for six phases | Scope to a landmark (`getByRole('banner').getByRole(…)`) **and** pass `{ exact: true }`. A shell spec should be asking about the shell |
 | **A PUT replaces the whole resource** | A form field that does not exist is a column silently set to NULL. The Angular admin had no image control, so every run of "a product can be edited" wiped the artwork off NW-TS-001 - visible only on a storefront page no admin spec looks at | Assert save-and-RELOAD, not just "saved". `tests/e2e/specs-admin/catalog.spec.ts` has the guard |
 | **An unanchored positional selector depends on document order** | `getByRole('heading', { level: 3 }).first()` meant "the first product" until the products page gained a category rail whose department names are also h3. It then clicked "Accessories" and failed two assertions later on a missing button | Give the container an `aria-label` and scope to it: `getByRole('list', { name: 'Products' })` |
 | **A form field is empty for a moment after navigation** | `inputValue()` reads the initial empty state, because it does not retry. Both apps render fields first and populate them when the query resolves | `await expect(page.getByLabel('Name')).toHaveValue(…)` first - `toHaveValue` retries |
 | **There is no Prettier config in this repo** | Running `npx prettier --write` reformats a file to Prettier's defaults - double quotes throughout - and the diff buries the actual change | Do not run it. `.editorconfig` and `dotnet format` cover .NET; the web apps are formatted by hand |
 | **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments |
-| **Playwright `count()` does not auto-wait** | Returns whatever matches at that instant, so it reads 0 on a page that has not finished rendering — and `toBeGreaterThan(0)` then fails with no clue why | `await expect(something).toBeVisible()` FIRST, then count. Only `expect(locator)` retries |
-| **A visually hidden radio cannot be clicked** | `.option__input` is 1px and `pointer-events: none`, so `click()` on it hangs until the timeout | Click the `<label>` — which is what a person clicks. The input stays for the accessibility tree and keyboard navigation |
-| **A `<legend>` is the group's accessible name** | Putting a "— choose one" hint inside it renamed the fieldset the moment a size was chosen, so `getByRole('group', { name: … })` matched a different thing before and after | Keep the legend a stable noun; put hints in a sibling element |
-| **A Dapper positional record breaks when the SQL returns fewer columns** | `ProductDetailDto` gained `Variants`, which arrives in a SECOND result set — "a parameterless default constructor or one matching signature … is required" | `{ get; init; }` properties on every read DTO. Same trap as the case-sensitivity one, same fix |
+| **Playwright `count()` does not auto-wait** | Returns whatever matches at that instant, so it reads 0 on a page that has not finished rendering - and `toBeGreaterThan(0)` then fails with no clue why | `await expect(something).toBeVisible()` FIRST, then count. Only `expect(locator)` retries |
+| **A visually hidden radio cannot be clicked** | `.option__input` is 1px and `pointer-events: none`, so `click()` on it hangs until the timeout | Click the `<label>` - which is what a person clicks. The input stays for the accessibility tree and keyboard navigation |
+| **A `<legend>` is the group's accessible name** | Putting a "- choose one" hint inside it renamed the fieldset the moment a size was chosen, so `getByRole('group', { name: … })` matched a different thing before and after | Keep the legend a stable noun; put hints in a sibling element |
+| **A Dapper positional record breaks when the SQL returns fewer columns** | `ProductDetailDto` gained `Variants`, which arrives in a SECOND result set - "a parameterless default constructor or one matching signature … is required" | `{ get; init; }` properties on every read DTO. Same trap as the case-sensitivity one, same fix |
 | **`docker compose up -d` does not rebuild a web image** | Front-end changes are invisible; you debug an app that is three commits old | The four web services are `build:` targets. `docker compose build react-store angular-store react-admin angular-admin` first, then `up -d --wait` |
 | **PostgreSQL folds unquoted identifiers to lowercase** | Hand-written SQL fails with `column o.id does not exist` while EF is perfectly happy - EF quotes everything it generates | Name EVERY column explicitly, including keys: `.HasColumnName("id")` |
 | **Dapper matches column names exactly** | No snake_case translation. An unaliased query silently leaves properties at their DEFAULTS - a wrong value, not an error | Alias every column: `SELECT o.order_number AS OrderNumber` |
@@ -204,7 +209,7 @@ run against two independent implementations.
 - Suppress a diagnostic only in `.editorconfig`, **with a comment saying why**. Never relax
   `TreatWarningsAsErrors`.
 - Nullable reference types are escalated to **errors**.
-- Domain projects reference **nothing** outside the BCL — no EF Core, no MediatR, no ASP.NET.
+- Domain projects reference **nothing** outside the BCL - no EF Core, no MediatR, no ASP.NET.
 - Hand-written mappers, not AutoMapper ([ADR-0015](docs/adr/0015-manual-mappers-over-automapper.md)).
 
 ### Comments and docs
@@ -212,7 +217,7 @@ run against two independent implementations.
 Explain **why**, not what. Every file implementing a non-obvious pattern carries a header comment naming the
 pattern and linking to the doc page. Every doc page states what, why, how, and **the alternatives rejected**.
 
-An ADR with no downsides is marketing — always include what the decision costs.
+An ADR with no downsides is marketing - always include what the decision costs.
 
 ### Diagrams
 
@@ -229,7 +234,7 @@ invalidates it.
 | [`docs/architecture.md`](docs/architecture.md) | C4 model, service catalogue, sync/async rules |
 | [`docs/domain/bounded-contexts.md`](docs/domain/bounded-contexts.md) | Why each boundary sits where it does |
 | [`docs/authorization-model.md`](docs/authorization-model.md) | Role/permission matrix |
-| [`docs/adr/`](docs/adr/) | 20 ADRs. **Immutable once merged** — supersede, never edit |
+| [`docs/adr/`](docs/adr/) | 20 ADRs. **Immutable once merged** - supersede, never edit |
 | [`web/parity-checklist.md`](web/parity-checklist.md) | React/Angular parity tracking |
 | [`identity/keycloak/realm-export.json`](identity/keycloak/realm-export.json) | The realm, imported on startup |
 | [`Directory.Packages.props`](Directory.Packages.props) | One version per package, solution-wide |
@@ -250,7 +255,7 @@ All password `Passw0rd!`. Keycloak admin: `admin` / `dev_only_kc_admin_pw` at ht
 
 Only `customer`, `ordermgr` and `administrator` hold `order:write`, so the others **cannot check out**.
 That is deliberate least privilege, and it is why the checkout e2e block runs serially.
-| `blocked` | `customer` | disabled — cannot log in |
+| `blocked` | `customer` | disabled - cannot log in |
 
 ---
 
@@ -262,7 +267,7 @@ That is deliberate least privilege, and it is why the checkout e2e block runs se
 | Seq (logs) | http://localhost:8081 |
 | Jaeger (traces) | http://localhost:16686 |
 | RabbitMQ | http://localhost:15672 (`ecom` / `dev_only_rabbit_pw`) |
-| Services REST | 5001–5009 · gRPC 5101–5107 |
+| Services REST | 5001-5009 · gRPC 5101-5107 |
 | BFFs | 6001 storefront · 6002 admin · 6003 mobile |
 | Web | 3000 react-store · 4200 angular-store · 3001 react-admin · 4201 angular-admin |
 | Docs site | https://rakshins10.github.io/E-Commerce/ |
@@ -274,5 +279,5 @@ That is deliberate least privilege, and it is why the checkout e2e block runs se
 - **Lead with what changed and what to do**, not with process narration.
 - Keep it short. They have said more than once that long responses are hard to follow.
 - Explain jargon on first use, or link to `docs/concepts-explained.md`.
-- Be explicit about what is **not** built yet — they have been surprised by this before.
+- Be explicit about what is **not** built yet - they have been surprised by this before.
 - When something fails, say so plainly with the actual error, then fix it.

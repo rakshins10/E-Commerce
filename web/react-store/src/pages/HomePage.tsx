@@ -13,7 +13,7 @@ import type { IconName } from '../components/Icon';
  *
  * ---
  * **Everything here is a real query.** The hero images, the category counts and the featured row all
- * come from the Catalog service — nothing is hard-coded to make the page look full. A landing page
+ * come from the Catalog service - nothing is hard-coded to make the page look full. A landing page
  * built from fixtures is the one page that never catches a broken API.
  *
  * ---
@@ -65,7 +65,7 @@ export function HomePage() {
   /**
    * The shop, by department.
    *
-   * Departments only, each showing what is inside it — the way a shop is actually organised, and the
+   * Departments only, each showing what is inside it - the way a shop is actually organised, and the
    * thing a flat list of six tiles could not express. A customer thinking "I want a hoodie" and one
    * thinking "show me the clothing" both find their way in one look.
    *
@@ -231,7 +231,7 @@ export function HomePage() {
 
           <p className="muted">
             Granted by composite roles in Keycloak, not assigned to this account directly. They decide
-            what this page shows — the server enforces the same rules independently.
+            what this page shows - the server enforces the same rules independently.
           </p>
 
           <div className="chips">
@@ -255,13 +255,13 @@ export function HomePage() {
           </p>
           <ul className="muted" style={{ margin: 0, paddingInlineStart: '1.25rem' }}>
             <li>
-              <code>customer</code> — browse, buy, track orders
+              <code>customer</code> - browse, buy, track orders
             </li>
             <li>
-              <code>support</code> — read-only, and deliberately cannot check out
+              <code>support</code> - read-only, and deliberately cannot check out
             </li>
             <li>
-              <code>administrator</code> — everything, including the back office
+              <code>administrator</code> - everything, including the back office
             </li>
           </ul>
         </section>

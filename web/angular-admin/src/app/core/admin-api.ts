@@ -20,7 +20,7 @@ import type {
 /**
  * The admin API.
  *
- * Owned by this application — the React admin panel has its own equivalent in `lib/admin-api.ts`.
+ * Owned by this application - the React admin panel has its own equivalent in `lib/admin-api.ts`.
  * See docs/adr/0018-self-contained-frontends.md.
  *
  * ---
@@ -28,7 +28,7 @@ import type {
  *
  * React returns a plain object of functions from `createAdminApi(getToken)`; Angular uses an injectable
  * whose token is attached by an HTTP interceptor. Angular's version cannot forget the token on a new
- * call site, which is a genuine point for its DI model — but it also means the token attachment is
+ * call site, which is a genuine point for its DI model - but it also means the token attachment is
  * invisible from here, so a reader has to know the interceptor exists.
  */
 @Injectable({ providedIn: 'root' })

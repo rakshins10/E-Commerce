@@ -10,7 +10,7 @@ namespace ECommerce.Ordering.Infrastructure.Orders;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Why this exists when <c>DbSet&lt;Order&gt;</c> already is a repository.</b> Not to abstract EF —
+/// <b>Why this exists when <c>DbSet&lt;Order&gt;</c> already is a repository.</b> Not to abstract EF -
 /// wrapping <c>DbSet</c> in a near-identical interface buys nothing and is the most common piece of
 /// cargo-cult layering in .NET codebases. It exists to guarantee one thing the raw <c>DbSet</c> cannot:
 /// <b>an order is never loaded without its lines</b>.
@@ -24,7 +24,7 @@ namespace ECommerce.Ordering.Infrastructure.Orders;
 /// <para>
 /// It is an <i>aggregate</i> repository, deliberately not a generic one. One repository per aggregate
 /// root is the pattern; <c>IRepository&lt;T&gt;</c> for every entity re-invents <c>DbSet</c> with fewer
-/// features and quietly encourages loading pieces of an aggregate on their own — which is exactly what
+/// features and quietly encourages loading pieces of an aggregate on their own - which is exactly what
 /// an aggregate boundary is meant to prevent.
 /// </para>
 /// </remarks>

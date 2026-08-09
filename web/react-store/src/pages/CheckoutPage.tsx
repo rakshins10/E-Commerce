@@ -56,7 +56,7 @@ export function CheckoutPage() {
   });
 
   // Prefill from the saved default. A customer who has already told us where they live should not have
-  // to type it again — and the address book exists precisely so they do not.
+  // to type it again - and the address book exists precisely so they do not.
   useEffect(() => {
     const profile = profileQuery.data;
     if (!profile) return;
@@ -276,7 +276,7 @@ export function CheckoutPage() {
                     {item.productName}
                     {(item.size || item.colourName) &&
                       ` (${[item.size, item.colourName].filter(Boolean).join(' · ')})`}{' '}
-                    × {item.quantity} —{' '}
+                    × {item.quantity} -{' '}
                     {formatMoney({ amount: item.lineTotal, currency: item.currency })}
                   </span>
                 </li>

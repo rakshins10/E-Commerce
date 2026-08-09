@@ -4,7 +4,7 @@
  * ---
  * **Inline SVG rather than an icon font or a library.** No extra network request, no flash of missing
  * glyph before a font loads, and `currentColor` means an icon inherits the colour of whatever it sits
- * inside — so a button that changes colour on hover does not need a second rule to keep its icon in
+ * inside - so a button that changes colour on hover does not need a second rule to keep its icon in
  * step.
  *
  * A library would be a dependency shipped to the browser for a dozen shapes. These are twelve lines of

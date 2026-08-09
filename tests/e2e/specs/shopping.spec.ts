@@ -7,7 +7,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
  *
  * These specs place real orders, which cannot be deleted. They are written to be **repeatable**
  * regardless: each starts by emptying the basket, and none asserts on a total that depends on what a
- * previous run left behind. A suite that only passes on a clean database gets ignored within a week —
+ * previous run left behind. A suite that only passes on a clean database gets ignored within a week -
  * which is a lesson from the account specs in Phase 5, where exactly that happened.
  */
 
@@ -28,7 +28,7 @@ async function signIn(page: Page, username: string) {
  *
  * A size is deliberately NOT pre-selected: the product page leaves "Add to basket" disabled until one
  * is picked, because defaulting a size means somebody buys a Small because it happened to be first.
- * (A colour IS pre-selected — the photograph already shows one.) So every spec that buys clothing has
+ * (A colour IS pre-selected - the photograph already shows one.) So every spec that buys clothing has
  * to make the choice a customer would.
  *
  * Picks the first size that is not sold out. Sold-out sizes render disabled, and clicking a disabled
@@ -88,7 +88,7 @@ async function addFirstProduct(page: Page): Promise<string> {
   // Scoped to the product list BY NAME, not to "the first h3 on the page".
   //
   // It was the latter, and it worked right up until the products page grew a category rail whose
-  // department names are also h3 — at which point "the first product" became "Accessories", the
+  // department names are also h3 - at which point "the first product" became "Accessories", the
   // click navigated to a filtered list, and the failure surfaced as a missing "Add to basket"
   // button two assertions later. An unanchored positional selector is a spec that quietly depends on
   // document order.
@@ -230,12 +230,12 @@ test.describe('basket', () => {
 /**
  * Serial, deliberately.
  *
- * Only three seed users hold `order:write` — customer, ordermgr and administrator — because support
+ * Only three seed users hold `order:write` - customer, ordermgr and administrator - because support
  * and catalog-manager are not meant to buy things on the shop's behalf. That is correct least
  * privilege, and it leaves fewer users than there are tests here, so two specs would otherwise share a
  * basket and race each other while emptying it.
  *
- * Running them one at a time is the honest fix. The alternative — a seed user per test — would make the
+ * Running them one at a time is the honest fix. The alternative - a seed user per test - would make the
  * realm export a function of the test suite, which is the tail wagging the dog.
  */
 test.describe.configure({ mode: 'serial' });

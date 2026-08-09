@@ -10,7 +10,7 @@ namespace ECommerce.Ordering.Domain.Orders;
 /// <remarks>
 /// <para>
 /// <b>An entity, not a value object.</b> Two lines for the same product at the same price are still two
-/// distinct lines — you can change the quantity of one without touching the other, and a warehouse
+/// distinct lines - you can change the quantity of one without touching the other, and a warehouse
 /// picking list refers to a specific line. Identity survives every field changing, which is the test.
 /// </para>
 /// <para>
@@ -25,7 +25,7 @@ namespace ECommerce.Ordering.Domain.Orders;
 /// </para>
 /// <para>
 /// <b>ProductName and UnitPrice are copied, not looked up.</b> Prices change and products get renamed.
-/// An order shows what the customer actually agreed to pay, not what the item costs today — otherwise
+/// An order shows what the customer actually agreed to pay, not what the item costs today - otherwise
 /// every historical order silently repriced itself the moment marketing ran a sale, and the totals would
 /// stop matching what was charged. See <see cref="ShippingAddress"/> for the same reasoning about
 /// addresses.
@@ -84,7 +84,7 @@ public sealed class OrderItem : Entity<Guid>
     /// </summary>
     /// <remarks>
     /// A snapshot, exactly like <see cref="ProductName"/> and <see cref="UnitPrice"/>. The SKU already
-    /// identifies the variant precisely — the warehouse picks by it — but a customer reading their order
+    /// identifies the variant precisely - the warehouse picks by it - but a customer reading their order
     /// history needs "Medium, Navy" rather than <c>NW-TS-001-M-NAV</c>, and renaming a colour next year
     /// must not rewrite what last year's dispatch note said.
     /// </remarks>
@@ -96,7 +96,7 @@ public sealed class OrderItem : Entity<Guid>
 
     public int Quantity { get; private set; }
 
-    /// <summary>Quantity times unit price. Computed, never stored — see below.</summary>
+    /// <summary>Quantity times unit price. Computed, never stored - see below.</summary>
     /// <remarks>
     /// Storing a line total would allow it to disagree with its own inputs, and reconciling that
     /// disagreement later is guesswork. Deriving it makes the inconsistency unrepresentable.

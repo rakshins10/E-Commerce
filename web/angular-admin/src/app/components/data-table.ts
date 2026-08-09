@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
  *
  * `render` returns a **string**, unlike React's version which returns a `ReactNode`. Angular templates
  * cannot embed arbitrary markup returned from a function, so cells needing links or buttons are
- * projected instead — see the `cellTemplate` note below.
+ * projected instead - see the `cellTemplate` note below.
  */
 export interface Column<TRow> {
   readonly header: string;
@@ -22,14 +22,14 @@ export interface Column<TRow> {
  * ---
  * **Why one component rather than a table per page.** Orders, stock, users and the audit log are four
  * screens with the same shape. Written separately, three of them would eventually lose the caption, or
- * the row header, or the empty state — and nobody would notice, because a table with a missing
+ * the row header, or the empty state - and nobody would notice, because a table with a missing
  * `<caption>` looks identical to one that has it.
  *
  * ---
  * **Accessibility is baked in rather than left to each page.**
  *
  * - a `<caption>`, visually hidden, so a screen reader announces what the table is *before* reading it;
- * - one `<th scope="row">` per row, so each cell is announced with the thing it describes — without it
+ * - one `<th scope="row">` per row, so each cell is announced with the thing it describes - without it
  *   a screen reader reads "Cancelled" with no idea which order;
  * - `<th scope="col">` headers, so column context is announced too;
  * - a real empty state, because a table with a header and no rows reads as broken.
@@ -41,7 +41,7 @@ export interface Column<TRow> {
  * **React/Angular divergence** (docs/react-vs-angular.md).
  *
  * React's `render` returns a `ReactNode`, so a cell can contain a link or a button with no ceremony.
- * Angular has no equivalent — a function cannot return markup — so pages needing interactive cells
+ * Angular has no equivalent - a function cannot return markup - so pages needing interactive cells
  * render their own table rather than contorting this one. Content projection with `ngTemplateOutlet`
  * would work and costs more machinery than the two screens that need it justify.
  *

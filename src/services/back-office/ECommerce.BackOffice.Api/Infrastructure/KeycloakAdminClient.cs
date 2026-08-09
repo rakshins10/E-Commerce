@@ -51,13 +51,13 @@ public sealed class KeycloakAdminOptions
 /// <remarks>
 /// <para>
 /// <b>Client credentials, not the signed-in user's token.</b> The admin panel's user has a token for
-/// <c>ecommerce-api</c>, which Keycloak's own admin endpoints do not accept — so this service
+/// <c>ecommerce-api</c>, which Keycloak's own admin endpoints do not accept - so this service
 /// authenticates as itself with a service account.
 /// </para>
 /// <para>
 /// That means the caller's permission check has already happened, at the route, before this is reached.
-/// The service account is powerful; the route is what decides who gets to use it. Losing that ordering —
-/// calling this before checking the permission — would hand every signed-in user the service account's
+/// The service account is powerful; the route is what decides who gets to use it. Losing that ordering -
+/// calling this before checking the permission - would hand every signed-in user the service account's
 /// privileges.
 /// </para>
 /// </remarks>
@@ -73,7 +73,7 @@ public sealed class KeycloakAdminClient(
     /// </summary>
     /// <remarks>
     /// Cached because fetching a token per request doubles every call's latency and hammers Keycloak.
-    /// Refreshed 30 seconds early, so a token never expires mid-flight — the classic off-by-one that
+    /// Refreshed 30 seconds early, so a token never expires mid-flight - the classic off-by-one that
     /// produces a 401 on one request in a thousand and is miserable to reproduce.
     /// </remarks>
     private string? _token;

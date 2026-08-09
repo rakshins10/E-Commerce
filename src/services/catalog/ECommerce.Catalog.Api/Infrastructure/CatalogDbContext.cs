@@ -4,13 +4,13 @@ using Microsoft.EntityFrameworkCore;
 namespace ECommerce.Catalog.Api.Infrastructure;
 
 /// <summary>
-/// Catalog's own database. No other service reads these tables — see
+/// Catalog's own database. No other service reads these tables - see
 /// <c>docs/architecture.md §7</c>.
 /// </summary>
 /// <remarks>
 /// The <c>DbContext</c> <b>is</b> the Unit of Work: it tracks changes across the whole request and
 /// <c>SaveChangesAsync</c> commits them atomically. There is deliberately no hand-written
-/// <c>IUnitOfWork</c> wrapper — that would be an abstraction over an abstraction, adding a layer and no
+/// <c>IUnitOfWork</c> wrapper - that would be an abstraction over an abstraction, adding a layer and no
 /// capability.
 /// </remarks>
 public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbContext(options)
@@ -131,7 +131,7 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
     /// <para>
     /// EF Core defaults to the .NET property name, so <c>StockOnHand</c> becomes a column called
     /// <c>StockOnHand</c>. PostgreSQL folds unquoted identifiers to lower case, which means every reference
-    /// to that column in hand-written SQL must be quoted — <c>p."StockOnHand"</c> — and forgetting a quote
+    /// to that column in hand-written SQL must be quoted - <c>p."StockOnHand"</c> - and forgetting a quote
     /// produces <c>column p.stockonhand does not exist</c>.
     /// </para>
     /// <para>
@@ -141,7 +141,7 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
     /// </para>
     /// <para>
     /// This is applied in <c>OnModelCreating</c> rather than by hand per property so a new entity cannot
-    /// forget it — the convention is enforced by construction rather than by discipline.
+    /// forget it - the convention is enforced by construction rather than by discipline.
     /// </para>
     /// </remarks>
     private static void ApplySnakeCaseNames(ModelBuilder modelBuilder)

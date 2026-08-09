@@ -9,7 +9,7 @@ namespace ECommerce.Catalog.Api.Domain;
 /// <para>
 /// <b>Deliberately simple.</b> Catalog is a <i>supporting</i> subdomain
 /// (<c>docs/domain/bounded-contexts.md</c>): necessary, but not where the business differentiates. It gets
-/// plain entities with guarded constructors — no aggregate roots, no domain events, no four-layer split.
+/// plain entities with guarded constructors - no aggregate roots, no domain events, no four-layer split.
 /// </para>
 /// <para>
 /// Compare with <c>Ordering</c>, which is the <b>core</b> subdomain and does get the full treatment. Spending
@@ -58,7 +58,7 @@ public class Product
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// The <b>style code</b> — <c>NW-TS-001</c>. Unique, enforced by a database index rather than by hoping.
+    /// The <b>style code</b> - <c>NW-TS-001</c>. Unique, enforced by a database index rather than by hoping.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -67,7 +67,7 @@ public class Product
     /// ([ADR-0020](../../../docs/adr/0020-product-variants.md)).
     /// </para>
     /// <para>
-    /// Both indexes exist and they guarantee different things — unique styles here, unique sellable units on
+    /// Both indexes exist and they guarantee different things - unique styles here, unique sellable units on
     /// <c>product_variants.sku</c>. Reading only one of them leads to the wrong conclusion.
     /// </para>
     /// </remarks>
@@ -82,7 +82,7 @@ public class Product
     /// </summary>
     /// <remarks>
     /// When an order is placed, Ordering copies this onto the order line as a snapshot. A price change next
-    /// week must not retroactively alter last week's order — see <c>docs/architecture.md §6</c>.
+    /// week must not retroactively alter last week's order - see <c>docs/architecture.md §6</c>.
     /// </remarks>
     public decimal Price { get; private set; }
 
@@ -102,7 +102,7 @@ public class Product
     public string? ImageUrl { get; private set; }
 
     /// <summary>
-    /// Who the product is made for. An attribute, not a category — see <see cref="Domain.Audience"/>.
+    /// Who the product is made for. An attribute, not a category - see <see cref="Domain.Audience"/>.
     /// </summary>
     public Audience Audience { get; private set; } = Audience.Unisex;
 
@@ -126,7 +126,7 @@ public class Product
     /// <para>
     /// <b>It is allowed to be wrong,</b> and that is the interesting part. A product page a few seconds stale
     /// is fine, because the authoritative check happens when stock is reserved during checkout. The place you
-    /// must be exactly right is the reservation, not the browse page — which is the whole lesson about
+    /// must be exactly right is the reservation, not the browse page - which is the whole lesson about
     /// choosing where eventual consistency is acceptable.
     /// </para>
     /// </remarks>
@@ -154,7 +154,7 @@ public class Product
     /// </summary>
     /// <remarks>
     /// In Phase 6 this also raises <c>ProductPriceChanged</c>, which Basket consumes to update and
-    /// <b>flag</b> affected lines — rather than silently repricing what a customer thought they were buying.
+    /// <b>flag</b> affected lines - rather than silently repricing what a customer thought they were buying.
     /// </remarks>
     public void ChangePrice(decimal newPrice)
     {
@@ -224,7 +224,7 @@ public class Product
     /// The display stock figure: the sum across active variants.
     /// </summary>
     /// <remarks>
-    /// Derived rather than stored, for the same reason an order total is — a stored copy is a second source
+    /// Derived rather than stored, for the same reason an order total is - a stored copy is a second source
     /// of truth that drifts the first time somebody updates one number and not the other. Callers that have
     /// loaded the variants should prefer this; <see cref="StockOnHand"/> remains for the read model, which
     /// computes the same sum in SQL.

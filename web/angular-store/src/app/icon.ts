@@ -6,7 +6,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * ---
  * **Inline SVG rather than an icon font or a library.** No extra network request, no flash of missing
  * glyph before a font loads, and `currentColor` means an icon inherits the colour of whatever it sits
- * inside — so a button that changes colour on hover does not need a second rule to keep its icon in
+ * inside - so a button that changes colour on hover does not need a second rule to keep its icon in
  * step.
  *
  * ---
@@ -19,7 +19,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * **React/Angular divergence** (docs/react-vs-angular.md).
  *
  * React's version is a function returning JSX and needs no registration. Angular's is a component that
- * every consumer must add to its `imports` array — more ceremony, and the compiler tells you when you
+ * every consumer must add to its `imports` array - more ceremony, and the compiler tells you when you
  * forget, which React's version cannot.
  */
 const PATHS: Record<string, string> = {

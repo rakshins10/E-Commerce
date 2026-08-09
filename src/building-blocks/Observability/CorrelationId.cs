@@ -26,7 +26,7 @@ public static class CorrelationId
     /// <remarks>
     /// <para>
     /// <see cref="HttpContext.Items"/> holds the same value, but reaching it requires an
-    /// <c>IHttpContextAccessor</c> — which means any component that wants the id has to take a
+    /// <c>IHttpContextAccessor</c> - which means any component that wants the id has to take a
     /// dependency on ASP.NET Core. That is a poor trade for infrastructure such as the outbox writer,
     /// which is otherwise entirely framework-agnostic.
     /// </para>
@@ -52,15 +52,15 @@ public static class CorrelationId
 /// </para>
 /// <para>
 /// <b>Why this exists alongside distributed tracing.</b> OpenTelemetry already produces a trace id, so this can
-/// look redundant. It is not, for two reasons. First, traces are commonly <i>sampled</i> — under load you keep a
-/// percentage — whereas logs are usually kept in full; a correlation id present on every log line still ties a
+/// look redundant. It is not, for two reasons. First, traces are commonly <i>sampled</i> - under load you keep a
+/// percentage - whereas logs are usually kept in full; a correlation id present on every log line still ties a
 /// request together when its trace was sampled away. Second, a correlation id is something a human can be given:
 /// it goes in an error response, a customer quotes it to support, and one query finds everything that happened.
 /// A W3C trace id is not something you read down the phone.
 /// </para>
 /// <para>
-/// <b>Inbound ids are adopted, not overwritten.</b> If a caller already sent one — a BFF forwarding a browser
-/// request — reusing it is what makes the chain traceable end to end. Generating a fresh id at each hop produces
+/// <b>Inbound ids are adopted, not overwritten.</b> If a caller already sent one - a BFF forwarding a browser
+/// request - reusing it is what makes the chain traceable end to end. Generating a fresh id at each hop produces
 /// several disconnected fragments of one user action, which is the failure this middleware exists to prevent.
 /// </para>
 /// </remarks>

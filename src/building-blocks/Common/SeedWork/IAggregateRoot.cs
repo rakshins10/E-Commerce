@@ -1,7 +1,7 @@
 namespace ECommerce.Common.SeedWork;
 
 /// <summary>
-/// Marks an entity as an <b>aggregate root</b> — the single entry point through which its aggregate is loaded,
+/// Marks an entity as an <b>aggregate root</b> - the single entry point through which its aggregate is loaded,
 /// modified, and saved.
 /// </summary>
 /// <remarks>
@@ -10,8 +10,8 @@ namespace ECommerce.Common.SeedWork;
 /// See <c>docs/domain/bounded-contexts.md#ordering</c> and <c>docs/diagrams/ordering-aggregate.md</c>.
 /// </para>
 /// <para>
-/// An <b>aggregate</b> is a cluster of objects treated as one unit for data changes, and — this is the part that
-/// matters — <b>one consistency boundary</b>. Everything inside it is guaranteed consistent after every
+/// An <b>aggregate</b> is a cluster of objects treated as one unit for data changes, and - this is the part that
+/// matters - <b>one consistency boundary</b>. Everything inside it is guaranteed consistent after every
 /// transaction; anything outside it is only <i>eventually</i> consistent.
 /// </para>
 /// <para>
@@ -19,7 +19,7 @@ namespace ECommerce.Common.SeedWork;
 /// </para>
 /// <list type="number">
 ///   <item><description><b>Outside code touches only the root.</b> Nothing loads an <c>OrderItem</c> directly;
-///   it goes through <c>Order</c>. That is what lets the root enforce its invariants — if callers could mutate
+///   it goes through <c>Order</c>. That is what lets the root enforce its invariants - if callers could mutate
 ///   items directly, no invariant could be guaranteed.</description></item>
 ///   <item><description><b>One repository per aggregate root</b>, never per entity. A repository for
 ///   <c>OrderItem</c> would be a hole straight through the boundary.</description></item>
@@ -35,7 +35,7 @@ namespace ECommerce.Common.SeedWork;
 /// what is convenient to load together. <c>OrderItem</c> is inside <c>Order</c> because an order's total must
 /// never disagree with its lines. The buyer is outside because an order does not need the customer record to be
 /// consistent with it at every instant. Too large and you get lock contention and slow loads; too small and
-/// invariants have nowhere to live. When in doubt, prefer <i>smaller</i> — the usual failure is aggregates that
+/// invariants have nowhere to live. When in doubt, prefer <i>smaller</i> - the usual failure is aggregates that
 /// grow to swallow half the model.
 /// </para>
 /// <para>

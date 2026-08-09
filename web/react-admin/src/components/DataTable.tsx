@@ -21,14 +21,14 @@ export interface Column<TRow> {
  * ---
  * **Why one component rather than a table per page.** Orders, stock, users and the audit log are four
  * screens with the same shape. Written separately, three of them would eventually lose the caption, or
- * the row header, or the empty state — and nobody would notice, because a table with a missing
+ * the row header, or the empty state - and nobody would notice, because a table with a missing
  * `<caption>` looks identical to one that has it.
  *
  * ---
  * **Accessibility is baked in rather than left to each page.**
  *
  * - a `<caption>`, visually hidden, so a screen reader announces what the table is *before* reading it;
- * - one `<th scope="row">` per row, so each cell is announced with the thing it describes — without it
+ * - one `<th scope="row">` per row, so each cell is announced with the thing it describes - without it
  *   a screen reader reads "Cancelled" with no idea which order;
  * - `<th scope="col">` headers, so column context is announced too;
  * - a real empty state, because a table with a header and no rows reads as broken.

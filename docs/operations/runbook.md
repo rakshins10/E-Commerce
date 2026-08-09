@@ -10,7 +10,7 @@ operating.
 
 ```bash
 cd deploy
-docker compose down -v          # containers AND volumes — all data gone
+docker compose down -v          # containers AND volumes - all data gone
 docker compose up -d --wait
 ```
 
@@ -45,7 +45,7 @@ psql -h localhost -p 15434 -U ecom -d ordering    # ordering
 Full port list: [`deploy/.env.example`](../../deploy/.env.example).
 
 **Reading another service's database to answer a question is fine. Writing to it, or wiring code to it, is
-the rule this architecture exists to prevent** — see
+the rule this architecture exists to prevent** - see
 [data sovereignty](../architecture.md#7-data-sovereignty-why-services-never-share-a-database).
 
 ## Watch the event bus
@@ -66,7 +66,7 @@ _Detailed in Phase 7, once there are real consumers._ The shape:
 1. Find it in the `.dlq` queue and read the payload and the `x-death` header for the failure count.
 2. Decide whether the bug is in the message or the handler.
 3. If the handler: fix, deploy, then shovel the message back to the main queue from the management UI.
-4. If the message: discard it and record why. **Never** re-queue a message that can never succeed — that is
+4. If the message: discard it and record why. **Never** re-queue a message that can never succeed - that is
    how one bad message saturates a consumer and blocks everything behind it.
 
 ## Reseed demo data
@@ -78,17 +78,17 @@ safe.
 
 1. Regenerate it in the Keycloak admin console for that client.
 2. Update the matching `*_CLIENT_SECRET` in `deploy/.env`.
-3. `docker compose up -d <service>` — the service picks it up on restart.
+3. `docker compose up -d <service>` - the service picks it up on restart.
 
-Only confidential clients (BFFs, back-office, saga) have secrets. Public clients — the SPAs and the mobile
-app — deliberately have none; they use PKCE ([ADR-0005](../adr/0005-keycloak-as-identity-provider.md)).
+Only confidential clients (BFFs, back-office, saga) have secrets. Public clients - the SPAs and the mobile
+app - deliberately have none; they use PKCE ([ADR-0005](../adr/0005-keycloak-as-identity-provider.md)).
 
 ## Free disk space
 
 ```bash
 docker system df                # what is using it
-docker builder prune            # build cache only — safe, keeps images
-docker system prune -af         # everything unused — frees a lot, next build is slow
+docker builder prune            # build cache only - safe, keeps images
+docker system prune -af         # everything unused - frees a lot, next build is slow
 ```
 
 ## Apply a migration outside the container

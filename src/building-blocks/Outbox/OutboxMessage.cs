@@ -26,7 +26,7 @@ namespace ECommerce.Outbox;
 /// </para>
 /// <para>
 /// <b>The outbox.</b> Write the event into <i>this table</i>, in the <i>same transaction</i> as the
-/// order. One database, one commit — either both happen or neither does, with no coordination protocol
+/// order. One database, one commit - either both happen or neither does, with no coordination protocol
 /// required. A background publisher then reads unpublished rows and sends them to the broker.
 /// </para>
 /// <code>
@@ -39,10 +39,10 @@ namespace ECommerce.Outbox;
 /// </code>
 /// <para>
 /// <b>What you trade for it.</b> Publication becomes asynchronous, so consumers see the event a moment
-/// later than the commit — the outbox buys atomicity at the cost of latency, not of correctness. And
+/// later than the commit - the outbox buys atomicity at the cost of latency, not of correctness. And
 /// because the publisher can crash between sending and recording success, delivery is
 /// <b>at-least-once</b>: the same event will sometimes be published twice. That is not a flaw to be
-/// engineered away — exactly-once delivery is not achievable across a network — so every consumer must
+/// engineered away - exactly-once delivery is not achievable across a network - so every consumer must
 /// be idempotent. See <see cref="ProcessedMessage"/> for the receiving half.
 /// </para>
 /// </remarks>
@@ -92,7 +92,7 @@ public sealed class OutboxMessage
     /// </summary>
     /// <remarks>
     /// Without this the trace stops dead at the publish. You would see the order being created and,
-    /// entirely disconnected, some payment activity, with nothing tying them together — which is exactly
+    /// entirely disconnected, some payment activity, with nothing tying them together - which is exactly
     /// the visibility a distributed system needs most.
     /// </remarks>
     public string? TraceParent { get; private set; }

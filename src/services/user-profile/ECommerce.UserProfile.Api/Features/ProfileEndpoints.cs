@@ -57,7 +57,7 @@ public sealed record SaveAddressRequest(
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Every endpoint here is scoped to the caller's own profile</b>, resolved from the <c>sub</c> claim —
+/// <b>Every endpoint here is scoped to the caller's own profile</b>, resolved from the <c>sub</c> claim -
 /// never from a route parameter. That is the strongest form of resource-based authorization available: there
 /// is no id to tamper with, because the identifier comes from a signed token rather than from the request.
 /// </para>
@@ -306,7 +306,7 @@ public static class ProfileEndpoints
     ///   <item><description>A slow or failed profile service must never block a login. Putting a call to us
     ///   inside the authentication path would make logging in only as available as the least available thing
     ///   it touches.</description></item>
-    ///   <item><description>It keeps the dependency pointing the right way — Keycloak knows nothing about
+    ///   <item><description>It keeps the dependency pointing the right way - Keycloak knows nothing about
     ///   us.</description></item>
     /// </list>
     /// <para>
@@ -367,7 +367,7 @@ public static class ProfileEndpoints
             request.IsDefaultBilling);
 
     /// <summary>
-    /// Hand-written mapping. See <c>docs/adr/0015-manual-mappers-over-automapper.md</c> — renaming a property
+    /// Hand-written mapping. See <c>docs/adr/0015-manual-mappers-over-automapper.md</c> - renaming a property
     /// breaks the build here rather than silently producing a null in a client.
     /// </summary>
     private static ProfileDto ToDto(Domain.UserProfile profile) =>

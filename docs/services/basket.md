@@ -23,7 +23,7 @@ anything, abandon it entirely. Nothing about it must be true for the business to
 where "the total equals the sum of the lines" must hold at every instant, cancellation is legal in some
 states and not others, and getting it wrong means charging the wrong amount.
 
-The two limits that do exist — 50 distinct products, 100 of each — are there to stop a script making the
+The two limits that do exist - 50 distinct products, 100 of each - are there to stop a script making the
 basket endpoint slow for everybody, not because the business cares.
 
 > **Applying Ordering's ceremony here would be solving a problem that is not present.** That is how DDD
@@ -35,18 +35,18 @@ basket endpoint slow for everybody, not because the business cares.
 
 ## Why Redis, when every other service uses PostgreSQL
 
-The clearest example of **polyglot persistence** in this repo — and it is only possible because each
+The clearest example of **polyglot persistence** in this repo - and it is only possible because each
 service owns its own data.
 
 | Reason | Detail |
 |--------|--------|
 | **The access pattern is key/value** | Every read is "give me this customer's basket"; every write replaces it wholesale. Not one query joins, filters or aggregates, so nothing a relational database is good at is being used. |
-| **The data is disposable** | Losing a basket is an annoyance; losing an order is an incident. Accepting weaker durability for basket data is a legitimate trade — and one you can only make if baskets are not sitting in the orders database. |
+| **The data is disposable** | Losing a basket is an annoyance; losing an order is an incident. Accepting weaker durability for basket data is a legitimate trade - and one you can only make if baskets are not sitting in the orders database. |
 | **Expiry is built in** | Abandoned baskets should disappear. Redis does that with a TTL. PostgreSQL needs a scheduled job somebody has to write, run and monitor. |
 
 **The counterweight, stated honestly:** this is another technology to operate, back up and understand. For
 a smaller system a `baskets` table would be a perfectly reasonable answer, and "we already run PostgreSQL"
-is a real argument. The point is not that Redis is better — it is that the choice is *available* per
+is a real argument. The point is not that Redis is better - it is that the choice is *available* per
 service, and here the data genuinely fits it.
 
 ### Storage details
@@ -71,7 +71,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer
 ```
 
 It is designed to be shared for the life of the application: it multiplexes every command over a small
-number of sockets. Creating one per request — the reflex, because it is called *Connection* — opens a
+number of sockets. Creating one per request - the reflex, because it is called *Connection* - opens a
 socket per request, exhausts the pool under load, and is the single most common way to make Redis look
 slow.
 
@@ -97,7 +97,7 @@ compatible and someone needs to know.
 **This is the single most important thing on this page.**
 
 The client sends the name and price it is displaying when adding an item. That is safe *here*, because
-nothing in a basket is binding — and it is emphatically **not** safe at checkout.
+nothing in a basket is binding - and it is emphatically **not** safe at checkout.
 
 When an order is placed, [Ordering re-derives every price from Catalog](ordering.md#re-pricing). The
 basket's price is used for exactly one thing: showing the customer a total before they commit.
@@ -117,8 +117,8 @@ curl -s -X POST "$BFF/api/orders" -H "Authorization: Bearer $TOKEN" -d @order.js
 > never accepted from a client.** A client-supplied price that reaches the ledger is a discount anyone can
 > grant themselves.
 
-The basket page says so in plain words rather than hiding it in small print — *"Prices are confirmed when
-you place your order, so this total may change"* — and an e2e spec asserts that sentence is present.
+The basket page says so in plain words rather than hiding it in small print - *"Prices are confirmed when
+you place your order, so this total may change"* - and an e2e spec asserts that sentence is present.
 
 ---
 
@@ -137,7 +137,7 @@ tamper with.
 | `DELETE` | `/me/items/{productId}` | `basket:write:own` | Remove a line |
 | `DELETE` | `/me` | `basket:write:own` | Empty the basket |
 
-Both permissions are held by **every** signed-in role — see
+Both permissions are held by **every** signed-in role - see
 [the authorization model](../authorization-model.md#4-the-matrix--which-role-grants-what).
 
 ### Internal routes, not exposed through any BFF
@@ -147,7 +147,7 @@ Both permissions are held by **every** signed-in role — see
 | `GET` | `/internal/basket/{buyerId}` | Ordering, when placing an order |
 | `DELETE` | `/internal/basket/{buyerId}` | Ordering, once the order exists |
 
-These take a buyer id in the path — which would be a serious flaw on a public route and is acceptable here
+These take a buyer id in the path - which would be a serious flaw on a public route and is acceptable here
 because the only way to reach them is from inside the container network.
 
 > **That is network-level trust, and it is worth being honest about.** It is adequate for this repo and
@@ -199,5 +199,5 @@ find out.
 
 ## Testing
 
-Covered by [`tests/e2e/specs/shopping.spec.ts`](../../tests/e2e/specs/shopping.spec.ts) — add, quantity
+Covered by [`tests/e2e/specs/shopping.spec.ts`](../../tests/e2e/specs/shopping.spec.ts) - add, quantity
 change, zero-removes, empty state and the price warning, run against **both** storefronts.

@@ -1,12 +1,12 @@
 # Architecture Decision Records
 
 An ADR captures **one decision**: the context that forced it, the options genuinely considered, what was
-chosen, and the consequences accepted. It is not documentation of how the code works — that lives in
+chosen, and the consequences accepted. It is not documentation of how the code works - that lives in
 [`docs/services/`](../services/) and [`docs/concept-map.md`](../concept-map.md). An ADR exists to answer
 *"why is it like this?"* six months later, when the reasoning has evaporated and only the code remains.
 
 **ADRs are immutable once merged.** If a later phase reverses a decision, write a new ADR that supersedes the
-old one and mark the old one `Superseded by ADR-NNNN`. Never edit history — the fact that we once believed
+old one and mark the old one `Superseded by ADR-NNNN`. Never edit history - the fact that we once believed
 something different is itself information.
 
 Use [`0000-template.md`](0000-template.md) for new records.
@@ -18,10 +18,10 @@ Use [`0000-template.md`](0000-template.md) for new records.
 | # | Decision | Status | Phase |
 |---|----------|--------|-------|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions in this repo | Accepted | 1 |
-| [0002](0002-microservices-over-modular-monolith.md) | Microservices over a modular monolith — and why that is the *wrong* production call here | Accepted | 1 |
+| [0002](0002-microservices-over-modular-monolith.md) | Microservices over a modular monolith - and why that is the *wrong* production call here | Accepted | 1 |
 | [0003](0003-postgresql-and-polyglot-persistence.md) | PostgreSQL as the default engine; Redis and MongoDB where the access pattern justifies them | Accepted | 1 |
 | [0004](0004-identity-vs-profile-data-split.md) | Split identity data (Keycloak) from profile data (User Profile service) | Accepted | 1 |
-| [0005](0005-keycloak-as-identity-provider.md) | Keycloak as the identity provider — vs Entra ID, Auth0, Duende, and rolling our own | Accepted | 1 |
+| [0005](0005-keycloak-as-identity-provider.md) | Keycloak as the identity provider - vs Entra ID, Auth0, Duende, and rolling our own | Accepted | 1 |
 | [0006](0006-yarp-gateway-and-bff-per-client.md) | YARP with a BFF per client family, not a single gateway | Accepted | 1 |
 | [0007](0007-grpc-for-internal-sync-calls.md) | gRPC for internal synchronous calls, REST at the edge | Accepted | 1 |
 | [0008](0008-monorepo.md) | A single monorepo rather than a repository per service | Accepted | 1 |

@@ -20,14 +20,14 @@ import { Icon, type IconName } from '../icon';
  *
  * ---
  * **Everything here is a real query.** The hero images, the category counts and the featured row all
- * come from the Catalog service — nothing is hard-coded to make the page look full. A landing page
+ * come from the Catalog service - nothing is hard-coded to make the page look full. A landing page
  * built from fixtures is the one page that never catches a broken API.
  *
  * ---
  * **React/Angular divergence** (docs/react-vs-angular.md).
  *
  * React declares two `useQuery` calls and gets caching, deduping and loading state from TanStack Query.
- * Angular loads both in the constructor into signals and owns the states by hand — which is fine for a
+ * Angular loads both in the constructor into signals and owns the states by hand - which is fine for a
  * page with two requests and no refetching, and is the same trade recorded since Phase 4.
  */
 const REASSURANCE: readonly { icon: IconName; title: string; detail: string }[] = [
@@ -193,7 +193,7 @@ const REASSURANCE: readonly { icon: IconName; title: string; detail: string }[] 
 
             <p class="muted">
               Granted by composite roles in Keycloak, not assigned to this account directly. They decide
-              what this page shows — the server enforces the same rules independently.
+              what this page shows - the server enforces the same rules independently.
             </p>
 
             <div class="chips">
@@ -210,9 +210,9 @@ const REASSURANCE: readonly { icon: IconName; title: string; detail: string }[] 
               watch what the shop lets you do change.
             </p>
             <ul class="muted" style="margin: 0; padding-inline-start: 1.25rem">
-              <li><code>customer</code> — browse, buy, track orders</li>
-              <li><code>support</code> — read-only, and deliberately cannot check out</li>
-              <li><code>administrator</code> — everything, including the back office</li>
+              <li><code>customer</code> - browse, buy, track orders</li>
+              <li><code>support</code> - read-only, and deliberately cannot check out</li>
+              <li><code>administrator</code> - everything, including the back office</li>
             </ul>
           </section>
         }

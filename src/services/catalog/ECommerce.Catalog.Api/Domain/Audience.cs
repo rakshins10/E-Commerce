@@ -7,7 +7,7 @@ namespace ECommerce.Catalog.Api.Domain;
 /// <para>
 /// An <b>attribute</b>, deliberately, and not a branch of the category tree
 /// ([ADR-0020](../../../docs/adr/0020-product-variants.md)). The taxonomy answers <i>what is this thing</i>;
-/// this answers <i>who is it for</i>. They vary independently, so they are two fields — modelling audience as
+/// this answers <i>who is it for</i>. They vary independently, so they are two fields - modelling audience as
 /// a category means "T-shirts" exists twice, a unisex product has to be duplicated to appear in both, and
 /// adding "Kids" doubles the tree again.
 /// </para>
@@ -19,7 +19,7 @@ namespace ECommerce.Catalog.Api.Domain;
 /// </remarks>
 public enum Audience
 {
-    /// <summary>Not gendered — drinkware, stationery, and clothing sold to everyone.</summary>
+    /// <summary>Not gendered - drinkware, stationery, and clothing sold to everyone.</summary>
     Unisex = 0,
 
     Men = 1,

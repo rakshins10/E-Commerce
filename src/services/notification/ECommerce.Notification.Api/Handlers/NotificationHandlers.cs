@@ -13,7 +13,7 @@ namespace ECommerce.Notification.Api.Handlers;
 /// <remarks>
 /// <para>
 /// <b>The clearest example in the repo of why consumers must be idempotent.</b> Sending an email is not
-/// naturally idempotent — there is no "send this email unless you already did" operation, and the second
+/// naturally idempotent - there is no "send this email unless you already did" operation, and the second
 /// one is already in the customer's inbox by the time you notice. Everything else in this system can
 /// shrug off a duplicate; this cannot.
 /// </para>
@@ -28,8 +28,8 @@ namespace ECommerce.Notification.Api.Handlers;
 /// about the pattern being demonstrated. The row is the evidence the notification would have gone.
 /// </para>
 /// <para>
-/// <b>Marketing consent is not consulted here, deliberately.</b> These are <i>service</i> messages —
-/// part of performing the contract the customer entered by buying something — not marketing. Under UK
+/// <b>Marketing consent is not consulted here, deliberately.</b> These are <i>service</i> messages -
+/// part of performing the contract the customer entered by buying something - not marketing. Under UK
 /// GDPR/PECR they do not require opt-in, and a customer who unsubscribed from adverts still expects a
 /// dispatch email. See the User Profile service for the other half of that distinction.
 /// </para>

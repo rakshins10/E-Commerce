@@ -11,13 +11,13 @@ namespace ECommerce.Ordering.Domain.Orders;
 /// <para>
 /// <b>What "aggregate root" actually means here.</b> An order and its lines are one consistency
 /// boundary: they are loaded together, saved together, and every rule that spans them is enforced in
-/// this class. Nothing outside can reach an <see cref="OrderItem"/> — there is no repository for one,
+/// this class. Nothing outside can reach an <see cref="OrderItem"/> - there is no repository for one,
 /// the collection is exposed read-only, and the item's constructor is <c>internal</c>. That is not
 /// ceremony; it is the only way "the total equals the sum of the lines" can be a guarantee rather than a
 /// convention.
 /// </para>
 /// <para>
-/// <b>Why Ordering gets full DDD and Catalog does not.</b> Catalog is a <i>supporting</i> subdomain —
+/// <b>Why Ordering gets full DDD and Catalog does not.</b> Catalog is a <i>supporting</i> subdomain -
 /// mostly CRUD over product data, where a rich model would be cost without benefit. Ordering is the
 /// <i>core</i> subdomain: it holds the rules that make this a shop rather than a database. Applying the
 /// same ceremony everywhere is how DDD gets a reputation for being heavy. See
@@ -25,8 +25,8 @@ namespace ECommerce.Ordering.Domain.Orders;
 /// </para>
 /// <para>
 /// <b>The state machine.</b> An order is in exactly one <see cref="OrderStatus"/>, and every transition
-/// is a method that checks the current state first. The alternative — a bag of booleans and callers who
-/// remember to check them — permits states like "cancelled and shipped", and something eventually
+/// is a method that checks the current state first. The alternative - a bag of booleans and callers who
+/// remember to check them - permits states like "cancelled and shipped", and something eventually
 /// produces one.
 /// </para>
 /// <code>
@@ -37,7 +37,7 @@ namespace ECommerce.Ordering.Domain.Orders;
 /// <para>
 /// Cancellation is legal up to and including <see cref="OrderStatus.Paid"/>, because a paid order that
 /// has not left the building can still be stopped and refunded. Once it is
-/// <see cref="OrderStatus.Shipped"/> it cannot be cancelled — that is a return, which is a different
+/// <see cref="OrderStatus.Shipped"/> it cannot be cancelled - that is a return, which is a different
 /// process with different money attached, and modelling it as cancellation loses that distinction.
 /// </para>
 /// </remarks>
@@ -81,7 +81,7 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
     /// <remarks>
     /// The <see cref="Entity{TId}.Id"/> is a GUID: correct for a database, useless to a customer on the
     /// phone. This is short enough to read aloud, sortable by eye, and unique. It is <i>not</i> the
-    /// primary key — deriving a key from user-facing data means a change to the display format becomes a
+    /// primary key - deriving a key from user-facing data means a change to the display format becomes a
     /// database migration.
     /// </remarks>
     public string OrderNumber { get; private set; } = string.Empty;
@@ -114,7 +114,7 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
     /// <summary>Whether inventory has confirmed a reservation for this order.</summary>
     /// <remarks>
     /// The saga needs this to know whether a cancellation has anything to compensate. Releasing stock
-    /// that was never reserved is not a harmless no-op — it inflates the available count.
+    /// that was never reserved is not a harmless no-op - it inflates the available count.
     /// </remarks>
     public bool StockReserved { get; private set; }
 
@@ -127,8 +127,8 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
     /// <remarks>
     /// <b>Computed, never stored.</b> A stored total is a second source of truth for the same fact, and
     /// the two drift the first time a line is edited by a path that forgets to recalculate. Deriving it
-    /// makes that bug unrepresentable. (If a report needed to filter on it at scale, the read model —
-    /// not the aggregate — is where a denormalised copy belongs.)
+    /// makes that bug unrepresentable. (If a report needed to filter on it at scale, the read model -
+    /// not the aggregate - is where a denormalised copy belongs.)
     /// </remarks>
     public Money Total =>
         _items.Aggregate(Money.Zero(Currency), (running, item) => running.Add(item.LineTotal));
@@ -288,7 +288,7 @@ public sealed class Order : Entity<Guid>, IAggregateRoot
     /// </para>
     /// <para>
     /// The refusal to cancel a shipped order is stated in business terms, not as a generic invalid-state
-    /// error, because the caller's next step is genuinely different — they need the returns process.
+    /// error, because the caller's next step is genuinely different - they need the returns process.
     /// </para>
     /// </remarks>
     public void Cancel(OrderCancellationReason reason)

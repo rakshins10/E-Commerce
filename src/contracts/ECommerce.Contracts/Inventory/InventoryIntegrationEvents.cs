@@ -13,7 +13,7 @@ namespace ECommerce.Contracts.Inventory;
 /// clears, are answered afterwards.
 /// </para>
 /// <para>
-/// Compare the basket, which Ordering fetches <i>synchronously</i> during checkout — there is nothing to
+/// Compare the basket, which Ordering fetches <i>synchronously</i> during checkout - there is nothing to
 /// order without it, so the customer genuinely is waiting. The rule of thumb: <b>synchronous when the
 /// caller cannot proceed without the answer; asynchronous when the answer changes what happens next but
 /// not whether the request succeeded.</b>

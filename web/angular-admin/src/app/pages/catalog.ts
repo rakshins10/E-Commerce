@@ -252,7 +252,7 @@ export class CatalogPage {
  * Add or edit a product.
  *
  * ---
- * **Price is handled separately when editing.** Creating a product sets its price in the same request —
+ * **Price is handled separately when editing.** Creating a product sets its price in the same request -
  * there is nothing to override yet. Changing an existing price is a distinct action with a distinct
  * permission, so it gets its own field and its own button.
  */
@@ -287,7 +287,7 @@ export class CatalogPage {
             <input id="sku" class="input" formControlName="sku" />
             @if (!isNew()) {
               <p class="muted small">
-                A SKU cannot be changed — historic orders reference it. Withdraw this product and add a
+                A SKU cannot be changed - historic orders reference it. Withdraw this product and add a
                 new one instead.
               </p>
             }
@@ -339,7 +339,7 @@ export class CatalogPage {
               <option value="Women">Women</option>
             </select>
             <p class="muted small">
-              An attribute, not a category — the taxonomy says what a thing is, this says who it is
+              An attribute, not a category - the taxonomy says what a thing is, this says who it is
               for.
             </p>
           </div>
@@ -415,7 +415,7 @@ export class CatalogPage {
 
               <p class="muted small">
                 What a customer actually buys. Each row has its own SKU, and Inventory holds stock
-                against that SKU rather than against the product — which is why this service needed no
+                against that SKU rather than against the product - which is why this service needed no
                 schema change when sizes arrived.
               </p>
 
@@ -433,7 +433,7 @@ export class CatalogPage {
                   @for (variant of variants(); track variant.id) {
                     <tr>
                       <th scope="row">{{ variant.sku }}</th>
-                      <td>{{ variant.size ?? '—' }}</td>
+                      <td>{{ variant.size ?? '-' }}</td>
                       <td>
                         @if (variant.colourName) {
                           <span class="cell-with-thumb">
@@ -445,7 +445,7 @@ export class CatalogPage {
                             {{ variant.colourName }}
                           </span>
                         } @else {
-                          —
+                          -
                         }
                       </td>
                       <td style="text-align: right">{{ variant.stockOnHand }}</td>
@@ -478,7 +478,7 @@ export class ProductEditPage {
   protected readonly saved = signal<string | null>(null);
   protected readonly price = signal(0);
 
-  /** The loaded product's sellable variants. Read-only here — stock is Inventory's to change. */
+  /** The loaded product's sellable variants. Read-only here - stock is Inventory's to change. */
   protected readonly variants = signal<readonly AdminProductVariant[]>([]);
 
   protected readonly canOverridePrice = Permissions.Catalog.PriceOverride;

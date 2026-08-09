@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
 /**
  * My Account API types and access.
  *
- * Owned by this application — the React storefront has its own equivalent in
+ * Owned by this application - the React storefront has its own equivalent in
  * `src/lib/profile.ts`. See docs/adr/0018-self-contained-frontends.md.
  */
 
@@ -84,7 +84,7 @@ export const CURRENCIES = [
  *
  * React uses TanStack Query mutations with `onSuccess` writing the returned
  * profile back into the cache. Angular holds the profile in a single signal that
- * every operation replaces — which is simpler here, because every endpoint
+ * every operation replaces - which is simpler here, because every endpoint
  * returns the *whole* updated profile and there is only one consumer.
  *
  * Note the auth token: Angular's `HttpClient` needs an interceptor to attach it

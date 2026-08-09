@@ -8,7 +8,7 @@ import { Routes } from '@angular/router';
  *
  * Every page is lazily loaded with `loadComponent`, so Angular emits a separate
  * chunk per route and the initial download contains only the shell. React
- * achieves the same with `React.lazy` — Angular makes it the default shape of a
+ * achieves the same with `React.lazy` - Angular makes it the default shape of a
  * route definition rather than something you remember to add.
  */
 export const routes: Routes = [

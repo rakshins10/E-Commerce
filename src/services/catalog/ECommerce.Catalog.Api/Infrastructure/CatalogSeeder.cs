@@ -12,13 +12,13 @@ namespace ECommerce.Catalog.Api.Infrastructure;
 /// have to populate by hand is a demo nobody runs.
 /// </para>
 /// <para>
-/// <b>Idempotent</b> — it checks before inserting, so a restart does not duplicate anything.
+/// <b>Idempotent</b> - it checks before inserting, so a restart does not duplicate anything.
 /// </para>
 /// <para>
 /// <b>Simplified for this repo:</b> production would not migrate from application startup. Several replicas
 /// starting at once would race each other, and a failed migration would crash every instance rather than one
 /// deployment step. Production runs migrations as a separate job that must succeed before the new version is
-/// rolled out — see <c>docs/operations/deployment.md</c>.
+/// rolled out - see <c>docs/operations/deployment.md</c>.
 /// </para>
 /// </remarks>
 public static class CatalogSeeder
@@ -92,7 +92,7 @@ public static class CatalogSeeder
             3);
     }
 
-    /// <summary>The four clothing sizes, in the order a human expects to see them — never alphabetical.</summary>
+    /// <summary>The four clothing sizes, in the order a human expects to see them - never alphabetical.</summary>
     private static readonly string[] ClothingSizes = ["S", "M", "L", "XL"];
 
     /// <summary>
@@ -109,7 +109,7 @@ public static class CatalogSeeder
     /// </summary>
     /// <remarks>
     /// A static table rather than a sequence of calls with array literals in them, because the analyzers
-    /// reject the latter (CA1861 — a constant array argument is reallocated on every call). Reading better
+    /// reject the latter (CA1861 - a constant array argument is reallocated on every call). Reading better
     /// than the calls did is a bonus: the entire seeded catalogue is one thing you can scan.
     /// </remarks>
     private static readonly Dictionary<string, Colourway[]> VariantPlan = new(StringComparer.Ordinal)
@@ -148,7 +148,7 @@ public static class CatalogSeeder
 
         // --- Drinkware: colour, no size -----------------------------------------------------------
         // A mug does not come in a size, and saying it comes in "one size" is a different and wronger
-        // statement — so Size stays null and the UI omits the selector entirely.
+        // statement - so Size stays null and the UI omits the selector entirely.
         ["NW-DW-001"] =
         [
             new("Speckled White", "#f1f5f9", false, [200]),
@@ -182,7 +182,7 @@ public static class CatalogSeeder
     /// </para>
     /// <list type="bullet">
     ///   <item><description>a product in stock in every size,</description></item>
-    ///   <item><description>a product low in one size and fine in the others — the case that justifies
+    ///   <item><description>a product low in one size and fine in the others - the case that justifies
     ///     per-variant stock existing at all,</description></item>
     ///   <item><description>a size that is sold out while the product is not,</description></item>
     ///   <item><description>a product sold out entirely,</description></item>
@@ -192,7 +192,7 @@ public static class CatalogSeeder
     /// Products the checkout specs buy hold <b>200 of every variant</b>. A paid order keeps its stock
     /// reservation until it ships and nothing here ships automatically, so every demo run permanently
     /// consumes stock; a realistic figure on a spec-bought SKU drains within a day of testing and the saga
-    /// specs then fail with a perfectly correct "Out of stock" — see the gotcha table in CLAUDE.md.
+    /// specs then fail with a perfectly correct "Out of stock" - see the gotcha table in CLAUDE.md.
     /// </para>
     /// <para>
     /// <b>These figures are mirrored exactly in <c>InventorySeeder</c></b>, which holds the authoritative
@@ -223,7 +223,7 @@ public static class CatalogSeeder
                 else
                 {
                     // With no colour either, the variant SKU equals the style code. A coincidence of there
-                    // being one variant, not a rule — nothing anywhere parses or compares the two.
+                    // being one variant, not a rule - nothing anywhere parses or compares the two.
                     string sku = colourway.Colour is null
                         ? product.Sku
                         : $"{product.Sku}-{Abbreviate(colourway.Colour)}";

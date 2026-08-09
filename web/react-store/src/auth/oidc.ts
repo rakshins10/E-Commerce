@@ -2,7 +2,7 @@
  * OIDC wiring for the React storefront.
  *
  * The configuration lives in src/lib/auth.ts. The Angular
- * storefront also uses — so both apps request identical scopes and redirect
+ * storefront also uses - so both apps request identical scopes and redirect
  * URIs. Only the plumbing below is React-specific.
  *
  * @see docs/authorization-model.md

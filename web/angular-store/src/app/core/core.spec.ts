@@ -29,7 +29,7 @@ import {
  * [ADR-0018](../../../../../docs/adr/0018-self-contained-frontends.md) each app
  * owns its own `permissions` and `formatting`, so a fix applied to one copy can
  * silently miss the other three. The [e2e suite](../../../../../tests/e2e/) catches drift
- * that is *visible on screen*; this catches drift that is not — a currency
+ * that is *visible on screen*; this catches drift that is not - a currency
  * separator, a permission helper's treatment of an empty list, an off-by-one in
  * `truncate`.
  *

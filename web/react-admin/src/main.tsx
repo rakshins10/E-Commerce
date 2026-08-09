@@ -30,7 +30,7 @@ import './styles/app.css';
  *
  * ---
  * **Every route declares the permission it needs**, right next to the component. That means the whole
- * authorization surface of the application is readable in one screen — and an unguarded route shows up
+ * authorization surface of the application is readable in one screen - and an unguarded route shows up
  * as an *absence*, which is far easier to spot in review than a missing check inside a component.
  *
  * It is the same principle as `RequirePermission(...)` on a minimal-API route, applied to the client.

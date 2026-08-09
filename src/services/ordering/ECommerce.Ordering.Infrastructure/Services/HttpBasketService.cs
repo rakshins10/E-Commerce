@@ -13,7 +13,7 @@ namespace ECommerce.Ordering.Infrastructure.Services;
 /// <remarks>
 /// <para>
 /// Calls the <c>/internal</c> routes, which are not exposed through any BFF. Those endpoints take a
-/// buyer id in the path — which would be a serious flaw on a public route and is fine here, because the
+/// buyer id in the path - which would be a serious flaw on a public route and is fine here, because the
 /// only way to reach them is from inside the container network.
 /// </para>
 /// <para>
@@ -23,7 +23,7 @@ namespace ECommerce.Ordering.Infrastructure.Services;
 /// audience. Recorded here rather than left as an unexamined assumption.
 /// </para>
 /// <para>
-/// Resilience — retry with jitter, and a circuit breaker — is configured on the typed client in
+/// Resilience - retry with jitter, and a circuit breaker - is configured on the typed client in
 /// <c>Program.cs</c> rather than written here, so the policy is visible in the composition root next to
 /// every other cross-cutting concern.
 /// </para>

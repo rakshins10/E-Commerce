@@ -129,7 +129,7 @@ import { Icon } from '../icon';
                       <label class="option__label" [attr.for]="'size-' + option">
                         {{ option }}
                         @if (!hasSizeStock(option)) {
-                          <span class="visually-hidden"> — sold out</span>
+                          <span class="visually-hidden">, sold out</span>
                         }
                       </label>
                     </span>
@@ -165,7 +165,7 @@ import { Icon } from '../icon';
                         ></span>
                         {{ option.name }}
                         @if (!hasColourStock(option.name)) {
-                          <span class="visually-hidden"> — sold out</span>
+                          <span class="visually-hidden">, sold out</span>
                         }
                       </label>
                     </span>
@@ -246,7 +246,7 @@ export class ProductDetailPage {
    * Which size and colour is chosen.
    *
    * `null` means "not chosen yet" for a product that HAS that axis, and also "this product has no
-   * such axis" — the two collapse deliberately, because a mug's variants genuinely have `size: null`
+   * such axis" - the two collapse deliberately, because a mug's variants genuinely have `size: null`
    * and matching on null is then correct rather than a special case.
    */
   protected readonly size = signal<string | null>(null);
@@ -262,7 +262,7 @@ export class ProductDetailPage {
     findVariant(this.variants(), this.size(), this.colour()),
   );
 
-  /** A size axis not yet chosen — not the same as a combination that does not exist. */
+  /** A size axis not yet chosen - not the same as a combination that does not exist. */
   protected readonly needsSize = computed(() => this.sizes().length > 0 && this.size() === null);
 
   protected readonly addButtonTitle = computed(() => {

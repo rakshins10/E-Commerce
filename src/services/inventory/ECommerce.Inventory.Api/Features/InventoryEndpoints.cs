@@ -14,7 +14,7 @@ namespace ECommerce.Inventory.Api.Features;
 /// Stock levels for staff.
 /// </summary>
 /// <remarks>
-/// Read-mostly. The only write is a manual adjustment — goods in, damage, or a stock take correction.
+/// Read-mostly. The only write is a manual adjustment - goods in, damage, or a stock take correction.
 /// Reservations are never made or released through HTTP: they happen in response to saga commands, and an
 /// endpoint that could reserve stock directly would let someone create a reservation no saga knows about
 /// and nothing will ever release.

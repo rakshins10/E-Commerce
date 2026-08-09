@@ -241,7 +241,7 @@ export class BasketPage {
     void this.run(() => this.baskets.setQuantity(sku, quantity));
   }
 
-  /** "M · Navy" — what the customer chose, shown under the product name. */
+  /** "M · Navy" - what the customer chose, shown under the product name. */
   protected describe(item: BasketItem): string {
     return [item.size, item.colourName].filter(Boolean).join(' · ');
   }
@@ -273,7 +273,7 @@ export class BasketPage {
   /**
    * The wrapper TanStack Query hands React for free, per mutation.
    *
-   * Nine lines is not a crisis, but it is repeated on every screen that writes — and the component
+   * Nine lines is not a crisis, but it is repeated on every screen that writes - and the component
    * owns `saving` and `error` for ALL operations at once, so one pending call disables every button
    * rather than just its own.
    */

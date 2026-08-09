@@ -25,7 +25,7 @@ public sealed record ProductSummaryDto(
 /// The full product, for a detail page.
 /// </summary>
 /// <remarks>
-/// Init-only properties, not a positional record — and <see cref="Variants"/> is why.
+/// Init-only properties, not a positional record - and <see cref="Variants"/> is why.
 ///
 /// Dapper materialises by finding a constructor whose parameters match the columns returned. A positional
 /// record's constructor includes <c>Variants</c>, which the first result set does not select (the variants
@@ -33,7 +33,7 @@ public sealed record ProductSummaryDto(
 /// … is required". Init-only properties have a parameterless constructor and are set by name, so a column
 /// that is not returned simply stays at its default.
 ///
-/// This is the same trap as the case-sensitivity one in the gotcha table — both are Dapper's constructor
+/// This is the same trap as the case-sensitivity one in the gotcha table - both are Dapper's constructor
 /// matching, and both are solved by not having a constructor to match.
 /// </remarks>
 public sealed record ProductDetailDto
@@ -109,7 +109,7 @@ public sealed record ProductQuery(
 /// <remarks>
 /// Init-only properties, not a positional record. Dapper matches constructor parameters
 /// <b>case-sensitively</b> and PostgreSQL lower-cases unquoted aliases, so a positional record fails with
-/// "no matching signature" — see the gotcha table in CLAUDE.md.
+/// "no matching signature" - see the gotcha table in CLAUDE.md.
 /// </remarks>
 public sealed record ProductVariantDto
 {
@@ -156,7 +156,7 @@ public sealed record FacetsDto(
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Pattern:</b> CQRS — separate read and write paths.
+/// <b>Pattern:</b> CQRS - separate read and write paths.
 /// See <c>docs/adr/0012-cqrs-with-mediatr.md</c>.
 /// </para>
 /// <para>
@@ -167,7 +167,7 @@ public sealed record FacetsDto(
 /// </para>
 /// <para>
 /// It is also a <b>hard boundary</b>. <c>AsNoTracking()</c> would remove the tracking cost but keep you in
-/// the entity's shape, which quietly invites navigation properties added <i>for reads</i> — and those
+/// the entity's shape, which quietly invites navigation properties added <i>for reads</i> - and those
 /// corrupt the write model. Returning DTOs from hand-written SQL makes it impossible for a query to touch a
 /// domain type.
 /// </para>
@@ -448,13 +448,13 @@ public sealed class ProductQueries(IDbConnection connection)
     /// <remarks>
     /// <para>
     /// <b>Counts are of PRODUCTS, not variants.</b> "Navy (7)" has to mean seven things you can click
-    /// through to, because that is what a shopper reads it as — a count of eleven variants across seven
+    /// through to, because that is what a shopper reads it as - a count of eleven variants across seven
     /// products would be a number that matches nothing on the next screen. Hence
     /// <c>COUNT(DISTINCT v.product_id)</c>.
     /// </para>
     /// <para>
     /// Three result sets, one round trip. Audiences come from <c>products</c>; sizes and colours from
-    /// <c>product_variants</c>, restricted to variants of products still on sale — a withdrawn product must
+    /// <c>product_variants</c>, restricted to variants of products still on sale - a withdrawn product must
     /// not contribute a colour that then returns nothing.
     /// </para>
     /// <para>
@@ -561,7 +561,7 @@ public sealed class ProductQueries(IDbConnection connection)
     /// </summary>
     /// <remarks>
     /// <b>An allow-list, never string interpolation.</b> ORDER BY cannot be parameterised, so a caller-supplied
-    /// sort field concatenated into SQL is a direct injection route — one of the few places Dapper's
+    /// sort field concatenated into SQL is a direct injection route - one of the few places Dapper's
     /// parameterisation cannot save you. Anything unrecognised falls back to a safe default rather than
     /// erroring, because a bad sort key is not worth a 400.
     /// </remarks>

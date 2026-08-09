@@ -206,13 +206,13 @@ public static class ProductAdminEndpoints
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>The route is DELETE and the row survives.</b> That is not a compromise — it is the correct
+    /// <b>The route is DELETE and the row survives.</b> That is not a compromise - it is the correct
     /// behaviour, and the verb is kept because withdrawing is what "delete" means to the person clicking
     /// it.
     /// </para>
     /// <para>
     /// Hard-deleting a product breaks history. Orders copy the product name and price onto their own
-    /// lines precisely so an old invoice still reads correctly — but the <c>product_id</c> on those lines
+    /// lines precisely so an old invoice still reads correctly - but the <c>product_id</c> on those lines
     /// would dangle, the admin panel could not link from an order to what was bought, and any report
     /// joining orders to products would silently lose rows.
     /// </para>
@@ -270,7 +270,7 @@ public static class ProductAdminEndpoints
         Results.Ok(await queries.GetWithdrawnAsync(cancellationToken));
 
     /// <remarks>
-    /// A category or brand id that does not exist would otherwise fail as a foreign-key violation — a
+    /// A category or brand id that does not exist would otherwise fail as a foreign-key violation - a
     /// 500 naming a constraint. Checked up front so the caller is told which one is wrong.
     /// </remarks>
     /// <summary>

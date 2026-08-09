@@ -18,7 +18,7 @@ namespace ECommerce.Common.SeedWork;
 ///   <item><description>Five loose strings can be half-populated. An <c>Address</c> constructed through one
 ///   constructor that validates is either complete or does not exist.</description></item>
 ///   <item><description>Loose primitives spread validation across every call site. A value object validates once,
-///   in its constructor, and is thereafter trustworthy — the "parse, don't validate" idea.</description></item>
+///   in its constructor, and is thereafter trustworthy - the "parse, don't validate" idea.</description></item>
 /// </list>
 /// <para>
 /// <b>Immutability is the point, not a detail.</b> Because two equal value objects are interchangeable, sharing
@@ -27,7 +27,7 @@ namespace ECommerce.Common.SeedWork;
 /// from any "change" operation.
 /// </para>
 /// <para>
-/// <b>Why not just use a C# <c>record</c>?</b> Often you should — records give structural equality for free and
+/// <b>Why not just use a C# <c>record</c>?</b> Often you should - records give structural equality for free and
 /// are the right choice for simple cases. This base class exists for value objects that need a hand-written
 /// equality contract: normalising before comparing (a currency code compared case-insensitively), or excluding a
 /// cached/derived member from equality. Deriving from this makes that contract explicit in one place
@@ -41,7 +41,7 @@ public abstract class ValueObject : IEquatable<ValueObject>
     /// </summary>
     /// <remarks>
     /// Yield exactly the members that make two instances interchangeable. Normalise here rather than at the
-    /// comparison site — for example <c>yield return Currency.ToUpperInvariant();</c>.
+    /// comparison site - for example <c>yield return Currency.ToUpperInvariant();</c>.
     /// </remarks>
     protected abstract IEnumerable<object?> GetEqualityComponents();
 

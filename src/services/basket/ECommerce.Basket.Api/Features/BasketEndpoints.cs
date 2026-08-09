@@ -11,7 +11,7 @@ namespace ECommerce.Basket.Api.Features;
 /// <remarks>
 /// <para>
 /// Every route is <c>/me</c>, and "me" is resolved server-side from the <c>sub</c> claim. There is no
-/// <c>/baskets/{buyerId}</c> route, so there is no id to tamper with — the same reasoning as the
+/// <c>/baskets/{buyerId}</c> route, so there is no id to tamper with - the same reasoning as the
 /// profile endpoints in Phase 5. See docs/authorization-model.md.
 /// </para>
 /// <para>
@@ -215,7 +215,7 @@ public static class BasketEndpoints
 /// <summary>Adding a product to the basket.</summary>
 /// <remarks>
 /// The client supplies the name and price it is displaying. That is safe <i>here</i> because nothing in
-/// a basket is binding — and it is emphatically not safe at checkout, where every price is re-derived
+/// a basket is binding - and it is emphatically not safe at checkout, where every price is re-derived
 /// from Catalog. A client-supplied price that reached the ledger would be a discount anyone could grant
 /// themselves.
 /// </remarks>

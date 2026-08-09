@@ -9,7 +9,7 @@ namespace ECommerce.Catalog.Api.Features.Products;
 /// <remarks>
 /// <para>
 /// The permission each endpoint requires is declared <b>on the route</b>, so a reader can audit this
-/// service's entire authorization surface by scanning the table below — and an unprotected endpoint shows up
+/// service's entire authorization surface by scanning the table below - and an unprotected endpoint shows up
 /// as an <i>absence</i>, which is far easier to spot in review than a missing check inside a method.
 /// See <c>docs/authorization-model.md</c>.
 /// </para>
@@ -100,7 +100,7 @@ public static class ProductEndpoints
 
     /// <remarks>
     /// Filters arrive as individual query parameters rather than a bound object so the OpenAPI document
-    /// describes each one — which is what makes a generated client, and the Swagger UI, actually usable.
+    /// describes each one - which is what makes a generated client, and the Swagger UI, actually usable.
     /// </remarks>
     private static async Task<IResult> SearchProducts(
         ProductQueries queries,
@@ -157,7 +157,7 @@ public static class ProductEndpoints
     /// </summary>
     /// <remarks>
     /// One endpoint for all three rather than three, because a filter panel needs the whole set before it
-    /// can render anything — three requests would mean three loading states for one control.
+    /// can render anything - three requests would mean three loading states for one control.
     /// </remarks>
     private static async Task<IResult> GetFacets(ProductQueries queries, CancellationToken cancellationToken) =>
         Results.Ok(await queries.GetFacetsAsync(cancellationToken));

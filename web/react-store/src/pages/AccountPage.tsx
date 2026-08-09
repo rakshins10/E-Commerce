@@ -23,7 +23,7 @@ const EMPTY_ADDRESS: SaveAddressRequest = {
 };
 
 /**
- * My Account — profile, addresses and preferences.
+ * My Account - profile, addresses and preferences.
  *
  * ---
  * **The permissions this screen relies on are UI convenience only.** The server
@@ -33,7 +33,7 @@ const EMPTY_ADDRESS: SaveAddressRequest = {
  *
  * **Mutations invalidate the query rather than patching local state.** Every
  * endpoint returns the whole updated profile, so the server stays the single
- * source of truth — and the default-address invariant (adding a default
+ * source of truth - and the default-address invariant (adding a default
  * shipping address removes the flag from the previous one) arrives correctly
  * without the client having to replicate that rule.
  */

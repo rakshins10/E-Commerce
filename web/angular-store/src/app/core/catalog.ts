@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
 /**
  * Catalog API types and access.
  *
- * Owned by this application — the React storefront has its own equivalent in
+ * Owned by this application - the React storefront has its own equivalent in
  * `src/lib/catalog.ts`. See docs/adr/0018-self-contained-frontends.md.
  */
 
@@ -35,7 +35,7 @@ export interface ProductDetail extends ProductSummary {
 /**
  * One sellable size-and-colour of a product.
  *
- * The SKU here is the sellable one — what goes in the basket, what the warehouse picks, and what
+ * The SKU here is the sellable one - what goes in the basket, what the warehouse picks, and what
  * Inventory holds stock against. `ProductSummary.sku` is the style code
  * ([ADR-0020](../../../docs/adr/0020-product-variants.md)).
  */
@@ -43,7 +43,7 @@ export interface ProductVariant {
   readonly id: string;
   readonly productId: string;
   readonly sku: string;
-  /** Null when the product has no size axis — a mug does not come in a size. */
+  /** Null when the product has no size axis - a mug does not come in a size. */
   readonly size: string | null;
   readonly colourName: string | null;
   readonly colourHex: string | null;
@@ -67,7 +67,7 @@ export interface Facets {
  * The distinct sizes offered, in the order the server returned them.
  *
  * <b>Never sorted here.</b> The server orders by `array_position(ARRAY['S','M','L','XL'], size)`, because
- * alphabetical puts L before M before S before XL — which reads as a bug on every product page in the
+ * alphabetical puts L before M before S before XL - which reads as a bug on every product page in the
  * shop. Re-sorting client-side would undo that.
  */
 export function sizesOf(variants: readonly ProductVariant[]): readonly string[] {
@@ -104,7 +104,7 @@ export function coloursOf(
 /**
  * Finds the variant for a chosen size and colour.
  *
- * Both arguments are matched, including when one is null — a product with no size axis has variants whose
+ * Both arguments are matched, including when one is null - a product with no size axis has variants whose
  * size IS null, so `null` is a real value to match rather than "any". Treating it as a wildcard would let
  * a mug's White variant satisfy a request for a size that does not exist.
  */
@@ -120,7 +120,7 @@ export function findVariant(
  * Whether any variant in the given size can be bought.
  *
  * Used to strike out a sold-out size in the picker. A size with stock in Navy but none in Black is still
- * offered — the colour picker then shows which combination is unavailable.
+ * offered - the colour picker then shows which combination is unavailable.
  */
 export function sizeHasStock(variants: readonly ProductVariant[], size: string): boolean {
   return variants.some((variant) => variant.size === size && variant.stockOnHand > 0);
@@ -214,7 +214,7 @@ export type StockLevel = 'in-stock' | 'low-stock' | 'out-of-stock';
  * Stock presentation, shared by the list and detail screens.
  *
  * **Never colour alone.** Roughly 1 in 12 men has some colour vision
- * deficiency, so a green/red dot conveys nothing to them — WCAG 1.4.1. Every
+ * deficiency, so a green/red dot conveys nothing to them - WCAG 1.4.1. Every
  * caller renders the label text alongside the styling. Wording is identical to
  * the React implementation because the shared e2e specs assert on it.
  */
@@ -237,7 +237,7 @@ export function stockLevel(stockOnHand: number): { level: StockLevel; label: str
  * the grid does not flash empty.
  *
  * That is the honest comparison. Angular's DI and signals are excellent, but on
- * *server state* React's ecosystem is genuinely ahead — TanStack Query solves a
+ * *server state* React's ecosystem is genuinely ahead - TanStack Query solves a
  * problem Angular expects you to solve yourself.
  */
 @Injectable({ providedIn: 'root' })
@@ -297,7 +297,7 @@ export class CatalogService {
     this.brandsCache.set(brands);
   }
 
-  /** Sizes, colours and audiences. Cached like the taxonomy — it changes just as rarely. */
+  /** Sizes, colours and audiences. Cached like the taxonomy - it changes just as rarely. */
   async loadFacets(): Promise<void> {
     if (this.facetsCache() !== null) return;
 

@@ -21,20 +21,20 @@ namespace ECommerce.Observability;
 /// </para>
 /// <list type="table">
 ///   <item>
-///     <term><c>/health/live</c> — liveness</term>
+///     <term><c>/health/live</c> - liveness</term>
 ///     <description><i>Is this process irrecoverably broken?</i> Checks nothing external. Failing it means
 ///     <b>kill and restart me</b>.</description>
 ///   </item>
 ///   <item>
-///     <term><c>/health/ready</c> — readiness</term>
-///     <description><i>Can I serve traffic right now?</i> Checks dependencies — database, broker, cache.
+///     <term><c>/health/ready</c> - readiness</term>
+///     <description><i>Can I serve traffic right now?</i> Checks dependencies - database, broker, cache.
 ///     Failing it means <b>stop sending me traffic, but leave me alone</b>.</description>
 ///   </item>
 /// </list>
 /// <para>
 /// <b>Why conflating them is actively dangerous.</b> Put a database check in liveness, and when the database has
 /// a brief outage every replica fails liveness at once and the orchestrator restarts all of them. Restarting
-/// does not fix a database — so you have converted a recoverable dependency blip into a full outage plus a crash
+/// does not fix a database - so you have converted a recoverable dependency blip into a full outage plus a crash
 /// loop, and the restarts add connection-storm load to a database that is already struggling. The rule:
 /// <b>liveness must never check anything the process cannot fix by restarting.</b>
 /// </para>
@@ -56,7 +56,7 @@ public static class HealthCheckExtensions
     /// Registers the always-passing self check that backs <c>/health/live</c>.
     /// </summary>
     /// <remarks>
-    /// It looks pointless — a check that always returns healthy. It is not: reaching it at all proves the
+    /// It looks pointless - a check that always returns healthy. It is not: reaching it at all proves the
     /// process is running, Kestrel is accepting connections, and the request pipeline executes. That is
     /// precisely, and only, what liveness should assert.
     /// </remarks>
@@ -92,7 +92,7 @@ public static class HealthCheckExtensions
     /// <remarks>
     /// The default writer returns only the aggregate status as plain text, which tells an operator that
     /// <i>something</i> is wrong but not what. Naming the failing check turns a health endpoint from an alarm
-    /// into a diagnosis. Note that <c>description</c> is included but exception detail is not — a health
+    /// into a diagnosis. Note that <c>description</c> is included but exception detail is not - a health
     /// endpoint is often reachable from outside and must not leak connection strings or stack traces.
     /// </remarks>
     private static Task WriteResponseAsync(HttpContext context, HealthReport report)

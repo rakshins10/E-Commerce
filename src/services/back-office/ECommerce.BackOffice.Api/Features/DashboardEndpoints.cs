@@ -16,14 +16,14 @@ namespace ECommerce.BackOffice.Api.Features;
 /// oversight.
 /// </para>
 /// <para>
-/// The alternative — calling each service over HTTP and aggregating — was rejected because a dashboard
+/// The alternative - calling each service over HTTP and aggregating - was rejected because a dashboard
 /// fans out to five services on every page load, and then the dashboard is down whenever any one of them
 /// is. Reporting is the classic case where the boundary that helps write paths hurts read paths.
 /// </para>
 /// <para>
 /// <b>The rule that keeps this honest:</b> connections are <b>read-only</b> and the queries are
 /// aggregates. Back-office never writes to another service's tables and never reads a row it would then
-/// act on — that would be reaching into someone else's aggregate, and the invariants live there for a
+/// act on - that would be reaching into someone else's aggregate, and the invariants live there for a
 /// reason.
 /// </para>
 /// <para>
@@ -81,7 +81,7 @@ public sealed record DashboardDto
 
     public required int OrdersCancelled { get; init; }
 
-    /// <summary>Sagas that started and never finished — the operational alarm.</summary>
+    /// <summary>Sagas that started and never finished - the operational alarm.</summary>
     public required int SagasStuck { get; init; }
 
     public required int LowStockItems { get; init; }

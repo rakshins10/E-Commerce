@@ -22,7 +22,7 @@ namespace ECommerce.Ordering.Infrastructure;
 /// zero. That is a domain guarantee, not a data-access abstraction.
 /// </para>
 /// <para>
-/// <b>The outbox tables live here, in this database.</b> That is not incidental — it is the entire
+/// <b>The outbox tables live here, in this database.</b> That is not incidental - it is the entire
 /// mechanism. Because <c>outbox_messages</c> is in the same database as <c>orders</c>, one
 /// <c>SaveChangesAsync</c> commits both atomically, with no distributed transaction and no window in
 /// which an order exists but nobody was told.

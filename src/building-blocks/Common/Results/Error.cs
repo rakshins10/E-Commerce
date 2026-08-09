@@ -38,7 +38,7 @@ public enum ErrorType
 /// this; they must never branch on <paramref name="Description"/>, which is prose and may be reworded or
 /// localised.</param>
 /// <param name="Description">Human-readable explanation, safe to show a developer. Never include secrets or
-/// internal detail — this can reach a client.</param>
+/// internal detail - this can reach a client.</param>
 /// <param name="Type">Determines the HTTP status code.</param>
 public sealed record Error(string Code, string Description, ErrorType Type = ErrorType.Validation)
 {

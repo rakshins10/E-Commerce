@@ -120,7 +120,7 @@ import { COUNTRIES, ProfileService } from '../core/profile';
                     />
                     <span>
                       {{ item.productName }}{{ describe(item) ? ' (' + describe(item) + ')' : '' }}
-                      × {{ item.quantity }} —
+                      × {{ item.quantity }} -
                       {{ money(item.lineTotal, item.currency) }}
                     </span>
                   </li>
@@ -170,7 +170,7 @@ export class CheckoutPage {
   protected readonly money = (amount: number, currency: string) =>
     formatMoney({ amount, currency });
 
-  /** "M · Navy" — the option chosen, in the words the customer chose it in. */
+  /** "M · Navy" - the option chosen, in the words the customer chose it in. */
   protected describe(item: { size: string | null; colourName: string | null }): string {
     return [item.size, item.colourName].filter(Boolean).join(' · ');
   }

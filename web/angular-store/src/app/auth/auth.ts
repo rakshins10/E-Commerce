@@ -10,7 +10,7 @@ import type { AuthenticatedUser, Permission } from '../core/permissions';
  *
  * Uses the SAME `toAuthenticatedUser` and `hasPermission` from
  * core/auth-config.ts as the React storefront's lib/auth.ts, so both derive permissions
- * from a token identically. That is the point of the shared layer — if each
+ * from a token identically. That is the point of the shared layer - if each
  * parsed claims itself, one would eventually read the wrong claim and the bug
  * would surface only as "permissions randomly missing in Angular".
  *
@@ -21,7 +21,7 @@ import type { AuthenticatedUser, Permission } from '../core/permissions';
  * Angular exposes it as an injectable service holding signals, which any
  * component can read without prop-drilling and which updates every consumer
  * when it changes. Angular's version needs no provider wrapper in the component
- * tree — DI handles it — but it does need the bridge below from RxJS to
+ * tree - DI handles it - but it does need the bridge below from RxJS to
  * signals, because the OIDC library is Observable-based.
  */
 @Injectable({ providedIn: 'root' })
@@ -100,7 +100,7 @@ export class Auth {
   /**
    * Whether the signed-in user holds a permission.
    *
-   * Decides what to *render*. The server enforces the same rule independently —
+   * Decides what to *render*. The server enforces the same rule independently -
    * anyone can copy the token from devtools and call the API directly.
    */
   can(permission: Permission): boolean {
@@ -115,7 +115,7 @@ export class Auth {
    * Signs out at Keycloak, not just locally.
    *
    * Clearing only local tokens leaves the Keycloak session alive, so the next
-   * "Sign in" logs the same user straight back in with no prompt — which looks
+   * "Sign in" logs the same user straight back in with no prompt - which looks
    * exactly like a broken logout.
    */
   signOut(): void {

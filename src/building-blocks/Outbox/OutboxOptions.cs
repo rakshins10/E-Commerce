@@ -13,7 +13,7 @@ public sealed class OutboxOptions
     /// <remarks>
     /// This is the floor on how stale a consumer's view can be, so it is a latency budget rather than a
     /// tuning knob: one second means an order confirmation email can be a second behind the order.
-    /// Lower costs a query per interval against an index that is nearly always empty — cheap, but not
+    /// Lower costs a query per interval against an index that is nearly always empty - cheap, but not
     /// free, and it multiplies by the number of replicas.
     /// </remarks>
     public int PollingIntervalMs { get; set; } = 1_000;
