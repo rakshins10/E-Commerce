@@ -41,10 +41,51 @@ proves the server does not rely on the UI having hidden the button -
 [`docs/authorization-model.md`](../docs/authorization-model.md) explains why that distinction is the whole
 point.
 
+## What there is
+
+| Suite | Where | Count |
+|---|---|---:|
+| Domain invariants (no database) | `tests/unit/ECommerce.Ordering.Domain.Tests` | 28 |
+| Shared building blocks | `tests/unit/ECommerce.Common.Tests` | 17 |
+| Architecture boundaries | `tests/unit/ECommerce.Architecture.Tests` | 4 |
+| Auth, against a real Keycloak container | `tests/integration/ECommerce.Auth.IntegrationTests` | 16 |
+| Storefront end-to-end, **run twice** - React and Angular | `tests/e2e/specs` | 64 |
+| Back-office end-to-end, **run twice** | `tests/e2e/specs-admin` | 26 |
+| Frontend unit, the same 25 assertions in each storefront | `web/*/src` | 25 |
+
+---
+
 ## Running them
 
 ```bash
 dotnet test ECommerce.slnx                              # unit + integration + contract
 dotnet test tests/unit/ECommerce.Architecture.Tests     # boundary rules only
-cd tests/e2e && npx playwright test                     # e2e (needs the stack up)
+```
+
+The e2e suite needs the stack up, and each command runs the **same specs** against a different app.
+That duplication is the parity proof, not an accident
+([ADR-0014](../docs/adr/0014-react-and-angular-in-lockstep.md)):
+
+```bash
+cd tests/e2e
+npm run test:react          # 64 storefront specs against :3000
+npm run test:angular        # the SAME 64 against :4200
+npm run test:react:admin    # 26 back-office specs against :3001
+npm run test:angular:admin  # the SAME 26 against :4201
+```
+
+> **Run a suite twice before trusting it.** These specs place real orders and edit real catalogue rows,
+> so one that passes on a clean database and fails on the second run is a spec that assumed its starting
+> state. Several did, once.
+
+---
+
+## Repository hygiene
+
+Two checks that fail in seconds rather than after a twenty-minute build, and run as their own CI job:
+
+```bash
+node scripts/check-ascii-punctuation.mjs   # no em dashes, en dashes or curly quotes
+node scripts/check-design-tokens.mjs       # WCAG contrast + cross-app palette drift
+node scripts/check-doc-links.mjs           # every relative markdown link resolves
 ```

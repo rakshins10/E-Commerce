@@ -3,7 +3,7 @@
 > **Bounded context:** Identity & Access (supporting) · **Port:** 5006 · **Store:** PostgreSQL
 > **Code:** [`src/services/user-profile/ECommerce.UserProfile.Api`](../../src/services/user-profile/ECommerce.UserProfile.Api/)
 > **Related:** [Bounded contexts](../domain/bounded-contexts.md) · [Authorization model](../authorization-model.md) ·
-> [ADR-0004 - Keycloak as the identity provider](../adr/0004-keycloak-identity-provider.md)
+> [ADR-0004 - Identity vs profile data](../adr/0004-identity-vs-profile-data-split.md)
 
 ## Purpose
 

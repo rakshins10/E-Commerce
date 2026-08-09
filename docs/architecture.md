@@ -120,7 +120,7 @@ graph TB
     subgraph data["Datastores - one per service"]
         direction LR
         CATDB[("catalog<br/>Postgres")]
-        CATRD[("catalog read<br/>Mongo")]
+        CATRD[("catalog read<br/>Dapper on Postgres")]
         BASDB[("basket<br/>Redis")]
         ORDDB[("ordering<br/>Postgres")]
         USRDB[("user-profile<br/>Postgres")]
@@ -251,7 +251,7 @@ complex.**
 
 | Service | Bounded context | Type | Datastore | Sync surface | Primary responsibility |
 |---------|-----------------|------|-----------|--------------|------------------------|
-| **catalog** | Catalog | Supporting | Postgres (write) + Mongo (read model) | REST, gRPC | Products, categories, brands, search, pricing, images |
+| **catalog** | Catalog | Supporting | Postgres - EF Core writes, Dapper reads | REST, gRPC | Products, variants, categories, brands, search, faceting, pricing |
 | **basket** | Basket | Supporting | Redis | REST, gRPC | Per-user cart; reacts to price/stock changes |
 | **ordering** | Ordering | **Core** | Postgres | REST, gRPC | `Order` aggregate, order state machine, full DDD + CQRS |
 | **payment** | Payment | Generic | Postgres | - (events only) | Simulated PSP; authorise / capture / refund |
@@ -357,10 +357,16 @@ the query is hot or the join is wide); or accept that the query does not belong 
 all and belongs in analytics.
 
 **What you get:** each service can change its schema, its indexes, even its database engine, without asking
-permission. Basket uses Redis because a cart is a short-lived key-value blob with a TTL. Catalog's query
-side uses Mongo because product documents are read-heavy and denormalised. Ordering uses Postgres because
-orders need ACID and relational integrity within the aggregate. **Polyglot persistence is a consequence of
-sovereignty, not a goal in itself.**
+permission. Basket uses Redis because a cart is a short-lived key-value blob with a TTL. Ordering uses
+Postgres because orders need ACID and relational integrity within the aggregate. Catalog uses Postgres for
+both sides of its CQRS split - EF Core to write, hand-written Dapper to read. **Polyglot persistence is a
+consequence of sovereignty, not a goal in itself.**
+
+> [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md) anticipated a MongoDB projection for
+> Catalog's read side. It has **not been built**: the read model is a different *shape* served by different
+> *technology* (Dapper, purpose-built DTOs), but it lives in the same database. The `mongo` container is
+> provisioned and unused. The decision stands; the implementation has not caught up, and an architecture
+> document that claimed otherwise would be describing a system nobody can run.
 
 See [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md).
 
@@ -407,7 +413,7 @@ The scheme:
 | `15672`, `5672` | RabbitMQ management, AMQP |
 | `16686`, `4317/4318` | Jaeger UI, OTLP gRPC/HTTP |
 | `15432-15440` | Postgres containers (one host port per service database) |
-| `6379`, `27017` | Redis, MongoDB |
+| `6379` | Redis |
 
 gRPC gets its own port because Kestrel cannot multiplex HTTP/1.1 and HTTP/2 on the same **plaintext** port,
 and TLS between containers is out of scope here. In production behind TLS, both would share 443.

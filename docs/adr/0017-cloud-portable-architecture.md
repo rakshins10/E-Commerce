@@ -152,4 +152,4 @@ Container Apps directly, and the abstraction would be dead weight. Portability i
 - [ADR-0016](0016-rabbitmq-behind-ieventbus.md) - the messaging abstraction this extends
 - [ADR-0009](0009-secrets-management.md) - secrets, and why managed identity is the goal
 - [`docs/operations/deployment.md`](../operations/deployment.md) - how each environment is deployed
-- [`docs/operations/azure.md`](../operations/azure.md) - the Azure topology and its free-tier options
+- [`docs/operations/deployment.md`](../operations/deployment.md) - the deployment topology, including Azure

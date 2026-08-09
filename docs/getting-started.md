@@ -24,7 +24,7 @@ you want to run a component *outside* its container while developing it.
 
 ### Docker Desktop resources
 
-**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs ~27 containers. Below
+**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs 31 containers. Below
 8 GB, containers are killed by the OOM reaper mid-startup, which surfaces as services flapping between
 starting and unhealthy rather than as an obvious out-of-memory message - a genuinely confusing failure.
 
@@ -71,7 +71,7 @@ docker compose up -d --build
 
 | Stage | Time | What is happening |
 |-------|------|-------------------|
-| Image pull | 3-10 min | Postgres, Keycloak, RabbitMQ, Mongo, Redis, Seq, Jaeger, .NET base images |
+| Image pull | 3-10 min | Postgres, Keycloak, RabbitMQ, Redis, Seq, Jaeger, .NET base images |
 | .NET builds | 5-15 min | Twelve services compiled. **First build only** - later builds reuse cached layers |
 | Startup | 60-90 s | Databases initialise, Keycloak imports the realm, services connect |
 
@@ -139,6 +139,19 @@ docker compose down                       # stop, keep data
 docker compose down -v                    # stop and DELETE ALL DATA (full reset)
 docker compose ps                         # what is running and healthy
 ```
+
+> **`up -d` does not rebuild a web image.** The four front ends are `build:` targets, so a change to
+> React or Angular is invisible until you rebuild them explicitly - and you end up debugging an app that
+> is several commits old:
+>
+> ```bash
+> docker compose build react-store angular-store react-admin angular-admin
+> docker compose up -d --wait
+> ```
+
+> **A schema change needs `down -v`.** Migrations run on startup, but the demo data is seeded only into
+> an empty database - so a new column arrives without the rows that make it interesting. If the catalogue
+> looks wrong after pulling, `docker compose down -v` and start again.
 
 ### Running a service outside Docker
 

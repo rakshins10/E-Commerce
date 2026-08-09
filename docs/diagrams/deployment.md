@@ -3,7 +3,7 @@
 > **Source:** [`deploy/docker-compose.yml`](../../deploy/docker-compose.yml) ·
 > **Related:** [Getting started](../getting-started.md) · [Architecture](../architecture.md)
 
-What `docker compose up` actually creates: 27 containers on two networks.
+What `docker compose up` actually creates: 31 containers on two networks.
 
 ```mermaid
 graph TB

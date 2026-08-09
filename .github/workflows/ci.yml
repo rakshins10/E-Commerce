@@ -62,6 +62,11 @@ jobs:
       - name: Design tokens
         run: node scripts/check-design-tokens.mjs
 
+      # Documentation ships in the same PR as the code, so links get written against a tree that is
+      # still moving. Five were already broken when this check was first run.
+      - name: Documentation links
+        run: node scripts/check-doc-links.mjs
+
   # ---------------------------------------------------------------------------
   #  .NET - build, style, test
   # ---------------------------------------------------------------------------

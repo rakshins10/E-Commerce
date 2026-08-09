@@ -89,7 +89,7 @@ link to a justification)
 
 ## Intentional divergences
 
-None. The two apps behave identically on every row above, proven by the same 86 Playwright specs passing
+None. The two apps behave identically on every row above, proven by the same 90 Playwright specs passing
 against both.
 
 One was found and closed during the shop-UI rebuild: React rendered a sign-in failure on the home page and
@@ -121,7 +121,7 @@ code, so structure no longer prevents drift. Four mechanisms replace it:
 
 | Mechanism | Catches |
 |-----------|---------|
-| [`tests/e2e`](../tests/e2e/) - 60 storefront + 26 back-office specs, each run against both apps | Behavioural drift, including differences nobody thought to check |
+| [`tests/e2e`](../tests/e2e/) - 64 storefront + 26 back-office specs, each run against both apps | Behavioural drift, including differences nobody thought to check |
 | **Unit tests - the same 25 assertions in each app** ([react](react-store/src/lib/lib.spec.ts), [angular](angular-store/src/app/core/core.spec.ts)) | Logic drift in the duplicated `permissions` and `formatting` modules - a currency separator, an off-by-one in `truncate`, a permission helper's empty-argument behaviour |
 | [`scripts/check-design-tokens.mjs`](../scripts/check-design-tokens.mjs) | Visual drift, and any WCAG AA contrast regression |
 | This checklist | Scope drift - a feature built in one app and not the other |

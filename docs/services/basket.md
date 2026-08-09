@@ -92,6 +92,32 @@ compatible and someone needs to know.
 
 ---
 
+## A line is a variant, not a product
+
+Since [ADR-0020](../adr/0020-product-variants.md) a product has several sellable variants, and **the line
+is identified by its variant SKU** - not by the product id.
+
+```jsonc
+{
+  "productId": "0198...",        // a REFERENCE, so the line can link back to the product page
+  "sku": "NW-TS-001-M-NAV",      // the IDENTITY - what the warehouse picks by
+  "productName": "Classic Cotton T-shirt",
+  "size": "M",                   // snapshotted, like the name and the price
+  "colourName": "Navy",
+  "unitPrice": 18.00,
+  "quantity": 1
+}
+```
+
+**Why it matters:** a customer buying a Medium *and* a Large of the same shirt wants two lines. Keying on
+the product id merges them into one, and the warehouse receives an instruction to pick "two of NW-TS-001"
+without being told which two. That is why `PUT` and `DELETE` take a SKU.
+
+`size` and `colourName` are **copied onto the line**, for the same reason the name and the price are: a
+basket records what was chosen, not a pointer to what that option happens to be called today.
+
+---
+
 ## The prices in a basket are not a promise
 
 **This is the single most important thing on this page.**
@@ -133,8 +159,8 @@ tamper with.
 |--------|-------|-----------|---------|
 | `GET` | `/me` | `basket:read:own` | The caller's basket |
 | `POST` | `/me/items` | `basket:write:own` | Add, or increase the quantity if already present |
-| `PUT` | `/me/items/{productId}` | `basket:write:own` | Set a quantity. **0 removes the line.** |
-| `DELETE` | `/me/items/{productId}` | `basket:write:own` | Remove a line |
+| `PUT` | `/me/items/{sku}` | `basket:write:own` | Set a quantity. **0 removes the line.** |
+| `DELETE` | `/me/items/{sku}` | `basket:write:own` | Remove a line |
 | `DELETE` | `/me` | `basket:write:own` | Empty the basket |
 
 Both permissions are held by **every** signed-in role - see

@@ -3,7 +3,7 @@
 > **Kind:** Gateway (Backend-for-Frontend) · **Port:** 6002 · **Store:** none
 > **Code:** [`src/gateways/admin-bff/`](../../src/gateways/admin-bff/)
 > **Related:** [Storefront BFF](storefront-bff.md) · [Back-office](back-office.md) ·
-> [ADR-0006 - BFF per client experience](../adr/0006-bff-per-client.md)
+> [ADR-0006 - YARP gateway and a BFF per client](../adr/0006-yarp-gateway-and-bff-per-client.md)
 
 ## Why a second gateway at all
 

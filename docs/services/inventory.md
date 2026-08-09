@@ -33,6 +33,32 @@ source of truth that drifts the first time somebody updates one number and not t
 
 ---
 
+## Stock is held per SKU, and the SKU is a variant
+
+**This service does not know what a size is, and that is the point.**
+
+`StockItem` keys on a **SKU string**. When Catalog gained sizes and colours
+([ADR-0020](../adr/0020-product-variants.md)), the sellable SKU moved from the product down to the
+variant - and Inventory needed **no schema change at all**. It has more rows.
+
+```
+Before: NW-TS-001                 42 on hand
+After:  NW-TS-001-S-NAV          200 on hand
+        NW-TS-001-M-NAV          200
+        NW-TS-001-L-NAV          200
+        ...                            49 rows across 12 products
+```
+
+That is not luck. SKU was already the one string crossing this context boundary - Catalog publishes it,
+Ordering snapshots it onto an order line, Basket carries it - so putting the boundary there is what made
+a change to *merchandising* stop at merchandising.
+
+**The lesson generalises:** a boundary drawn at the identifier both sides already agree on survives
+changes to what that identifier means. Had Inventory keyed on `product_id` with a size column beside it,
+this would have been a migration, a backfill and a coordinated deploy across two services.
+
+---
+
 ## Reservation is asynchronous, and that is a decision
 
 The customer is **not waiting** on it. They clicked "Place order", got an order number, and are looking
@@ -142,9 +168,26 @@ no trace is indistinguishable from nothing having happened.
 
 ## Seed data
 
-Twelve SKUs matching the catalogue, with a spread of levels so every UI state is reachable: plenty in
-stock, low stock, and out of stock.
+**49 variant SKUs** across the catalogue's 12 products, with levels spread so every UI state is reachable
+without editing the database:
+
+| State | Where |
+|---|---|
+| In stock in every size | `NW-TS-001`, `NW-HD-001` |
+| **Low in one size, fine in the others** | `CT-TS-003-S-BLA` has 2 |
+| One size sold out while the product is not | `CT-TS-003-XL-BLA` has 0; the Ecru XL has 1 |
+| Low in TOTAL, so the product *card* says so | `CT-HD-002` - 2 altogether |
+| Sold out entirely | `FB-HD-003`, `CT-ST-002` |
 
 `FB-ST-003` - the £5,200 Leather Portfolio - has stock **on purpose**: it reserves successfully and is
 then declined by the payment simulator, which is how the compensation path is demonstrated from the
 storefront.
+
+**Products the e2e suite buys hold 200 of every variant.** A paid order keeps its reservation until it
+ships and nothing here ships automatically, so every run permanently consumes stock. A realistic figure on
+a spec-bought SKU drains within a day of testing, and the saga specs then fail with a perfectly correct
+"Out of stock" - correct behaviour, unhelpful seed data.
+
+> These figures are **mirrored exactly** in Catalog's cached `stock_on_hand`, and the two lists must be
+> changed together. Duplicated across the service boundary on purpose: a shared seed library would couple
+> two services that are supposed to own their own data.

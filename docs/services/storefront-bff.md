@@ -2,7 +2,7 @@
 
 > **Kind:** Gateway (Backend-for-Frontend) · **Port:** 5000 · **Store:** none
 > **Code:** [`src/gateways/storefront-bff/ECommerce.StorefrontBff`](../../src/gateways/storefront-bff/ECommerce.StorefrontBff/)
-> **Related:** [ADR-0006 - BFF per client experience](../adr/0006-bff-per-client.md) ·
+> **Related:** [ADR-0006 - YARP gateway and a BFF per client](../adr/0006-yarp-gateway-and-bff-per-client.md) ·
 > [concepts-explained.md §7](../concepts-explained.md) · [Architecture](../architecture.md)
 
 ## What a BFF is, in plain English

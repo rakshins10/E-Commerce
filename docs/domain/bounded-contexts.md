@@ -191,16 +191,30 @@ preferences over gRPC, cached).
 
 ### Catalog
 
-**Subdomain:** Supporting · **Service:** `catalog` · **Store:** Postgres (write) + MongoDB (read model)
+**Subdomain:** Supporting · **Service:** `catalog` · **Store:** PostgreSQL - EF Core writes, Dapper reads
 
-**Owns:** products, variants, categories, brands, images, descriptions, list prices, search and filtering.
+**Owns:** products (styles), **variants** (the sellable size/colour units and their SKUs), **size scales**,
+categories, brands, images, descriptions, list prices, audience, search, filtering and faceting.
 
 **Deliberately does not own:** stock levels (Inventory) and the price a customer actually paid (Ordering).
 
 **Why the boundary:** merchandising changes on a completely different rhythm and by different people than
-fulfilment. It is also read-dominated by orders of magnitude, which justifies the split write/read model:
-the write side keeps a normalised relational model with real constraints, while the query side serves
-denormalised documents built by projecting domain events. That is CQRS applied where it genuinely pays.
+fulfilment. It is also read-dominated by orders of magnitude, which justifies the split read/write model:
+the write side keeps a normalised relational model with real constraints, while the read side is
+hand-written Dapper SQL returning purpose-built DTOs ([ADR-0012](../adr/0012-cqrs-with-mediatr.md)). CQRS
+applied where it genuinely pays.
+
+> **Both sides live in PostgreSQL.** [ADR-0003](../adr/0003-postgresql-and-polyglot-persistence.md)
+> anticipated a MongoDB projection for the read side and that has **not been built** - the separation is
+> logical (different model, different technology to query it) rather than physical. The `mongo` container
+> in `docker compose` is provisioned and currently unused. Saying so is cheaper than letting a reader
+> discover it.
+
+**Variants are Catalog's, and so is what a size means.** A product is a *style*; a variant is what a
+customer buys ([ADR-0020](../adr/0020-product-variants.md)). Which sizes a category is sold in is a
+**merchandising** decision, so the size scale lives here rather than in Inventory
+([ADR-0021](../adr/0021-category-defined-options-and-contextual-facets.md)) - Inventory owns how many are
+on the shelf, and deliberately does not know what a size is.
 
 **The stock question.** Displaying "in stock" needs Inventory data - so why not put stock in Catalog?
 Because *availability* and *description* have unrelated write patterns: stock changes on every order and

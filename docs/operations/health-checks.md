@@ -42,7 +42,7 @@ Registered with the `ready` tag as each service gains them:
 
 | Service | Readiness checks |
 |---------|------------------|
-| catalog | Postgres, MongoDB, RabbitMQ |
+| catalog | Postgres |
 | basket | Redis, RabbitMQ |
 | ordering, payment, inventory, notification, user-profile, saga | Postgres, RabbitMQ |
 | back-office | Postgres (audit), Keycloak discovery endpoint |

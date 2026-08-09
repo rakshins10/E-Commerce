@@ -23,8 +23,9 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 | 6 | Basket (Redis) + Ordering (DDD/CQRS) + **transactional outbox** + cart/checkout - **both** | ✅ done |
 | 7 | Payment + Inventory + Notification + **saga with compensating actions** - **both** | ✅ done |
 | 8 | Back-office + Admin BFF + **both** admin panels, permission-gated | ✅ done |
-| 9 | Catalogue CRUD in **both** admin panels | ⬜ next |
-| 10 | Resiliency, observability and security hardening | ⬜ |
+| 9 | Catalogue CRUD in **both** admin panels | ✅ done |
+| 9.5 | Product variants - size, colour, audience, per-variant stock, category-defined size scales ([ADR-0020](docs/adr/0020-product-variants.md), [ADR-0021](docs/adr/0021-category-defined-options-and-contextual-facets.md)) | ✅ done |
+| 10 | Resiliency, observability and security hardening | ⬜ next |
 | 11 | React Native (Expo) app + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
 | 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ⬜ |
@@ -49,6 +50,10 @@ Sign in as `customer` / `Passw0rd!` and buy something - the order advances from 
 own as four services and a message broker talk to each other. Order the £5,200 Leather Portfolio and watch
 the saga reserve stock, fail the payment, **release the stock** and cancel the order.
 
+Pick the **Graphic Print T-shirt**: choose Small and it says *"Only 2 left"*; choose Black and XL and it
+says *"Sold out in this option"* - while XL on its own stays selectable, because Ecru still has one. That
+distinction is the whole reason stock is held per variant rather than per product.
+
 Sign into the back office as `administrator`, then `support`, then `ordermgr`: same build, three
 different navigation bars.
 
@@ -56,10 +61,11 @@ different navigation bars.
 
 | Suite | Count |
 |-------|------:|
-| Domain + architecture tests (no database, 177 ms) | 30 |
-| Frontend unit tests - the same 20 assertions in each of four apps | 80 |
-| Storefront end-to-end, run against React **and** Angular | 53 × 2 |
-| Back-office end-to-end, run against React **and** Angular | 15 × 2 |
+| Domain, common and architecture tests (no database) | 49 |
+| Auth integration tests (a real Keycloak container) | 16 |
+| Frontend unit tests - the same 25 assertions in each of two storefronts | 50 |
+| Storefront end-to-end, run against React **and** Angular | 64 × 2 |
+| Back-office end-to-end, run against React **and** Angular | 26 × 2 |
 
 **Frameworks are built in lockstep.** No phase is complete until the same Playwright specs pass against both
 the React and the Angular app and [`web/parity-checklist.md`](web/parity-checklist.md) has no gaps.
@@ -136,7 +142,7 @@ cp .env.example .env          # dev-only values; see the warning below
 docker compose up -d
 ```
 
-This brings up **27 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
+This brings up **31 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
 afterwards it is about 60 seconds. Use `docker compose up -d --wait` to block until everything reports
 healthy - it also fails if a service starts and then crashes, which a plain `up -d` reports as success.
 

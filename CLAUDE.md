@@ -21,7 +21,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 ## Hard rules - these block a merge
 
 1. **`main` must always be a state where `docker compose up` works.** CI enforces this with a job that boots
-   all 27 containers and waits for health.
+   all 31 containers and waits for health.
 2. **Documentation ships in the same PR as the code it describes.** A code-only PR is incomplete. See the
    table in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 3. **React and Angular move in lockstep.** Every UI feature lands in *both* frameworks in the *same* PR,
@@ -124,6 +124,7 @@ npm test  --workspace react-store                 # 25 unit tests
 npm test  --workspace angular-store               # the SAME 25 - drift guard
 node ../scripts/check-design-tokens.mjs           # contrast + cross-app palette drift
 node ../scripts/check-ascii-punctuation.mjs       # no em dashes or curly quotes
+node ../scripts/check-doc-links.mjs               # every relative markdown link resolves
 ```
 
 ### End-to-end (the parity proof)

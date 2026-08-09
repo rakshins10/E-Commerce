@@ -48,10 +48,14 @@ need.)
 
 **What:** choosing the datastore per service according to its access pattern rather than by convention.
 
-**Why here:** Redis for the basket (short-lived, disposable, key-value, TTL), MongoDB for the Catalog read
-side (denormalised documents, read-dominated), Postgres everywhere else (relational data with real
-invariants). Each deviation is defensible in one sentence - that is the test. Using three databases to look
-sophisticated is the failure mode.
+**Why here:** Redis for the basket (short-lived, disposable, key-value, TTL), Postgres everywhere else
+(relational data with real invariants). Each deviation is defensible in one sentence - that is the test.
+Using three databases to look sophisticated is the failure mode.
+
+ADR-0003 also chose MongoDB for a denormalised Catalog read side. It was **not built**: Catalog's read
+model is a different shape served by different technology (Dapper, purpose-built DTOs) in the same
+database, which turned out to be enough. The unused `mongo` container is the honest evidence that a
+deviation has to earn itself twice - once when decided, and again when it is time to run it.
 
 **Where:** [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md) · Phase 1
 

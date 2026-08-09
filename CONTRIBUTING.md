@@ -105,6 +105,7 @@ Concretely, in the same PR as the code:
 | an integration event | `docs/events/event-catalogue.md` and the event-flow diagram |
 | a screen | `docs/frontend/<app>/<screen>.md` and the matching `/web/ui-spec` entry |
 | a domain concept | the glossary and the relevant `docs/domain/` page |
+| a size scale, facet or other merchandising option | [`docs/services/catalog.md`](docs/services/catalog.md) and the glossary |
 | a design decision | a new ADR, plus every diagram the decision invalidates |
 
 Stale documentation is a bug. If a change invalidates a diagram, **update the diagram in the same commit**.

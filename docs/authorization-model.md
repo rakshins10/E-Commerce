@@ -382,9 +382,13 @@ So **every rule enforced in a screen is independently enforced on the server**, 
 protected endpoints with lower-privileged tokens and requires rejection. That test is what proves the server
 does not rely on the UI having hidden anything.
 
-The shared [`hasPermission()`](../web/shared/) helper reads the same `permissions` claim the server checks, so
-the two cannot drift in their *understanding* of what a permission is - only in whether they enforce it, and
-the server always does.
+Each front end owns its own `hasPermission()` helper - there is no shared package
+([ADR-0018](adr/0018-self-contained-frontends.md)) - and every copy reads the same `permissions` claim the
+server checks. So the apps cannot drift in their *understanding* of what a permission is, only in whether
+they enforce it, and the server always does.
+
+That the helper is duplicated is the point of ADR-0018, and the identical unit tests in each app are what
+stop the copies diverging.
 
 ---
 

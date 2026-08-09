@@ -54,6 +54,8 @@ classDiagram
         <<Entity, internal ctor>>
         +string Sku
         +string ProductName
+        +string Size
+        +string ColourName
         +Money UnitPrice
         +int Quantity
         +Money LineTotal
@@ -72,6 +74,21 @@ classDiagram
     Order "1" *-- "1" ShippingAddress
     OrderItem "1" *-- "1" Money
 ```
+
+### A line is a variant, and it snapshots what was chosen
+
+`Sku` is the **variant** SKU since [ADR-0020](../adr/0020-product-variants.md) - the thing the warehouse
+picks - and `Size` and `ColourName` are copied onto the line beside the name and the price.
+
+The SKU alone identifies the variant precisely, so the size and colour are strictly redundant to a
+machine. They are there for a person: a customer reading their order history needs *"Medium, Navy"*, not
+`NW-TS-001-M-NAV`, and renaming a colour next year must not rewrite what last year's dispatch note said.
+Same reasoning as every other snapshot on an order.
+
+**Lines merge on SKU, not on product id.** The remark in `AddItem` always said "two lines for the same
+SKU produce two picking instructions for one shelf" - before variants the two were indistinguishable, so
+nothing noticed the code used the product. Merging on the product would collapse a Medium and a Large into
+one line, and the picking instruction would say "two of NW-TS-001" without saying which two.
 
 ### The boundary is enforced by the compiler
 
