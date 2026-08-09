@@ -428,13 +428,16 @@ export class ProductsPage {
 
     void this.catalog.loadCategories();
     void this.catalog.loadBrands();
-    void this.catalog.loadFacets();
 
     // Refetch whenever the URL changes. The effect tracks `filters()`
     // automatically - no dependency array to keep in step.
+    //
+    // The facets go with it now: which options are on offer depends on what is already chosen, so they
+    // are no longer a load-once taxonomy (ADR-0021).
     effect(() => {
       const current = this.filters();
       void this.load(current);
+      void this.catalog.loadFacets(current);
     });
   }
 

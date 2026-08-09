@@ -146,14 +146,60 @@ crosses those boundaries. Moving it from the product to the variant meant:
 
 That is the payoff for having drawn the boundary at the SKU rather than at the product.
 
+### Size scales: which options a category has
+
+A category names the **size scale** its products are sold in, and a child inherits its parent's
+([ADR-0021](../adr/0021-category-defined-options-and-contextual-facets.md)).
+
+```
+size_scales          size_scale_values        categories
+  id                   id                       ...
+  name  "UK clothing"  size_scale_id            size_scale_id  (nullable)
+  slug  "uk-clothing"  value     "M"
+                       position  1
+```
+
+| Category | Scale | Sizes |
+|---|---|---|
+| Clothing | UK clothing | S, M, L, XL |
+| T-shirts, Hoodies | *inherited* | S, M, L, XL |
+| Accessories, Drinkware, Stationery | none | *not sized* |
+
+**A null scale means the category is not sized** - which is a different claim from being sold in one
+size, and is why the storefront omits the size control for a notebook rather than offering it one option.
+
+**`position` is why this is data.** Sizes have an order that is neither alphabetical nor numeric: S, M,
+L, XL sorts to L, M, S, XL either way. That order used to be an `ARRAY['S','M','L','XL']` literal inside
+two queries, which said in the database layer that this shop sells clothing. It is now a join, so adding
+an "EU shoe" scale with 40-46 is rows rather than a deployment.
+
+**`GET /api/catalog/categories` resolves the inheritance in SQL** and returns `sizeScaleName` and an
+ordered `sizes` array, so no client reimplements it. The back office shows it beside the category
+selector: pick Hoodies and it says *"Sold in sizes S, M, L, XL"*; pick Stationery and it says the category
+is not sized.
+
+### Facets follow the current filter
+
+`GET /api/catalog/facets` takes the **same parameters as the browse endpoint** and returns only values
+present in that result set.
+
+Before, it answered "every size anywhere in the catalogue" - so choosing Stationery still offered
+**M (6)**, and choosing it returned **0 products**. A filter panel is not an inventory of what exists; it
+is a list of what would do something.
+
+**Each axis is counted with its own filter left out.** Otherwise choosing Medium collapses the size list
+to Medium alone and a shopper can never change their mind. `BuildFilter(query, excluding:)` is shared
+with the product search, so the two cannot drift - and when they drift the symptom is an option that
+promises results and delivers none.
+
 ### Known gaps
 
 - **Nothing validates that a variant SKU belongs to its product at checkout.** A forged SKU fails at stock
   reservation instead - the saga cancels the order and compensates - so it fails safe, but seconds later
   rather than immediately. Closing it means widening the Catalog pricing contract to return variants.
-- **Facet counts are not filtered by the current selection.** "Navy (2)" is a count across the whole
-  catalogue, not "Navy, given that you have already chosen Medium". Doing that properly needs a query per
-  facet per request, which is the point at which a search index earns its keep.
+- **Size scales are seeded, not editable in the back office.** The admin panel shows which scale a
+  category uses and what is in it, but adding a scale or changing one is a seeder change. The model is
+  the part that had to exist first; the CRUD screen is the smaller half.
 - **Variants are read-only in the back office.** Sizes and colours are set by the seeder; the admin panel
   shows them with their stock but does not add or remove them.
 

@@ -251,6 +251,9 @@ export class CatalogService {
   private readonly brandsCache = signal<Brand[] | null>(null);
   private readonly facetsCache = signal<Facets | null>(null);
 
+  /** Which filter combination facetsCache holds, so it is refetched only when that changes. */
+  private facetsKey: string | null = null;
+
   readonly categories = computed(() => this.categoriesCache() ?? []);
   readonly brands = computed(() => this.brandsCache() ?? []);
   readonly facets = computed(() => this.facetsCache());
@@ -297,13 +300,47 @@ export class CatalogService {
     this.brandsCache.set(brands);
   }
 
-  /** Sizes, colours and audiences. Cached like the taxonomy - it changes just as rarely. */
-  async loadFacets(): Promise<void> {
-    if (this.facetsCache() !== null) return;
+  /**
+   * The filter options available WITHIN the current result set.
+   *
+   * Takes the same filters as `searchProducts`, because a filter panel is not an inventory of what
+   * exists - it is a list of what would do something. Asking globally is what produced a Size control
+   * offering "M (6)" under Stationery, where no product has ever had a size (ADR-0021).
+   *
+   * Cached per filter combination rather than once, which is the cost of the change. The previous
+   * answer stays on screen while the next loads, so the controls do not blink out and back.
+   */
+  async loadFacets(filters: ProductFilters): Promise<void> {
+    const key = [
+      filters.search ?? '',
+      filters.category ?? '',
+      filters.brand ?? '',
+      filters.inStockOnly ? '1' : '',
+      filters.audience ?? '',
+      filters.size ?? '',
+      filters.colour ?? '',
+    ].join('|');
+
+    if (this.facetsKey === key) return;
+    this.facetsKey = key;
+
+    let params = new HttpParams();
+    if (filters.search) params = params.set('search', filters.search);
+    if (filters.category) params = params.set('category', filters.category);
+    if (filters.brand) params = params.set('brand', filters.brand);
+    if (filters.inStockOnly) params = params.set('inStockOnly', 'true');
+    if (filters.audience) params = params.set('audience', filters.audience);
+    if (filters.size) params = params.set('size', filters.size);
+    if (filters.colour) params = params.set('colour', filters.colour);
 
     const facets = await firstValueFrom(
-      this.http.get<Facets>(`${this.baseUrl}/api/catalog/facets`),
+      this.http.get<Facets>(`${this.baseUrl}/api/catalog/facets`, { params }),
     );
-    this.facetsCache.set(facets);
+
+    // Guarded against an out-of-order response: a slow request for an abandoned filter must not
+    // overwrite the answer for the one the customer is actually looking at.
+    if (this.facetsKey === key) {
+      this.facetsCache.set(facets);
+    }
   }
 }

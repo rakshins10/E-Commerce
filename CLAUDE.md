@@ -69,7 +69,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
 | 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
 | 9 | Catalogue CRUD in **both** admin panels | ✅ 25 admin e2e specs green on both |
-| 9.5 | Product variants (size, colour, audience) - ADR-0020 | ✅ 60 storefront + 26 admin specs green on both |
+| 9.5 | Product variants + category-defined size scales - ADR-0020, ADR-0021 | ✅ 64 storefront + 26 admin specs green on both |
 | 10 | Resiliency, observability and security hardening | ⬜ **next** |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
@@ -130,8 +130,8 @@ node ../scripts/check-ascii-punctuation.mjs       # no em dashes or curly quotes
 
 ```powershell
 cd tests/e2e
-npm run test:react                                # 60 storefront specs against :3000
-npm run test:angular                              # the SAME 60 against :4200
+npm run test:react                                # 64 storefront specs against :3000
+npm run test:angular                              # the SAME 64 against :4200
 npm run test:react:admin                          # 26 back-office specs against :3001
 npm run test:angular:admin                        # the SAME 26 against :4201
 ```
@@ -176,7 +176,7 @@ run against two independent implementations.
 | **A form field is empty for a moment after navigation** | `inputValue()` reads the initial empty state, because it does not retry. Both apps render fields first and populate them when the query resolves | `await expect(page.getByLabel('Name')).toHaveValue(…)` first - `toHaveValue` retries |
 | **There is no Prettier config in this repo** | Running `npx prettier --write` reformats a file to Prettier's defaults - double quotes throughout - and the diff buries the actual change | Do not run it. `.editorconfig` and `dotnet format` cover .NET; the web apps are formatted by hand |
 | **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments |
-| **Playwright `count()` does not auto-wait** | Returns whatever matches at that instant, so it reads 0 on a page that has not finished rendering - and `toBeGreaterThan(0)` then fails with no clue why | `await expect(something).toBeVisible()` FIRST, then count. Only `expect(locator)` retries |
+| **Playwright `count()` and `allTextContents()` do not auto-wait** | Both return whatever matches at that instant, so they read 0 / `[]` on a page that has not finished rendering - and the assertion then fails with no clue why | `await expect(locator).toHaveCount(n)` FIRST, then read. Only `expect(locator)` retries |
 | **A visually hidden radio cannot be clicked** | `.option__input` is 1px and `pointer-events: none`, so `click()` on it hangs until the timeout | Click the `<label>` - which is what a person clicks. The input stays for the accessibility tree and keyboard navigation |
 | **A `<legend>` is the group's accessible name** | Putting a "- choose one" hint inside it renamed the fieldset the moment a size was chosen, so `getByRole('group', { name: … })` matched a different thing before and after | Keep the legend a stable noun; put hints in a sibling element |
 | **A Dapper positional record breaks when the SQL returns fewer columns** | `ProductDetailDto` gained `Variants`, which arrives in a SECOND result set - "a parameterless default constructor or one matching signature … is required" | `{ get; init; }` properties on every read DTO. Same trap as the case-sensitivity one, same fix |
@@ -234,7 +234,7 @@ invalidates it.
 | [`docs/architecture.md`](docs/architecture.md) | C4 model, service catalogue, sync/async rules |
 | [`docs/domain/bounded-contexts.md`](docs/domain/bounded-contexts.md) | Why each boundary sits where it does |
 | [`docs/authorization-model.md`](docs/authorization-model.md) | Role/permission matrix |
-| [`docs/adr/`](docs/adr/) | 20 ADRs. **Immutable once merged** - supersede, never edit |
+| [`docs/adr/`](docs/adr/) | 21 ADRs. **Immutable once merged** - supersede, never edit |
 | [`web/parity-checklist.md`](web/parity-checklist.md) | React/Angular parity tracking |
 | [`identity/keycloak/realm-export.json`](identity/keycloak/realm-export.json) | The realm, imported on startup |
 | [`Directory.Packages.props`](Directory.Packages.props) | One version per package, solution-wide |

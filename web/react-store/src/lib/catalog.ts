@@ -256,9 +256,42 @@ export function getBrands(signal?: AbortSignal): Promise<Brand[]> {
   return catalogApi.get<Brand[]>('/api/catalog/brands', { signal });
 }
 
-export function getFacets(signal?: AbortSignal): Promise<Facets> {
-  return catalogApi.get<Facets>('/api/catalog/facets', { signal });
+/**
+ * The filter options available WITHIN the current result set.
+ *
+ * Takes the same filters as {@link searchProducts}, because a filter panel is not an inventory of what
+ * exists - it is a list of what would do something. Asking globally is what produced a Size control
+ * offering "M (6)" under Stationery, where no product has ever had a size
+ * ([ADR-0021](../../../docs/adr/0021-category-defined-options-and-contextual-facets.md)).
+ *
+ * The server leaves each axis's own filter out when counting it, so choosing Medium still lists Small,
+ * Large and XL and a shopper can change their mind.
+ */
+export function getFacets(filters: FacetFilters, signal?: AbortSignal): Promise<Facets> {
+  return catalogApi.get<Facets>('/api/catalog/facets', {
+    signal,
+    query: {
+      search: filters.search || undefined,
+      category: filters.category || undefined,
+      brand: filters.brand || undefined,
+      inStockOnly: filters.inStockOnly || undefined,
+      audience: filters.audience || undefined,
+      size: filters.size || undefined,
+      colour: filters.colour || undefined,
+    },
+  });
 }
+
+/**
+ * The filters that change which options are on offer.
+ *
+ * Deliberately NOT the whole of {@link ProductFilters}: paging and sorting do not change what exists in
+ * the result set, and including them would refetch every facet on every page turn.
+ */
+export type FacetFilters = Pick<
+  ProductFilters,
+  'search' | 'category' | 'brand' | 'inStockOnly' | 'audience' | 'size' | 'colour'
+>;
 
 /**
  * Stock presentation, shared by the list and detail screens.

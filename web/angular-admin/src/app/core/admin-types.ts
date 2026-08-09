@@ -136,6 +136,16 @@ export interface AdminCategory {
   readonly slug: string;
   readonly parentSlug: string | null;
   readonly productCount: number;
+
+  /**
+   * The sizes products in this category are sold in, already in the scale's order.
+   *
+   * Resolved server-side, so a child category reports its parent's scale rather than each client
+   * reimplementing the inheritance. Empty means the category is not sized - a notebook has no size, which
+   * is a different claim from having one size.
+   */
+  readonly sizeScaleName: string | null;
+  readonly sizes: readonly string[];
 }
 
 export interface AdminBrand {

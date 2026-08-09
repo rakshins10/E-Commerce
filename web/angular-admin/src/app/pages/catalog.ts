@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { Auth } from '../auth/auth';
 import { AdminApi } from '../core/admin-api';
@@ -329,6 +330,24 @@ export class CatalogPage {
                 <option [value]="category.id">{{ category.name }}</option>
               }
             </select>
+
+            <!-- What the chosen category means for this product's options.
+                 A merchandiser adding a hoodie should be able to see that it will be sold in S/M/L/XL,
+                 and one adding a notebook should see that size does not apply here at all - without
+                 having to read the seeder to find out (ADR-0021). -->
+            @if (selectedCategory(); as category) {
+              @if (category.sizes.length > 0) {
+                <p class="muted small">
+                  Sold in sizes <strong>{{ category.sizes.join(', ') }}</strong> ({{
+                    category.sizeScaleName
+                  }}). Variants of this product may use these sizes.
+                </p>
+              } @else {
+                <p class="muted small">
+                  This category is not sized, so its products have no size option.
+                </p>
+              }
+            }
           </div>
 
           <div class="field">
@@ -505,6 +524,20 @@ export class ProductEditPage {
     categoryId: ['', Validators.required],
     brandId: ['', Validators.required],
   });
+
+  /**
+   * The category chosen in the form, so its size scale can be shown beside the select.
+   *
+   * `toSignal` on the control's valueChanges, because a reactive form is Observable-based and the rest
+   * of this component is signals - the same RxJS-to-signal bridge the products page uses for the router.
+   */
+  private readonly categoryId = toSignal(this.form.controls.categoryId.valueChanges, {
+    initialValue: this.form.controls.categoryId.value,
+  });
+
+  protected readonly selectedCategory = computed(() =>
+    this.categories().find((category) => category.id === this.categoryId()),
+  );
 
   constructor() {
     // A required signal input is not populated until AFTER the constructor - see pages/orders.ts.

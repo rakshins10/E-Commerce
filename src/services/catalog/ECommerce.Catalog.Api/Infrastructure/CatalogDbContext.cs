@@ -21,6 +21,8 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
 
     public DbSet<Category> Categories => Set<Category>();
 
+    public DbSet<SizeScale> SizeScales => Set<SizeScale>();
+
     public DbSet<Brand> Brands => Set<Brand>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -108,6 +110,41 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
                 .WithMany()
                 .HasForeignKey(c => c.ParentId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Restrict: a scale still in use by a category must not be deletable out from under it, or the
+            // category silently becomes unsized and its products stop being orderable by size.
+            entity.HasOne(c => c.SizeScale)
+                .WithMany()
+                .HasForeignKey(c => c.SizeScaleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SizeScale>(entity =>
+        {
+            entity.ToTable("size_scales");
+            entity.HasKey(s => s.Id);
+            entity.HasIndex(s => s.Slug).IsUnique();
+            entity.Property(s => s.Name).HasMaxLength(100).IsRequired();
+            entity.Property(s => s.Slug).HasMaxLength(100).IsRequired();
+        });
+
+        modelBuilder.Entity<SizeScaleValue>(entity =>
+        {
+            entity.ToTable("size_scale_values");
+            entity.HasKey(v => v.Id);
+            entity.Property(v => v.Value).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(v => v.SizeScale)
+                .WithMany(s => s.Values)
+                .HasForeignKey(v => v.SizeScaleId)
+                // Cascade: a size has no meaning without its scale. Unlike the category link above, this is
+                // a child entity rather than a reference.
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One position per scale AND one value per scale. Both are how a scale stays a well-formed
+            // ordered set rather than a bag that happens to sort correctly today.
+            entity.HasIndex(v => new { v.SizeScaleId, v.Position }).IsUnique();
+            entity.HasIndex(v => new { v.SizeScaleId, v.Value }).IsUnique();
         });
 
         modelBuilder.Entity<Brand>(entity =>

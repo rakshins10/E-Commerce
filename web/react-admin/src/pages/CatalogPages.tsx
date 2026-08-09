@@ -376,6 +376,9 @@ export function ProductEditPage() {
   /** Read-only here - stock is Inventory's to change, and options are fixed when a variant is made. */
   const variants = productQuery.data?.variants ?? [];
 
+  /** The category currently chosen in the form, so its size scale can be shown beside the select. */
+  const selectedCategory = taxonomy?.categories.find((category) => category.id === form.categoryId);
+
   // Requires the taxonomy too, not just the text fields. Belt and braces after the stale-closure bug
   // above: even if a default is somehow lost, the form cannot post an empty Guid.
   const canSubmit =
@@ -504,6 +507,22 @@ export function ProductEditPage() {
               </option>
             ))}
           </select>
+
+          {/* What the chosen category means for this product's options.
+              A merchandiser adding a hoodie should be able to see that it will be sold in S/M/L/XL, and
+              one adding a notebook should see that size does not apply here at all - without having to
+              read the seeder to find out (ADR-0021). */}
+          {selectedCategory &&
+            (selectedCategory.sizes.length > 0 ? (
+              <p className="muted small">
+                Sold in sizes <strong>{selectedCategory.sizes.join(', ')}</strong> (
+                {selectedCategory.sizeScaleName}). Variants of this product may use these sizes.
+              </p>
+            ) : (
+              <p className="muted small">
+                This category is not sized, so its products have no size option.
+              </p>
+            ))}
         </div>
 
         <div className="field">

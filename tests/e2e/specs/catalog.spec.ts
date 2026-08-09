@@ -170,6 +170,76 @@ test.describe('product browsing', () => {
     await page.goto('/products?page=2');
     await expect(page.getByRole('navigation', { name: 'Pagination' })).toBeHidden();
   });
+
+  test('the size filter disappears for a category that is not sized', async ({ page }) => {
+    await page.goto('/products');
+
+    // Clothing is sized, so the control is there.
+    await expect(page.getByLabel('Size')).toBeVisible();
+
+    // Stationery is not. The control must GO, not merely return nothing when used - offering "M" for a
+    // notebook walks the customer into a guaranteed empty result, which is the bug this asserts against.
+    await page.getByLabel('Category').selectOption('stationery');
+
+    await expect(page.getByRole('status')).toContainText('3 products');
+    await expect(page.getByLabel('Size')).toBeHidden();
+  });
+
+  test('the options offered narrow to what the current filter contains', async ({ page }) => {
+    await page.goto('/products?category=drinkware');
+    await expect(page.getByRole('status')).toContainText('3 products');
+
+    const colours = page.getByLabel('Colour');
+    await expect(colours).toBeVisible();
+
+    // Only the colours drinkware is actually sold in. A clothing-only colour must not be on the list,
+    // because choosing it would return nothing.
+    await expect(colours.getByRole('option', { name: /Speckled White/ })).toHaveCount(1);
+    await expect(colours.getByRole('option', { name: /^Navy/ })).toHaveCount(0);
+  });
+
+  test('choosing a size still leaves the other sizes selectable', async ({ page }) => {
+    await page.goto('/products?category=clothing&size=M');
+
+    // A facet computed WITH its own filter applied would collapse to "M" alone, and a shopper could
+    // never change their mind. Each axis is counted with its own filter left out.
+    const sizes = page.getByLabel('Size');
+
+    for (const size of ['S', 'M', 'L', 'XL']) {
+      await expect(sizes.getByRole('option', { name: new RegExp(`^${size} `) })).toHaveCount(1);
+    }
+  });
+
+  test('sizes are listed in the scale order, not alphabetically', async ({ page }) => {
+    await page.goto('/products?category=clothing');
+
+    // S, M, L, XL. Sorted either alphabetically or numerically this comes out wrong, which is why the
+    // order is stored as data on the size scale rather than inferred (ADR-0021).
+    const options = page.getByLabel('Size').getByRole('option');
+
+    // toHaveCount retries; allTextContents() does not, and reads an empty list on a panel that has not
+    // finished loading. Same hazard as count() - only expect(locator) waits.
+    await expect(options).toHaveCount(5);
+
+    const labels = (await options.allTextContents()).map((text) => text.trim().split(' ')[0]);
+
+    expect(labels).toEqual(['All', 'S', 'M', 'L', 'XL']);
+  });
+
+  test('the catalogue can be filtered by size and by who it is for', async ({ page }) => {
+    await page.goto('/products');
+    await expect(page.getByRole('status')).toContainText('12 products');
+
+    // Only clothing has sizes, so filtering by one excludes the mugs and the notebooks.
+    await page.getByLabel('Size').selectOption('S');
+    await expect(page.getByRole('status')).toContainText('6 products');
+
+    await page.goto('/products');
+    await page.getByRole('navigation', { name: 'Shop for' }).getByRole('link', { name: 'Women' }).click();
+
+    await expect(page).toHaveURL(/audience=Women/);
+    await expect(page.getByRole('status')).toContainText('2 products');
+  });
 });
 
 test.describe('product detail', () => {
@@ -295,18 +365,4 @@ test.describe('product detail', () => {
     await expect(page.getByRole('button', { name: 'Add to basket' })).toBeDisabled();
   });
 
-  test('the catalogue can be filtered by size and by who it is for', async ({ page }) => {
-    await page.goto('/products');
-    await expect(page.getByRole('status')).toContainText('12 products');
-
-    // Only clothing has sizes, so filtering by one excludes the mugs and the notebooks.
-    await page.getByLabel('Size').selectOption('S');
-    await expect(page.getByRole('status')).toContainText('6 products');
-
-    await page.goto('/products');
-    await page.getByRole('navigation', { name: 'Shop for' }).getByRole('link', { name: 'Women' }).click();
-
-    await expect(page).toHaveURL(/audience=Women/);
-    await expect(page.getByRole('status')).toContainText('2 products');
-  });
 });

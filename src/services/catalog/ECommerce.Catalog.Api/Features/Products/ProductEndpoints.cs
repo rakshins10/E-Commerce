@@ -153,12 +153,38 @@ public static class ProductEndpoints
         Results.Ok(await queries.GetBrandsAsync(cancellationToken));
 
     /// <summary>
-    /// The size, colour and audience facets.
+    /// The size, colour and audience facets <b>for the current filter</b>.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// One endpoint for all three rather than three, because a filter panel needs the whole set before it
     /// can render anything - three requests would mean three loading states for one control.
+    /// </para>
+    /// <para>
+    /// It takes the same parameters as the browse endpoint, so the options offered are the ones that would
+    /// return something. Choosing Stationery leaves <c>sizes</c> empty and the control disappears, rather
+    /// than offering a size that guarantees no results
+    /// ([ADR-0021](../../../../docs/adr/0021-category-defined-options-and-contextual-facets.md)).
+    /// </para>
     /// </remarks>
-    private static async Task<IResult> GetFacets(ProductQueries queries, CancellationToken cancellationToken) =>
-        Results.Ok(await queries.GetFacetsAsync(cancellationToken));
+    private static async Task<IResult> GetFacets(
+        ProductQueries queries,
+        CancellationToken cancellationToken,
+        string? search = null,
+        string? category = null,
+        string? brand = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        bool inStockOnly = false,
+        string? audience = null,
+        string? size = null,
+        string? colour = null)
+    {
+        var query = new ProductQuery(
+            search, category, brand, minPrice, maxPrice, inStockOnly,
+            SortBy: null, SortDescending: false, Page: 1, PageSize: 12,
+            audience, size, colour);
+
+        return Results.Ok(await queries.GetFacetsAsync(query, cancellationToken));
+    }
 }

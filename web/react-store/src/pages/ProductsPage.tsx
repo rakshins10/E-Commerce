@@ -6,6 +6,7 @@ import {
   getBrands,
   getCategories,
   getFacets,
+  type FacetFilters,
   groupIntoDepartments,
   searchProducts,
   stockLevel,
@@ -97,11 +98,41 @@ export function ProductsPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Sizes, colours and audiences. Cached like the taxonomy - it changes just as rarely.
+  /**
+   * Which options are on offer, given everything else already chosen.
+   *
+   * Refetched when the filters change rather than cached globally, which is the cost of contextual
+   * facets (ADR-0021). Paging and sorting are excluded from the key on purpose - they do not change
+   * what exists in the result set, so turning a page must not refetch the panel.
+   *
+   * `keepPreviousData` holds the last answer while the next loads, so the controls do not blink out of
+   * existence and back mid-filter.
+   */
+  const facetFilters: FacetFilters = useMemo(
+    () => ({
+      search: filters.search,
+      category: filters.category,
+      brand: filters.brand,
+      inStockOnly: filters.inStockOnly,
+      audience: filters.audience,
+      size: filters.size,
+      colour: filters.colour,
+    }),
+    [
+      filters.search,
+      filters.category,
+      filters.brand,
+      filters.inStockOnly,
+      filters.audience,
+      filters.size,
+      filters.colour,
+    ],
+  );
+
   const facetsQuery = useQuery({
-    queryKey: ['facets'],
-    queryFn: ({ signal }) => getFacets(signal),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ['facets', facetFilters],
+    queryFn: ({ signal }) => getFacets(facetFilters, signal),
+    placeholderData: keepPreviousData,
   });
 
   const result = productsQuery.data;

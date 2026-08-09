@@ -45,7 +45,22 @@ public static class CatalogSeeder
 
         logger.LogInformation("Seeding catalog demo data…");
 
+        // The size scale is DATA, not a SQL literal. It gives S/M/L/XL their order, and it is what a
+        // future "EU shoe" scale would sit alongside without touching a query. See ADR-0021.
+        var ukClothing = new SizeScale("UK clothing", "uk-clothing");
+        foreach (string size in ClothingSizes)
+        {
+            ukClothing.Add(size);
+        }
+
+        db.SizeScales.Add(ukClothing);
+
+        // Clothing declares the scale once; T-shirts and Hoodies inherit it. Accessories declares none, so
+        // Drinkware and Stationery are not sized - which is why the storefront omits the size control for
+        // them entirely rather than offering options that return nothing.
         var clothing = new Category("Clothing", "clothing");
+        clothing.UseSizeScale(ukClothing.Id);
+
         var tshirts = new Category("T-shirts", "t-shirts", clothing.Id);
         var hoodies = new Category("Hoodies", "hoodies", clothing.Id);
         var accessories = new Category("Accessories", "accessories");
