@@ -206,8 +206,9 @@ applied where it genuinely pays.
 
 > **Both sides live in PostgreSQL.** [ADR-0003](../adr/0003-postgresql-and-polyglot-persistence.md)
 > anticipated a MongoDB projection for the read side and that has **not been built** - the separation is
-> logical (different model, different technology to query it) rather than physical. The `mongo` container
-> in `docker compose` is provisioned and currently unused. Saying so is cheaper than letting a reader
+> logical (different model, different technology to query it) rather than physical. A `mongo` container
+> shipped provisioned-and-unused for twelve phases until it broke a cold boot by colliding with another
+> MongoDB on the same machine, and was removed in Phase 13. Saying so is cheaper than letting a reader
 > discover it.
 
 **Variants are Catalog's, and so is what a size means.** A product is a *style*; a variant is what a

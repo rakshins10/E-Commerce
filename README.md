@@ -36,8 +36,8 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 cd deploy && docker compose up -d --wait
 ```
 
-Thirty-one containers: nine services, three gateways, four web applications, Keycloak, RabbitMQ, Redis,
-seven databases, and the observability stack.
+Thirty containers: nine services, three gateways, four web applications, Keycloak and its database,
+RabbitMQ, Redis, eight service databases, and the observability pair (Seq and Jaeger).
 
 | Surface | URL |
 |---------|-----|
@@ -142,7 +142,7 @@ cp .env.example .env          # dev-only values; see the warning below
 docker compose up -d
 ```
 
-This brings up **31 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
+This brings up **30 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
 afterwards it is about 60 seconds. Use `docker compose up -d --wait` to block until everything reports
 healthy - it also fails if a service starts and then crashes, which a plain `up -d` reports as success.
 

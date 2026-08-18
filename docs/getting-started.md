@@ -24,7 +24,7 @@ you want to run a component *outside* its container while developing it.
 
 ### Docker Desktop resources
 
-**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs 31 containers. Below
+**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs 30 containers. Below
 8 GB, containers are killed by the OOM reaper mid-startup, which surfaces as services flapping between
 starting and unhealthy rather than as an obvious out-of-memory message - a genuinely confusing failure.
 

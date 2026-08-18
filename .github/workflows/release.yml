@@ -162,8 +162,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The scan pulls the image back from GHCR, so it needs the same login the publish used -
+      # packages default to private even on a public repository.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The v prefix matters: this action's releases are tagged v0.36.0, and a bare 0.28.0 made every
+      # scan job die in "Set up job" with "unable to find version" - before a single step ran.
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:sha-${{ github.sha }}
           format: sarif

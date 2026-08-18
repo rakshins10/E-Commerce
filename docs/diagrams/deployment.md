@@ -3,7 +3,7 @@
 > **Source:** [`deploy/docker-compose.yml`](../../deploy/docker-compose.yml) ·
 > **Related:** [Getting started](../getting-started.md) · [Architecture](../architecture.md)
 
-What `docker compose up` actually creates: 31 containers on two networks.
+What `docker compose up` actually creates: 30 containers on two networks.
 
 ```mermaid
 graph TB
@@ -38,7 +38,6 @@ graph TB
         subgraph stores["Datastores"]
             PG[("9 × postgres<br/>:15432-15440")]
             RDS[("redis :6379")]
-            MNG[("mongo :27017")]
         end
 
         MQ{{"rabbitmq<br/>:5672 · UI :15672"}}
@@ -83,7 +82,6 @@ graph LR
     A -->|service_healthy| C[services]
     D[rabbitmq] -->|service_healthy| C
     E[redis] -->|service_healthy| C
-    F[mongo] -->|service_healthy| C
     B -->|service_healthy| G[BFFs + back-office]
 ```
 

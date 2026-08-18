@@ -80,6 +80,25 @@ npm run test:angular:admin  # the SAME 26 against :4201
 
 ---
 
+## Coverage, measured and stated plainly
+
+`dotnet test --collect:"XPlat Code Coverage"` (Phase 13, 2026-08-18):
+
+| Assembly | Line coverage | Covered by |
+|---|---:|---|
+| ECommerce.Ordering.Domain | 83% | 28 domain tests - every invariant |
+| ECommerce.Auth | 81% | 16 integration tests against a real Keycloak |
+| ECommerce.Common | 62% | 17 unit tests |
+| Everything else | ~0% unit | **The 180 e2e specs**, deliberately |
+
+The last row is a strategy, not a gap: API endpoints, the outbox, the saga and both front ends are
+exercised through the running system, where the failure modes actually live - serialization, wiring,
+idempotency under real at-least-once delivery. Unit-testing a minimal-API handler against a mocked
+DbContext would raise the number without raising confidence. The domain, where the invariants live, is
+where line coverage is held high.
+
+---
+
 ## Repository hygiene
 
 Two checks that fail in seconds rather than after a twenty-minute build, and run as their own CI job:

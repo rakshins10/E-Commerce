@@ -54,8 +54,9 @@ Using three databases to look sophisticated is the failure mode.
 
 ADR-0003 also chose MongoDB for a denormalised Catalog read side. It was **not built**: Catalog's read
 model is a different shape served by different technology (Dapper, purpose-built DTOs) in the same
-database, which turned out to be enough. The unused `mongo` container is the honest evidence that a
-deviation has to earn itself twice - once when decided, and again when it is time to run it.
+database, which turned out to be enough. The `mongo` container shipped unused for twelve phases and was
+removed in Phase 13 after it collided with another project's MongoDB and killed a cold boot - evidence
+that a deviation has to earn itself twice: once when decided, and again when it is time to run it.
 
 **Where:** [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md) · Phase 1
 

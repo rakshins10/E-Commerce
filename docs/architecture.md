@@ -364,9 +364,11 @@ consequence of sovereignty, not a goal in itself.**
 
 > [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md) anticipated a MongoDB projection for
 > Catalog's read side. It has **not been built**: the read model is a different *shape* served by different
-> *technology* (Dapper, purpose-built DTOs), but it lives in the same database. The `mongo` container is
-> provisioned and unused. The decision stands; the implementation has not caught up, and an architecture
-> document that claimed otherwise would be describing a system nobody can run.
+> *technology* (Dapper, purpose-built DTOs), but it lives in the same database. The `mongo` container
+> sat provisioned-and-unused until the Phase 13 fresh-machine walkthrough, when it collided with another
+> project's MongoDB on port 27017 and killed the entire boot - an unused container is not free, it is a
+> failure mode waiting for a port. It is removed. The decision stands as a decision; reviving it is one
+> compose block plus a projection consumer.
 
 See [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md).
 
