@@ -1,7 +1,7 @@
 /**
  * My Account API types and calls.
  *
- * Owned by this application — the Angular storefront has its own equivalent in
+ * Owned by this application - the Angular storefront has its own equivalent in
  * `core/profile.ts`. See docs/adr/0018-self-contained-frontends.md.
  *
  * Unlike catalog browsing, every call here is **authenticated**, so the client
@@ -56,7 +56,7 @@ export interface SaveAddressRequest {
 /**
  * Creates a profile client bound to the current access token.
  *
- * Takes a token *getter* rather than a token, because tokens expire and rotate —
+ * Takes a token *getter* rather than a token, because tokens expire and rotate -
  * capturing one at construction would attach a stale token to every later call.
  */
 export function createProfileApi(getAccessToken: () => string | null) {
@@ -90,7 +90,7 @@ export function createProfileApi(getAccessToken: () => string | null) {
   };
 }
 
-/** Countries offered in the address form. Deliberately short — this is a demo shop. */
+/** Countries offered in the address form. Deliberately short - this is a demo shop. */
 export const COUNTRIES = [
   { code: 'GB', name: 'United Kingdom' },
   { code: 'IE', name: 'Ireland' },

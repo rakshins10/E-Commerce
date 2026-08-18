@@ -16,7 +16,7 @@ namespace ECommerce.Ordering.Application.Orders;
 /// The single most important handler in the system, and the one worth reading closely. It shows what an
 /// application layer is actually for: <b>orchestration, and nothing else</b>. It fetches, it re-prices,
 /// it asks the aggregate to do the work, it writes the outbox, it commits. Every rule about what a valid
-/// order is lives in <see cref="Order"/>, not here — which is what stops a second entry point (an admin
+/// order is lives in <see cref="Order"/>, not here - which is what stops a second entry point (an admin
 /// tool, an import, a retry job) quietly obeying a different set of rules.
 /// </para>
 /// <para>
@@ -25,7 +25,7 @@ namespace ECommerce.Ordering.Application.Orders;
 /// <list type="number">
 ///   <item><description>Read the basket. No basket, no order.</description></item>
 ///   <item><description>
-///     <b>Re-price every line from Catalog.</b> The security step — see <see cref="ICatalogService"/>.
+///     <b>Re-price every line from Catalog.</b> The security step - see <see cref="ICatalogService"/>.
 ///   </description></item>
 ///   <item><description>
 ///     Ask the aggregate to build the order. All the invariants apply here, in one place.
@@ -34,7 +34,7 @@ namespace ECommerce.Ordering.Application.Orders;
 ///     Write the order <b>and</b> the integration event in ONE transaction. The outbox.
 ///   </description></item>
 ///   <item><description>
-///     Clear the basket afterwards, outside the transaction, and tolerate failure — see below.
+///     Clear the basket afterwards, outside the transaction, and tolerate failure - see below.
 ///   </description></item>
 /// </list>
 /// </remarks>
@@ -200,12 +200,26 @@ public sealed class PlaceOrderHandler(
 
             lines.Add(new OrderLineRequest(
                 price.ProductId,
-                price.Sku,
+                // The VARIANT SKU, from the basket - not price.Sku, which is the style code.
+                //
+                // This is the one field that must come from what the customer chose rather than from
+                // Catalog: the money is per product, but the thing being picked off a shelf is a specific
+                // size and colour. Taking price.Sku here would put "NW-TS-001" on the line, and Inventory
+                // would then have no stock row to reserve against.
+                //
+                // KNOWN GAP: nothing here proves the variant SKU exists or belongs to this product. It
+                // fails safe rather than silently - Inventory rejects an unknown SKU and the saga cancels
+                // the order with compensation - but the rejection arrives seconds later rather than at
+                // checkout. Validating it here would mean widening the Catalog pricing contract to return
+                // variants; recorded in docs/services/ordering.md rather than left to be discovered.
+                item.Sku,
                 // The name is taken from Catalog too, so a renamed product shows its real name on the
                 // invoice rather than whatever the client happened to send.
                 price.Name,
                 new Money(price.UnitPrice, price.Currency),
-                item.Quantity));
+                item.Quantity,
+                item.Size,
+                item.ColourName));
         }
 
         return lines;
@@ -217,8 +231,8 @@ public sealed class PlaceOrderHandler(
 /// </summary>
 /// <remarks>
 /// A one-method interface over <c>DbContext.SaveChangesAsync</c>, so the application layer can commit
-/// without referencing EF Core. Not an abstraction over persistence in general — the repository is
-/// already that — but the seam that keeps the layering assertion in
+/// without referencing EF Core. Not an abstraction over persistence in general - the repository is
+/// already that - but the seam that keeps the layering assertion in
 /// tests/unit/ECommerce.Architecture.Tests true.
 /// </remarks>
 public interface IOrderingUnitOfWork

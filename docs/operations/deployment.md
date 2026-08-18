@@ -7,20 +7,20 @@ Three GitHub Actions workflows, each with a distinct job:
 
 | Workflow | Runs on | What it does |
 |----------|---------|--------------|
-| [`ci.yml`](../../.github/workflows/ci.yml) | Every push and PR | Builds, tests, and proves the stack boots. **Gate — nothing merges without it.** |
+| [`ci.yml`](../../.github/workflows/ci.yml) | Every push and PR | Builds, tests, and proves the stack boots. **Gate - nothing merges without it.** |
 | [`release.yml`](../../.github/workflows/release.yml) | Push to `main`, and `v*` tags | Builds and publishes 12 container images to GitHub's registry |
 | [`docs.yml`](../../.github/workflows/docs.yml) | Docs changes on `main` | Publishes this documentation as a searchable website |
 
 ---
 
-## 1. What "deployment" means here — and what it does not
+## 1. What "deployment" means here - and what it does not
 
 **This repository builds and publishes deployable artefacts. It does not deploy to a live server**, because
 there is no server to deploy to.
 
 That is a deliberate stopping point, not an omission. Everything up to the artefact is real: images are
 built, tagged immutably, signed with provenance, scanned for vulnerabilities, and published. The final step
-— `kubectl apply` or an Azure Container Apps update — is a five-line addition once a target exists, and it is
+- `kubectl apply` or an Azure Container Apps update - is a five-line addition once a target exists, and it is
 the only part that would need credentials.
 
 **Why stop there?** Because a deploy step pointing at nothing is theatre, and it needs real cloud secrets in
@@ -38,14 +38,14 @@ When you build locally, the thing you tested and the thing you shipped are *diff
 might resolve to a newer patch version; a base image might have been updated. Usually harmless. Occasionally
 the cause of a bug that reproduces nowhere.
 
-A published image is **immutable**. You test image `sha-abc123` and you deploy image `sha-abc123` — byte for
+A published image is **immutable**. You test image `sha-abc123` and you deploy image `sha-abc123` - byte for
 byte the same thing. If it breaks, you roll back to `sha-def456`, which still exists.
 
 ---
 
 ## 3. Where the images go
 
-**GHCR** — GitHub Container Registry, at `ghcr.io`. It is GitHub's built-in registry, so there is no
+**GHCR** - GitHub Container Registry, at `ghcr.io`. It is GitHub's built-in registry, so there is no
 account to create, no secret to manage, and permissions follow the repository's.
 
 One image per service:
@@ -74,7 +74,7 @@ Each build produces several tags for different audiences:
 
 | Tag | Example | Use for |
 |-----|---------|---------|
-| `sha-<commit>` | `sha-ba77141…` | **Deploying.** Immutable — always this exact build |
+| `sha-<commit>` | `sha-ba77141…` | **Deploying.** Immutable - always this exact build |
 | `1.4.2` | from a `v1.4.2` git tag | Releases |
 | `1.4` | from the same tag | "Latest patch of 1.4" |
 | `latest` | | Local experimentation **only** |
@@ -83,7 +83,7 @@ Each build produces several tags for different audiences:
 
 `latest` is a *moving pointer*, not a version. Deploy it and:
 
-- **"What is running in production?"** becomes unanswerable — it depends when each instance last pulled.
+- **"What is running in production?"** becomes unanswerable - it depends when each instance last pulled.
 - **Rollback has no target.** There is no "previous latest".
 - **Two servers can run different code** while both claiming to run `latest`.
 
@@ -95,22 +95,22 @@ Deploy `sha-…` or the digest. This is one of the most common real-world contai
 
 Beyond building, three things worth knowing about:
 
-**Multi-architecture builds** — every image is built for `linux/amd64` *and* `linux/arm64`, so it runs on an
+**Multi-architecture builds** - every image is built for `linux/amd64` *and* `linux/arm64`, so it runs on an
 Apple Silicon Mac, on AWS Graviton, and on ordinary x86 servers. Docker picks the right one automatically.
 
-**Provenance attestation** — a cryptographically signed statement of *which commit and which workflow*
-produced the image. It answers "can I prove this image came from that source code?" — the supply-chain
+**Provenance attestation** - a cryptographically signed statement of *which commit and which workflow*
+produced the image. It answers "can I prove this image came from that source code?" - the supply-chain
 question that matters after incidents like SolarWinds. Anyone can verify it:
 
 ```bash
 gh attestation verify oci://ghcr.io/rakshins10/e-commerce-catalog-api:latest --owner rakshins10
 ```
 
-**Vulnerability scanning** — [Trivy](https://trivy.dev) scans the published images and reports findings to
+**Vulnerability scanning** - [Trivy](https://trivy.dev) scans the published images and reports findings to
 the repository's **Security** tab.
 
-> This is a *different* check from the one in `ci.yml`. NuGet audit catches vulnerable **NuGet packages** —
-> our own dependencies. Trivy catches vulnerabilities in the **operating system inside the image** — the
+> This is a *different* check from the one in `ci.yml`. NuGet audit catches vulnerable **NuGet packages** -
+> our own dependencies. Trivy catches vulnerabilities in the **operating system inside the image** - the
 > Debian packages in the .NET base image. Both matter, and neither finds the other's problems.
 
 Scanning reports rather than fails, deliberately: a base-image CVE with no patch yet available should be
@@ -129,13 +129,13 @@ Why, when Markdown already renders on GitHub? Because the stated goal is that a 
 from `docs/` alone**, and that needs full-text search across pages, a navigation sidebar, and reliably
 rendered Mermaid diagrams. GitHub gives you none of the first two.
 
-The reading order in the sidebar is deliberate — concepts, then architecture, then code.
+The reading order in the sidebar is deliberate - concepts, then architecture, then code.
 
 ### ⚠️ One-time setup you must do by hand
 
 The Pages deployment will fail with a 404 until this is enabled:
 
-> **Repository → Settings → Pages → Build and deployment → Source → “GitHub Actions”**
+> **Repository → Settings → Pages → Build and deployment → Source → "GitHub Actions"**
 
 This cannot be automated: enabling Pages is an account-level action requiring permissions a workflow token
 deliberately does not have.
@@ -163,7 +163,7 @@ Note it deploys the **`sha-` tag**, per §4.
 
 ### Kubernetes
 
-Compose is deliberately shaped so this is configuration, not a redesign — nothing hardcodes a hostname, all
+Compose is deliberately shaped so this is configuration, not a redesign - nothing hardcodes a hostname, all
 settings arrive as environment variables, and liveness and readiness are already separate endpoints
 ([health checks](health-checks.md)):
 
@@ -195,9 +195,9 @@ Slower, and the only approach that survives a rollback.
 |---------|----------|
 | Secrets | Key Vault / External Secrets with **managed identity**, so there is no bootstrap credential ([ADR-0009](../adr/0009-secrets-management.md)) |
 | TLS | Terminate at ingress; mTLS between services via a service mesh |
-| Rollback | Redeploy the previous `sha-` tag — which is why immutable tags matter |
+| Rollback | Redeploy the previous `sha-` tag - which is why immutable tags matter |
 | Progressive delivery | Canary or blue-green, so a bad release reaches 5% of traffic rather than 100% |
-| Observability | Point `OTEL_EXPORTER_OTLP_ENDPOINT` at a managed backend — one environment variable ([observability](observability.md)) |
+| Observability | Point `OTEL_EXPORTER_OTLP_ENDPOINT` at a managed backend - one environment variable ([observability](observability.md)) |
 
 ---
 
@@ -215,13 +215,13 @@ Or the **Actions** tab in the browser.
 
 ## 9. Troubleshooting
 
-**`denied: permission_denied` pushing to GHCR** — the workflow needs `packages: write`. It is already set in
+**`denied: permission_denied` pushing to GHCR** - the workflow needs `packages: write`. It is already set in
 `release.yml`; if you copy the job elsewhere, carry the permission block with it.
 
-**Pages deploy returns 404** — Pages source is not set to "GitHub Actions". See §6.
+**Pages deploy returns 404** - Pages source is not set to "GitHub Actions". See §6.
 
-**Multi-arch build is slow** — expected. `arm64` is emulated on x86 runners. The layer cache (`type=gha`)
+**Multi-arch build is slow** - expected. `arm64` is emulated on x86 runners. The layer cache (`type=gha`)
 makes subsequent runs much faster; the first is not.
 
-**CI passes but `docker compose up` fails locally** — usually stale volumes. `docker compose down -v` and try
+**CI passes but `docker compose up` fails locally** - usually stale volumes. `docker compose down -v` and try
 again. CI always starts clean, which is why it does not see the problem.

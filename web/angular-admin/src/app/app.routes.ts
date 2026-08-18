@@ -8,7 +8,7 @@ import { Permissions } from './core/permissions';
  *
  * ---
  * **Every route declares the permission it needs**, right next to the component. The whole
- * authorization surface of the application is readable in one screen — and an unguarded route shows up
+ * authorization surface of the application is readable in one screen - and an unguarded route shows up
  * as an *absence*, which is far easier to spot in review than a missing check inside a component.
  *
  * It is the same principle as `RequirePermission(...)` on a minimal-API route, applied to the client.
@@ -20,7 +20,7 @@ import { Permissions } from './core/permissions';
  *
  * Angular's `canActivate` runs **before** the component is created, so a forbidden route never mounts
  * and never fires its data request. React's `<RequirePermission>` renders, redirects, and only then
- * unmounts — harmless, but it means a guarded component's `useQuery` can briefly fire. A real point for
+ * unmounts - harmless, but it means a guarded component's `useQuery` can briefly fire. A real point for
  * Angular's router.
  */
 export const routes: Routes = [

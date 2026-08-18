@@ -10,7 +10,7 @@ namespace ECommerce.Catalog.Api.Infrastructure;
 /// <para>
 /// <b>Why this exists.</b> <c>dotnet ef migrations add</c> needs a <c>DbContext</c> instance to read the
 /// model from. By default it tries to build the application's host, which means running
-/// <c>Program.cs</c> — and that throws here, because the composition root requires a real connection string
+/// <c>Program.cs</c> - and that throws here, because the composition root requires a real connection string
 /// that is not present at design time:
 /// </para>
 /// <code>
@@ -24,7 +24,7 @@ namespace ECommerce.Catalog.Api.Infrastructure;
 /// <para>
 /// <b>The connection string below is never used to connect.</b> Generating a migration only needs the
 /// provider, so that EF Core knows to emit PostgreSQL DDL rather than SQL Server DDL. Nothing here reaches a
-/// database, which is why a placeholder is safe — and why it is not a committed secret.
+/// database, which is why a placeholder is safe - and why it is not a committed secret.
 /// </para>
 /// <para>
 /// To generate a migration against a real database (for <c>dotnet ef database update</c>), set

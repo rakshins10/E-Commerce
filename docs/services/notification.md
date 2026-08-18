@@ -15,7 +15,7 @@ Tells the customer when something happens to their order.
 Sending an email is **not naturally idempotent**. There is no "send this unless you already did"
 operation, and the second one is in the customer's inbox by the time you notice.
 
-Every other service here can shrug off a duplicate — `MarkAsPaid` on a paid order returns quietly,
+Every other service here can shrug off a duplicate - `MarkAsPaid` on a paid order returns quietly,
 `Release` clamps at zero. This one cannot. So it is the one place that uses the **inbox** half of the
 outbox pattern explicitly:
 
@@ -31,7 +31,7 @@ send twice or record a send that never happened.
 
 > **Prefer natural idempotency where it is achievable.** An operation that is idempotent by construction
 > needs no bookkeeping and cannot get the bookkeeping wrong. This table is for the operations that are
-> not — sending an email, incrementing a counter, calling a third party.
+> not - sending an email, incrementing a counter, calling a third party.
 
 The `consumer` column is part of the composite key, because one service can legitimately have several
 handlers for the same event. Deduplicating on the message id alone would let whichever handler ran first
@@ -44,7 +44,7 @@ silently suppress the others.
 Notifications are written to a table and logged. Wiring an SMTP server into a reference repo adds a
 credential to manage and a thing to break, and changes nothing about the pattern being demonstrated.
 
-In a real system this row would still exist — it is what lets support answer *"did we tell them?"* and
+In a real system this row would still exist - it is what lets support answer *"did we tell them?"* and
 what a resend is built from. The SMTP call would be an additional step, not a replacement for it.
 
 ---
@@ -61,7 +61,7 @@ This is exactly why the cancellation reason is **part of the event** rather than
 to go and ask for. Those three situations need completely different messages, and the second needs to
 tell the customer what to do next.
 
-An unrecognised reason falls through to a generic message rather than crashing — which is only possible
+An unrecognised reason falls through to a generic message rather than crashing - which is only possible
 because the reason travels as a string. See
 [ADR-0019](../adr/0019-shared-integration-event-contracts.md).
 
@@ -69,8 +69,8 @@ because the reason travels as a string. See
 
 ## Marketing consent is deliberately not consulted
 
-These are **service** messages — part of performing the contract the customer entered by buying something
-— not marketing.
+These are **service** messages - part of performing the contract the customer entered by buying something
+- not marketing.
 
 Under UK GDPR/PECR they do not require opt-in, and a customer who unsubscribed from adverts still expects
 a dispatch email. The [User Profile service](user-profile.md) holds the other half of that distinction,

@@ -3,7 +3,7 @@
 > **Related:** [Bounded contexts](bounded-contexts.md) · [Business rules](business-rules.md)
 
 The vocabulary of this domain, defined precisely. The point of a *ubiquitous* language is that the same word
-means the same thing in conversation, in documentation, and in code — so if a term here disagrees with a class
+means the same thing in conversation, in documentation, and in code - so if a term here disagrees with a class
 name, one of them is a bug.
 
 **Terms that mean different things in different contexts are marked ⚠️ and defined per context.** Those are
@@ -19,7 +19,7 @@ definition is how you end up with a bloated canonical model that serves nobody.
 | Context | Meaning |
 |---------|---------|
 | **Identity & Access** (Keycloak) | A set of credentials, an opaque `sub`, and a list of realm roles. Has no name, address, or preferences. |
-| **Customer Profile** | A display name, contact details, saved addresses, preferences, wishlists, and consent records — keyed by `sub`. Never authenticates anyone. |
+| **Customer Profile** | A display name, contact details, saved addresses, preferences, wishlists, and consent records - keyed by `sub`. Never authenticates anyone. |
 | **Ordering** | A `BuyerId` and a shipping address **frozen at the moment of purchase**. Not a live reference to a person. |
 
 **There is deliberately no canonical `Customer` class.** Three models, each complete for its own purpose,
@@ -33,12 +33,12 @@ business data on a mutable identifier guarantees an eventual orphaning incident.
 
 ### Realm role
 
-A coarse identity in Keycloak — `customer`, `support-agent`, `catalog-manager`, `order-manager`, `admin`.
+A coarse identity in Keycloak - `customer`, `support-agent`, `catalog-manager`, `order-manager`, `admin`.
 Answers *what kind of user is this*, not *what may they do*.
 
 ### Permission
 
-A fine-grained capability — `catalog:write`, `order:refund`, `user:manage`, `price:override`. Answers
+A fine-grained capability - `catalog:write`, `order:refund`, `user:manage`, `price:override`. Answers
 *what may they do*. Endpoints are guarded by permissions, never by roles.
 
 ### Composite role
@@ -49,7 +49,7 @@ change in Keycloak instead of a code change across every endpoint.
 
 ### Staff
 
-Any user with a realm role other than `customer`. Not a domain entity — a convenient collective noun.
+Any user with a realm role other than `customer`. Not a domain entity - a convenient collective noun.
 
 ---
 
@@ -57,27 +57,59 @@ Any user with a realm role other than `customer`. Not a domain entity — a conv
 
 ### Product
 
-A sellable item as *merchandising* understands it: name, description, images, category, brand, list price.
-Owned by Catalog. **Ordering does not hold a Product** — it holds an `OrderItem` carrying a copy of the name
-and price at the time of ordering.
+A **style**, as merchandising understands it: name, description, image, category, brand, list price, and who
+it is for. Owned by Catalog. **A product is not sellable** - a *variant* is. **Ordering does not hold a
+Product**; it holds an `OrderItem` carrying a copy of the name and price at the time of ordering.
 
 ### Variant
 
-A specific purchasable configuration of a product — size, colour. Carries the SKU. What is actually added to a
-basket and what stock is held against.
+A specific purchasable configuration of a product - a size and a colour. **This is what goes in a basket,
+what an order line records, and what stock is held against.** Every product has at least one, including
+those with neither a size nor a colour ([ADR-0020](../adr/0020-product-variants.md)).
 
 ### SKU
 
-*Stock Keeping Unit.* The identifier shared between Catalog and Inventory. The one string both contexts agree
-on, which makes it the integration key between them.
+*Stock Keeping Unit.* The identifier of a **variant**, and the one string Catalog, Inventory, Basket and
+Ordering all agree on - which is what makes it the integration key between them, and why moving it from the
+product to the variant cost Inventory no schema change.
+
+### Style code
+
+`Product.Sku` - the identifier of the style rather than of anything sellable, e.g. `NW-TS-001`. Variant
+SKUs are conventionally derived from it (`NW-TS-001-M-NAV`), but nothing parses that: the convention is a
+courtesy to whoever reads a picking list.
+
+> Both `products.sku` and `product_variants.sku` are uniquely indexed and they guarantee **different
+> things** - unique styles, and unique sellable units. Reading only one leads to the wrong conclusion.
+
+### Audience
+
+Who a product is made for: `Men`, `Women` or `Unisex`. An **attribute, not a branch of the category
+tree** - a taxonomy answers *what is this thing*, audience answers *who is it for*, and they vary
+independently.
+
+### Size scale
+
+The set of sizes a category is sold in, **and their order**: "UK clothing" is S, M, L, XL. Stored as data
+with an explicit position, because that order is neither alphabetical nor numeric. A category with no scale
+is **not sized** - which is a different claim from being sold in one size
+([ADR-0021](../adr/0021-category-defined-options-and-contextual-facets.md)).
 
 ### List price
 
-The price Catalog advertises. **Not necessarily the price paid** — see *unit price*.
+The price Catalog advertises. **Not necessarily the price paid** - see *unit price*. Held on the product,
+not per variant: a Medium and a Large of one shirt cost the same.
 
 ### Category / Brand
 
-Taxonomy for browsing and filtering. Categories nest; brands do not.
+Taxonomy for browsing and filtering. Categories nest one level; brands do not. A category names the *size
+scale* its products use, and a child inherits its parent's.
+
+### Facet
+
+A filterable axis with counts - audience, size, colour. Computed **against the current filter**, so the
+options offered are the ones that would return something: choosing Stationery leaves the size facet empty
+and the control disappears rather than offering a size no notebook has.
 
 ---
 
@@ -90,17 +122,19 @@ line was added, not a live lookup.
 
 ### Basket line
 
-One variant and a quantity within a basket, plus the captured price.
+One **variant** and a quantity, plus the captured price. Identified by its variant SKU rather than by the
+product, so a Medium and a Large of one shirt are two lines rather than a merged instruction to pick "two"
+of something unspecified.
 
 ### Captured price
 
 The price recorded when an item was added. If Catalog later publishes a price change, Basket updates the line
-and **flags it** so the UI can say the price changed — rather than silently altering what the customer thought
+and **flags it** so the UI can say the price changed - rather than silently altering what the customer thought
 they were buying.
 
 ### Checkout
 
-The act of converting a basket into an order. The basket publishes `BasketCheckedOut` and is then **deleted** —
+The act of converting a basket into an order. The basket publishes `BasketCheckedOut` and is then **deleted** -
 Basket keeps no history.
 
 ---
@@ -136,12 +170,12 @@ customer later edits that saved address, historic orders must still show where t
 ### Order status
 
 Where the order sits in its lifecycle: `Submitted` → `AwaitingStock` → `AwaitingPayment` → `Paid` →
-`Shipped` → `Delivered`, or `Cancelled`. Transitions are enforced by the aggregate — see the
+`Shipped` → `Delivered`, or `Cancelled`. Transitions are enforced by the aggregate - see the
 [state machine](../diagrams/README.md).
 
 ### Buyer
 
-The `BuyerId` on an order — the Keycloak `sub` of whoever placed it. **Outside the aggregate boundary**,
+The `BuyerId` on an order - the Keycloak `sub` of whoever placed it. **Outside the aggregate boundary**,
 referenced by id only.
 
 ---
@@ -155,13 +189,13 @@ compensations. Holds **process state, never domain state**.
 
 ### Compensating action
 
-The business operation that semantically undoes a completed step. **Not a rollback** — you cannot un-charge a
+The business operation that semantically undoes a completed step. **Not a rollback** - you cannot un-charge a
 card, you refund it; you cannot un-send an email, you send a correction.
 
 ### Reservation
 
 A hold placed on stock for a specific order, before payment. Confirmed on payment success, released on
-failure. **Stock is reserved, never decremented on order** — a naive decrement leaks stock permanently
+failure. **Stock is reserved, never decremented on order** - a naive decrement leaks stock permanently
 whenever anything downstream fails.
 
 ### Stock on hand
@@ -174,19 +208,19 @@ Physical units in the warehouse. Distinct from *available* stock, which is on ha
 
 ### Payment attempt
 
-One try at taking money for an order. An order may have several — a declined card followed by a successful
+One try at taking money for an order. An order may have several - a declined card followed by a successful
 retry.
 
 ### Authorisation / Capture
 
-Authorisation reserves funds on the card; capture actually takes them. **Simplified in this repository** —
+Authorisation reserves funds on the card; capture actually takes them. **Simplified in this repository** -
 the simulated gateway treats them as one step. Production separates them, typically authorising at checkout
 and capturing at dispatch.
 
 ### Refund
 
 Returning captured money. A distinct business operation with its own permission (`order:refund`) and its own
-audit trail — never a deletion of the payment record.
+audit trail - never a deletion of the payment record.
 
 ---
 
@@ -213,7 +247,7 @@ what wording?" is a question regulators actually ask.
 
 ### Integration event
 
-A fact published across service boundaries, after commit, via the outbox. Past tense. A published contract —
+A fact published across service boundaries, after commit, via the outbox. Past tense. A published contract -
 once someone consumes it, changing it breaks their deployment.
 
 ### Domain event
@@ -237,5 +271,5 @@ survives trace sampling.
 
 ### Audit log
 
-The append-only record of administrative actions — who did what, to what, when, from where. Owned by
+The append-only record of administrative actions - who did what, to what, when, from where. Owned by
 Back-office. A compliance artefact, not plumbing.

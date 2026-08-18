@@ -43,7 +43,7 @@ namespace ECommerce.OrderingSaga.Api.Handlers;
 /// </para>
 /// <list type="bullet">
 ///   <item><description>It can fail, and then needs retrying.</description></item>
-///   <item><description>It happens <i>later</i>, so the world has moved on — released stock may have
+///   <item><description>It happens <i>later</i>, so the world has moved on - released stock may have
 ///   been sold to somebody else in the meantime.</description></item>
 ///   <item><description>It is visible. A rollback leaves no trace; a compensation is a real event
 ///   others can see, which is why <c>StockReleased</c> is published.</description></item>

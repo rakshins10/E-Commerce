@@ -9,7 +9,7 @@ namespace ECommerce.Catalog.Api.Features.Products;
 /// <remarks>
 /// <para>
 /// The permission each endpoint requires is declared <b>on the route</b>, so a reader can audit this
-/// service's entire authorization surface by scanning the table below — and an unprotected endpoint shows up
+/// service's entire authorization surface by scanning the table below - and an unprotected endpoint shows up
 /// as an <i>absence</i>, which is far easier to spot in review than a missing check inside a method.
 /// See <c>docs/authorization-model.md</c>.
 /// </para>
@@ -48,6 +48,12 @@ public static class ProductEndpoints
             .WithName("GetBrands")
             .WithSummary("Brands with product counts, for the filter panel")
             .Produces<IReadOnlyList<BrandDto>>();
+
+        group
+            .MapGet("/facets", GetFacets)
+            .WithName("GetFacets")
+            .WithSummary("Audiences, sizes and colours with product counts, for the filter panel")
+            .Produces<FacetsDto>();
 
         // ---------------------------------------------------------------------------------------
         //  Internal: authoritative pricing for checkout.
@@ -94,7 +100,7 @@ public static class ProductEndpoints
 
     /// <remarks>
     /// Filters arrive as individual query parameters rather than a bound object so the OpenAPI document
-    /// describes each one — which is what makes a generated client, and the Swagger UI, actually usable.
+    /// describes each one - which is what makes a generated client, and the Swagger UI, actually usable.
     /// </remarks>
     private static async Task<IResult> SearchProducts(
         ProductQueries queries,
@@ -105,6 +111,9 @@ public static class ProductEndpoints
         decimal? minPrice = null,
         decimal? maxPrice = null,
         bool inStockOnly = false,
+        string? audience = null,
+        string? size = null,
+        string? colour = null,
         string? sortBy = null,
         bool sortDescending = false,
         int page = 1,
@@ -113,7 +122,8 @@ public static class ProductEndpoints
         // PageRequest.Normalise() clamps pageSize. An unclamped page size is a denial-of-service vector:
         // ?pageSize=10000000 is a free way to exhaust server memory.
         var query = new ProductQuery(
-            search, category, brand, minPrice, maxPrice, inStockOnly, sortBy, sortDescending, page, pageSize);
+            search, category, brand, minPrice, maxPrice, inStockOnly, sortBy, sortDescending, page, pageSize,
+            audience, size, colour);
 
         PagedResult<ProductSummaryDto> result = await queries.SearchAsync(query, cancellationToken);
 
@@ -141,4 +151,40 @@ public static class ProductEndpoints
 
     private static async Task<IResult> GetBrands(ProductQueries queries, CancellationToken cancellationToken) =>
         Results.Ok(await queries.GetBrandsAsync(cancellationToken));
+
+    /// <summary>
+    /// The size, colour and audience facets <b>for the current filter</b>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// One endpoint for all three rather than three, because a filter panel needs the whole set before it
+    /// can render anything - three requests would mean three loading states for one control.
+    /// </para>
+    /// <para>
+    /// It takes the same parameters as the browse endpoint, so the options offered are the ones that would
+    /// return something. Choosing Stationery leaves <c>sizes</c> empty and the control disappears, rather
+    /// than offering a size that guarantees no results
+    /// ([ADR-0021](../../../../docs/adr/0021-category-defined-options-and-contextual-facets.md)).
+    /// </para>
+    /// </remarks>
+    private static async Task<IResult> GetFacets(
+        ProductQueries queries,
+        CancellationToken cancellationToken,
+        string? search = null,
+        string? category = null,
+        string? brand = null,
+        decimal? minPrice = null,
+        decimal? maxPrice = null,
+        bool inStockOnly = false,
+        string? audience = null,
+        string? size = null,
+        string? colour = null)
+    {
+        var query = new ProductQuery(
+            search, category, brand, minPrice, maxPrice, inStockOnly,
+            SortBy: null, SortDescending: false, Page: 1, PageSize: 12,
+            audience, size, colour);
+
+        return Results.Ok(await queries.GetFacetsAsync(query, cancellationToken));
+    }
 }

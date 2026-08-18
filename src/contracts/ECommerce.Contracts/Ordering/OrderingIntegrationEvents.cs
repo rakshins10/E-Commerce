@@ -32,7 +32,7 @@ public sealed record OrderSubmittedIntegrationEvent : IntegrationEvent
 
     public required string OrderNumber { get; init; }
 
-    /// <summary>Keycloak <c>sub</c>. Never an email address — see the Order aggregate.</summary>
+    /// <summary>Keycloak <c>sub</c>. Never an email address - see the Order aggregate.</summary>
     public required string BuyerId { get; init; }
 
     public required decimal Total { get; init; }
@@ -43,7 +43,7 @@ public sealed record OrderSubmittedIntegrationEvent : IntegrationEvent
     /// <remarks>
     /// <b>Events carry their data.</b> An event holding only an order id would force every consumer to
     /// make a synchronous call back to Ordering, which reintroduces the runtime coupling that
-    /// asynchronous messaging exists to remove — and means Ordering being down stops Inventory working.
+    /// asynchronous messaging exists to remove - and means Ordering being down stops Inventory working.
     /// The cost is a larger message and a snapshot that could be stale; for a fact about the past, a
     /// snapshot is exactly right.
     /// </remarks>
@@ -109,7 +109,7 @@ public sealed record OrderDeliveredIntegrationEvent : IntegrationEvent
 /// </summary>
 /// <remarks>
 /// <see cref="StockWasReserved"/> tells a compensating handler whether there is anything to release.
-/// Releasing stock that was never reserved inflates the available count — a corruption in the opposite
+/// Releasing stock that was never reserved inflates the available count - a corruption in the opposite
 /// direction from the one being fixed, and harder to notice.
 /// </remarks>
 public sealed record OrderCancelledIntegrationEvent : IntegrationEvent

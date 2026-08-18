@@ -160,3 +160,7 @@ $RECYCLE.BIN/
 .docker-data/
 deploy/data/
 *.pid
+
+# Product images are generated into each app by web/scripts/sync-assets.mjs.
+# The source of truth is web/shared-assets/img - these copies are not.
+web/*/public/img/

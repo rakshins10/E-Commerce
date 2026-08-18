@@ -24,7 +24,7 @@ namespace ECommerce.EventBus;
 ///   reports something that <i>has happened</i> and cannot be refused. A subscriber may react; it may not veto.
 ///   (Commands sent to saga participants are a separate concept and are named imperatively.)</description></item>
 ///   <item><description><b>Additive change only.</b> Add optional fields; never remove or repurpose one.
-///   Consumers must tolerate unknown fields, so an additive change needs no coordinated release — which is
+///   Consumers must tolerate unknown fields, so an additive change needs no coordinated release - which is
 ///   precisely what makes independent deployability real rather than theoretical.</description></item>
 /// </list>
 /// <para>
@@ -46,14 +46,14 @@ public abstract record IntegrationEvent
     /// </para>
     /// <para>
     /// Critically, this id is assigned when the event is written to the <b>outbox</b>, inside the business
-    /// transaction — not when it is published. If it were generated at publish time, a redelivery would carry a
+    /// transaction - not when it is published. If it were generated at publish time, a redelivery would carry a
     /// fresh id and deduplication would silently do nothing.
     /// </para>
     /// </remarks>
     public Guid Id { get; init; } = Guid.CreateVersion7();
 
     /// <summary>
-    /// When the fact occurred — not when it was published or received.
+    /// When the fact occurred - not when it was published or received.
     /// </summary>
     /// <remarks>
     /// The gap between the two can be significant when the broker has been unavailable and the outbox has been

@@ -25,7 +25,7 @@ namespace ECommerce.Outbox;
 /// <para>
 /// <b>Ordering is per-batch, not global.</b> Rows are read oldest-first, so events from the same
 /// aggregate normally arrive in order. "Normally" is the honest word: with several replicas running,
-/// two publishers can interleave. Where strict ordering matters, the consumer must handle it — a status
+/// two publishers can interleave. Where strict ordering matters, the consumer must handle it - a status
 /// transition that checks the current state (as <c>Order</c> does) is robust to arriving out of order in
 /// a way that a blind overwrite is not.
 /// </para>

@@ -2,7 +2,7 @@
 
 > **Kind:** Gateway (Backend-for-Frontend) · **Port:** 5000 · **Store:** none
 > **Code:** [`src/gateways/storefront-bff/ECommerce.StorefrontBff`](../../src/gateways/storefront-bff/ECommerce.StorefrontBff/)
-> **Related:** [ADR-0006 — BFF per client experience](../adr/0006-bff-per-client.md) ·
+> **Related:** [ADR-0006 - YARP gateway and a BFF per client](../adr/0006-yarp-gateway-and-bff-per-client.md) ·
 > [concepts-explained.md §7](../concepts-explained.md) · [Architecture](../architecture.md)
 
 ## What a BFF is, in plain English
@@ -25,7 +25,7 @@ This repo has **two** storefronts, React and Angular, and they share **one** BFF
 
 That is the rule, and it is easy to get wrong. React and Angular render the same screens, need the same data
 in the same shape, and change together. They are one *experience* in two technologies. Splitting the BFF by
-framework would duplicate every endpoint for no gain and let the two apps drift apart — the exact drift the
+framework would duplicate every endpoint for no gain and let the two apps drift apart - the exact drift the
 [parity suite](../../tests/e2e/) exists to prevent.
 
 A **mobile** BFF is justified (Phase 11): smaller payloads, different pagination, push-notification
@@ -53,8 +53,8 @@ flowchart LR
 lives in configuration next to the code that owns it rather than in a separate infrastructure product.
 
 Today every route is a straight pass-through, so the BFF is configuration only. From Phase 6 it gains
-composed endpoints — "the checkout page" merging basket, profile addresses and catalog data into one
-response — and those are written as ordinary minimal-API handlers alongside the proxy routes. **Proxy what
+composed endpoints - "the checkout page" merging basket, profile addresses and catalog data into one
+response - and those are written as ordinary minimal-API handlers alongside the proxy routes. **Proxy what
 maps one-to-one; write code where the client needs a shape no single service has.**
 
 ### Routes
@@ -75,7 +75,7 @@ maps one-to-one; write code where the client needs a shape no single service has
 
 Catalog *will* grow `POST`/`PUT`/`DELETE` for the admin panel in Phase 9. Those endpoints must be reachable
 from the **Admin** BFF and never from the public storefront. Whitelisting the verb here means a future admin
-endpoint is unreachable through this door **by default** — if someone forgets to guard it, the storefront
+endpoint is unreachable through this door **by default** - if someone forgets to guard it, the storefront
 still cannot reach it.
 
 The alternative, a catch-all route that forwards everything and trusts each service's own checks, works right
@@ -99,7 +99,7 @@ network hop instead of two.
 This is **not** a replacement for the service's own checks. User Profile independently validates the token
 and requires `profile:read:own` / `profile:write:own`. The BFF asks *"are you signed in?"*; the service asks
 *"may you do this, and to whose data?"*. If the BFF were the only check, anything that ever reached the
-service by another path — another gateway, a misconfigured network policy, a developer with `curl` — would be
+service by another path - another gateway, a misconfigured network policy, a developer with `curl` - would be
 unauthenticated. **The gateway is a filter, not a guard.**
 
 ### Token forwarding
@@ -121,7 +121,7 @@ this only converts a slow timeout into a fast failure; with several it is what s
 instance that is still migrating its database.
 
 `ActivityTimeout: 00:00:10` bounds how long a hung downstream can hold a BFF request open. Without it a slow
-service exhausts the BFF's connections and takes the whole storefront down with it — the classic cascading
+service exhausts the BFF's connections and takes the whole storefront down with it - the classic cascading
 failure that [Polly's circuit breaker](../concepts-explained.md) is the second line of defence against.
 
 ---
@@ -132,7 +132,7 @@ failure that [Polly's circuit breaker](../concepts-explained.md) is the second l
 "Cors": { "Origins": ["http://localhost:3000", "http://localhost:4200"] }
 ```
 
-An **explicit allow-list** — both storefronts, nothing else. `AllowAnyOrigin()` is the reflex fix when a
+An **explicit allow-list** - both storefronts, nothing else. `AllowAnyOrigin()` is the reflex fix when a
 browser complains, and it is wrong here: with credentials in play it lets any page on the internet make
 authenticated calls on a signed-in user's behalf.
 
@@ -157,7 +157,7 @@ Production origins come from configuration, not code. See [deployment](../operat
 | Probe | Route | Checks |
 |-------|-------|--------|
 | Liveness | `/health/live` | Process is up |
-| Readiness | `/health/ready` | Self only — **not** downstream services |
+| Readiness | `/health/ready` | Self only - **not** downstream services |
 
 Readiness deliberately does **not** aggregate downstream health. If it did, one sick service would mark the
 BFF not-ready, the orchestrator would pull it from the load balancer, and the *entire* storefront would go
@@ -171,7 +171,7 @@ Per-cluster health checks handle downstream state; readiness answers only "can t
 | Not here | Where | Why |
 |----------|-------|-----|
 | Business rules | The owning service | A rule in the gateway is a rule the service can be bypassed to break |
-| Its own database | — | A stateless gateway scales horizontally and has nothing to back up |
+| Its own database | - | A stateless gateway scales horizontally and has nothing to back up |
 | Authorization decisions | Each service | It checks *authenticated*; services check *authorized* |
 | Serving the SPA files | nginx, in the web image | Static files and API composition are different jobs with different scaling and caching needs |
 

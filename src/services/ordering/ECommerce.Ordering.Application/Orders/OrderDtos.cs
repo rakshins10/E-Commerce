@@ -8,7 +8,7 @@ namespace ECommerce.Ordering.Application.Orders;
 /// <b>Why the aggregate is never returned directly.</b> Three reasons, in order of how much they hurt.
 /// </para>
 /// <para>
-/// First, serialising <c>Order</c> exposes every property the domain happens to have — including ones
+/// First, serialising <c>Order</c> exposes every property the domain happens to have - including ones
 /// added later for internal bookkeeping, which then silently become part of the public API.
 /// </para>
 /// <para>
@@ -17,13 +17,13 @@ namespace ECommerce.Ordering.Application.Orders;
 /// </para>
 /// <para>
 /// Third, the aggregate's computed properties (<c>Total</c>) and read-only collections do not survive
-/// round-tripping — a client could not POST back what it received, which is exactly the confusion that
+/// round-tripping - a client could not POST back what it received, which is exactly the confusion that
 /// leads people to make domain properties settable.
 /// </para>
 /// </remarks>
 public sealed record PlaceOrderRequest
 {
-    /// <summary>Where to send it. Copied onto the order, never referenced — see ShippingAddress.</summary>
+    /// <summary>Where to send it. Copied onto the order, never referenced - see ShippingAddress.</summary>
     public required AddressRequest ShippingAddress { get; init; }
 
     /// <summary>ISO 4217. Defaults are not assumed: an amount without a currency is not a price.</summary>
@@ -57,7 +57,7 @@ public sealed record OrderDto
     /// <summary>Whether the customer may still cancel. Computed by the aggregate, not the client.</summary>
     /// <remarks>
     /// Sent so the UI can hide an action that would fail. The UI hiding it is a courtesy; the aggregate
-    /// refusing it is the rule. See docs/authorization-model.md — the same principle as permissions.
+    /// refusing it is the rule. See docs/authorization-model.md - the same principle as permissions.
     /// </remarks>
     public required bool CanBeCancelled { get; init; }
 
@@ -106,6 +106,11 @@ public sealed record OrderItemDto
     public required string Sku { get; init; }
 
     public required string ProductName { get; init; }
+
+    /// <summary>The size and colour bought. Null on a product that has neither axis.</summary>
+    public string? Size { get; init; }
+
+    public string? ColourName { get; init; }
 
     public required int Quantity { get; init; }
 

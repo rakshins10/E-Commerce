@@ -5,7 +5,10 @@
   "type": "module",
   "description": "Back office - React. Functionally identical to @ecommerce/angular-admin.",
   "scripts": {
+    "sync:assets": "node ../scripts/sync-assets.mjs",
+    "predev": "npm run sync:assets",
     "dev": "vite",
+    "prebuild": "npm run sync:assets",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview --port 3001",

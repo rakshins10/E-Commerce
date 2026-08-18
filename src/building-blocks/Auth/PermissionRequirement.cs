@@ -15,7 +15,7 @@ namespace ECommerce.Auth;
 /// <para>
 /// <b>Why not <c>[Authorize(Roles = "admin,order-manager")]</c>?</b> Because that encodes a <i>job title</i>
 /// where the code means a <i>capability</i>. When the business decides support agents may now issue refunds,
-/// the role-based version requires finding and editing every attribute that should include them — and the
+/// the role-based version requires finding and editing every attribute that should include them - and the
 /// ones you miss keep working the old way, silently, with no error anywhere. Authorization bugs that fail
 /// permissively are the worst kind, because nothing reports them.
 /// </para>

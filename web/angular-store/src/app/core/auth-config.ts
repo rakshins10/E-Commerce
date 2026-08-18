@@ -35,7 +35,7 @@ export interface OidcConfig {
  *
  * **Note what is absent: there is no client secret.** These are *public*
  * clients. A secret shipped inside a JavaScript bundle is readable by anyone
- * who opens devtools, so it is not a secret. PKCE replaces it — the library
+ * who opens devtools, so it is not a secret. PKCE replaces it - the library
  * generates a random verifier, sends only its hash to start the flow, and must
  * present the original to redeem the authorization code. An intercepted code is
  * useless without it.
@@ -99,7 +99,7 @@ interface AccessTokenClaims {
  *
  * ---
  * **This does not and cannot validate anything.** It reads the middle segment
- * of the token, which is plain base64url — not encrypted, merely signed.
+ * of the token, which is plain base64url - not encrypted, merely signed.
  * Anyone can read a JWT; they simply cannot forge one.
  *
  * Verification requires the issuer's public key and happens **on the server**,
@@ -181,12 +181,12 @@ export function isTokenExpired(accessToken: string, marginSeconds = 30): boolean
 /**
  * Where tokens may be kept.
  *
- * - **`memory`** — safest in a browser. A token in a JavaScript variable cannot
+ * - **`memory`** - safest in a browser. A token in a JavaScript variable cannot
  *   be read by an XSS payload that only reaches storage, and it disappears when
  *   the tab closes. The cost is a silent re-authentication on page refresh,
  *   which is what the silent-renew iframe is for.
- * - **`session`** — survives a refresh, readable by any script on the origin.
- * - **`secure`** — the OS keychain. React Native only, and the only acceptable
+ * - **`session`** - survives a refresh, readable by any script on the origin.
+ * - **`secure`** - the OS keychain. React Native only, and the only acceptable
  *   choice there: `AsyncStorage` is unencrypted plain text on the device, so a
  *   rooted phone or a filesystem backup exposes every stored token.
  */

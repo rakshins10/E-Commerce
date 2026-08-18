@@ -1,12 +1,18 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 import { Auth } from '../auth/auth';
 import { AdminApi } from '../core/admin-api';
 import { formatMoney } from '../core/formatting';
 import { Permissions } from '../core/permissions';
-import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-types';
+import type {
+  AdminBrand,
+  AdminCategory,
+  AdminProduct,
+  AdminProductVariant,
+} from '../core/admin-types';
 
 /**
  * The catalogue.
@@ -93,6 +99,7 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                   <th scope="col">SKU</th>
                   <th scope="col">Name</th>
                   <th scope="col">Category</th>
+                  <th scope="col">For</th>
                   <th scope="col">Brand</th>
                   <th scope="col" style="text-align: right">Price</th>
                   <th scope="col" style="text-align: right">Stock</th>
@@ -111,8 +118,25 @@ import type { AdminBrand, AdminCategory, AdminProduct } from '../core/admin-type
                         {{ product.sku }}
                       }
                     </th>
-                    <td>{{ product.name }}</td>
+                    <!-- A thumbnail beside the name, because a catalogue manager recognises the
+                         product long before they finish reading the SKU. Decorative - the name is
+                         right next to it, so a screen reader would only hear the same thing twice. -->
+                    <td>
+                      <span class="cell-with-thumb">
+                        <img
+                          class="thumb"
+                          [src]="product.imageUrl ?? '/img/placeholder.svg'"
+                          alt=""
+                          aria-hidden="true"
+                          loading="lazy"
+                          width="40"
+                          height="40"
+                        />
+                        {{ product.name }}
+                      </span>
+                    </td>
                     <td>{{ product.categoryName }}</td>
+                    <td>{{ product.audience }}</td>
                     <td>{{ product.brandName }}</td>
                     <td style="text-align: right">{{ money(product.price, product.currency) }}</td>
                     <td style="text-align: right">{{ product.stockOnHand }}</td>
@@ -229,7 +253,7 @@ export class CatalogPage {
  * Add or edit a product.
  *
  * ---
- * **Price is handled separately when editing.** Creating a product sets its price in the same request —
+ * **Price is handled separately when editing.** Creating a product sets its price in the same request -
  * there is nothing to override yet. Changing an existing price is a distinct action with a distinct
  * permission, so it gets its own field and its own button.
  */
@@ -264,7 +288,7 @@ export class CatalogPage {
             <input id="sku" class="input" formControlName="sku" />
             @if (!isNew()) {
               <p class="muted small">
-                A SKU cannot be changed — historic orders reference it. Withdraw this product and add a
+                A SKU cannot be changed - historic orders reference it. Withdraw this product and add a
                 new one instead.
               </p>
             }
@@ -281,12 +305,62 @@ export class CatalogPage {
           </div>
 
           <div class="field">
+            <label for="imageUrl">Image URL</label>
+            <input
+              id="imageUrl"
+              class="input"
+              maxlength="500"
+              placeholder="/img/tshirt-classic.svg"
+              formControlName="imageUrl"
+            />
+            <p class="muted small">
+              A path served by the storefront, such as <code>/img/mug-ceramic.svg</code>. Leave it
+              empty and the shop shows a placeholder.
+            </p>
+
+            @if (form.controls.imageUrl.value; as preview) {
+              <img class="thumb" [src]="preview" alt="" aria-hidden="true" width="40" height="40" />
+            }
+          </div>
+
+          <div class="field">
             <label for="category">Category</label>
             <select id="category" class="input" formControlName="categoryId">
               @for (category of categories(); track category.id) {
                 <option [value]="category.id">{{ category.name }}</option>
               }
             </select>
+
+            <!-- What the chosen category means for this product's options.
+                 A merchandiser adding a hoodie should be able to see that it will be sold in S/M/L/XL,
+                 and one adding a notebook should see that size does not apply here at all - without
+                 having to read the seeder to find out (ADR-0021). -->
+            @if (selectedCategory(); as category) {
+              @if (category.sizes.length > 0) {
+                <p class="muted small">
+                  Sold in sizes <strong>{{ category.sizes.join(', ') }}</strong> ({{
+                    category.sizeScaleName
+                  }}). Variants of this product may use these sizes.
+                </p>
+              } @else {
+                <p class="muted small">
+                  This category is not sized, so its products have no size option.
+                </p>
+              }
+            }
+          </div>
+
+          <div class="field">
+            <label for="audience">Sold to</label>
+            <select id="audience" class="input" formControlName="audience">
+              <option value="Unisex">Everyone</option>
+              <option value="Men">Men</option>
+              <option value="Women">Women</option>
+            </select>
+            <p class="muted small">
+              An attribute, not a category - the taxonomy says what a thing is, this says who it is
+              for.
+            </p>
           </div>
 
           <div class="field">
@@ -353,6 +427,54 @@ export class CatalogPage {
                 </button>
               }
             </form>
+
+          @if (variants().length > 0) {
+            <section class="card stack" aria-labelledby="variants-heading">
+              <h2 id="variants-heading" style="margin-top: 0">Variants</h2>
+
+              <p class="muted small">
+                What a customer actually buys. Each row has its own SKU, and Inventory holds stock
+                against that SKU rather than against the product - which is why this service needed no
+                schema change when sizes arrived.
+              </p>
+
+              <table class="table">
+                <caption class="visually-hidden">Sellable variants of this product</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">SKU</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Colour</th>
+                    <th scope="col" style="text-align: right">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (variant of variants(); track variant.id) {
+                    <tr>
+                      <th scope="row">{{ variant.sku }}</th>
+                      <td>{{ variant.size ?? '-' }}</td>
+                      <td>
+                        @if (variant.colourName) {
+                          <span class="cell-with-thumb">
+                            <span
+                              class="swatch"
+                              [style.background]="variant.colourHex ?? 'transparent'"
+                              aria-hidden="true"
+                            ></span>
+                            {{ variant.colourName }}
+                          </span>
+                        } @else {
+                          -
+                        }
+                      </td>
+                      <td style="text-align: right">{{ variant.stockOnHand }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          }
+
           </section>
         }
       </div>
@@ -375,6 +497,9 @@ export class ProductEditPage {
   protected readonly saved = signal<string | null>(null);
   protected readonly price = signal(0);
 
+  /** The loaded product's sellable variants. Read-only here - stock is Inventory's to change. */
+  protected readonly variants = signal<readonly AdminProductVariant[]>([]);
+
   protected readonly canOverridePrice = Permissions.Catalog.PriceOverride;
   protected readonly isNew = computed(() => this.id() === 'new');
 
@@ -382,10 +507,37 @@ export class ProductEditPage {
     sku: ['', [Validators.required, Validators.maxLength(64)]],
     name: ['', [Validators.required, Validators.maxLength(200)]],
     description: [''],
+    /**
+     * This control was missing, and its absence cost a product its picture.
+     *
+     * `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a field
+     * the server sets to NULL. React survived it by accident - it kept `imageUrl` in component state
+     * and posted it straight back - while this form did not track it at all, so every run of the
+     * shared "a product can be edited" spec wiped the artwork off NW-TS-001.
+     *
+     * The form is now the fix AND the evidence: a value you can see is a value you notice
+     * disappearing.
+     */
+    imageUrl: ['', Validators.maxLength(500)],
+    audience: ['Unisex', Validators.required],
     price: [0, [Validators.required, Validators.min(0)]],
     categoryId: ['', Validators.required],
     brandId: ['', Validators.required],
   });
+
+  /**
+   * The category chosen in the form, so its size scale can be shown beside the select.
+   *
+   * `toSignal` on the control's valueChanges, because a reactive form is Observable-based and the rest
+   * of this component is signals - the same RxJS-to-signal bridge the products page uses for the router.
+   */
+  private readonly categoryId = toSignal(this.form.controls.categoryId.valueChanges, {
+    initialValue: this.form.controls.categoryId.value,
+  });
+
+  protected readonly selectedCategory = computed(() =>
+    this.categories().find((category) => category.id === this.categoryId()),
+  );
 
   constructor() {
     // A required signal input is not populated until AFTER the constructor - see pages/orders.ts.
@@ -414,6 +566,8 @@ export class ProductEditPage {
           sku: product.sku,
           name: product.name,
           description: product.description,
+          imageUrl: product.imageUrl ?? '',
+          audience: product.audience,
           price: product.price,
           categoryId: categories.find((c) => c.slug === product.categorySlug)?.id ?? '',
           brandId: brands.find((b) => b.slug === product.brandSlug)?.id ?? '',
@@ -421,6 +575,7 @@ export class ProductEditPage {
 
         // Disabled rather than merely readonly, so the value is excluded from getRawValue()'s
         // validation path and the control cannot be edited by a stray script.
+        this.variants.set(product.variants ?? []);
         this.form.controls.sku.disable();
         this.price.set(product.price);
       }
@@ -448,6 +603,8 @@ export class ProductEditPage {
           sku: value.sku,
           name: value.name,
           description: value.description,
+          imageUrl: value.imageUrl || null,
+          audience: value.audience,
           price: value.price,
           currency: 'GBP',
           categoryId: value.categoryId,
@@ -459,6 +616,8 @@ export class ProductEditPage {
         await this.api.updateProduct(this.id(), {
           name: value.name,
           description: value.description,
+          imageUrl: value.imageUrl || null,
+          audience: value.audience,
           categoryId: value.categoryId,
           brandId: value.brandId,
         });

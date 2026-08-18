@@ -17,7 +17,7 @@ export function ProductsPage() {
       <section className="card">
         <p className="muted" style={{ margin: 0 }}>
           This page will list products from the Catalog service via the Storefront BFF, with search,
-          filtering and server-side pagination — built in React and Angular in the same pull request.
+          filtering and server-side pagination - built in React and Angular in the same pull request.
         </p>
       </section>
     </div>

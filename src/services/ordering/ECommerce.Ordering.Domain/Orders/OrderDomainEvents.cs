@@ -25,7 +25,7 @@ namespace ECommerce.Ordering.Domain.Orders;
 ///   </item>
 ///   <item>
 ///     <term>Free to reference domain types</term>
-///     <description>A published contract — primitives only, versioned carefully</description>
+///     <description>A published contract - primitives only, versioned carefully</description>
 ///   </item>
 /// </list>
 /// <para>

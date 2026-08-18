@@ -1,7 +1,7 @@
-# E-Commerce — a reference .NET microservices platform
+# E-Commerce - a reference .NET microservices platform
 
-A production-grade, deliberately over-documented e-commerce platform built to demonstrate — correctly and
-idiomatically — every architectural concept in Microsoft's
+A production-grade, deliberately over-documented e-commerce platform built to demonstrate - correctly and
+idiomatically - every architectural concept in Microsoft's
 [.NET Microservices: Architecture for Containerized .NET Applications](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/),
 plus the full-stack and system-design topics a senior .NET engineer is expected to defend in an interview.
 
@@ -18,16 +18,17 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 | 1 | Repo, solution skeleton, building blocks, compose, CI | ✅ done |
 | 2 | Keycloak realm as code, `Auth` building block, authorization model | ✅ done |
 | 3 | **Both** storefront shells with OIDC login; self-contained frontends ([ADR-0018](docs/adr/0018-self-contained-frontends.md)) | ✅ done |
-| 4 | Catalog (CQRS/Dapper) + Storefront BFF + browse/search/detail — **both** | ✅ done |
-| 5 | User Profile + My Account (profile, addresses, preferences) — **both** | ✅ done |
-| 6 | Basket (Redis) + Ordering (DDD/CQRS) + **transactional outbox** + cart/checkout — **both** | ✅ done |
-| 7 | Payment + Inventory + Notification + **saga with compensating actions** — **both** | ✅ done |
+| 4 | Catalog (CQRS/Dapper) + Storefront BFF + browse/search/detail - **both** | ✅ done |
+| 5 | User Profile + My Account (profile, addresses, preferences) - **both** | ✅ done |
+| 6 | Basket (Redis) + Ordering (DDD/CQRS) + **transactional outbox** + cart/checkout - **both** | ✅ done |
+| 7 | Payment + Inventory + Notification + **saga with compensating actions** - **both** | ✅ done |
 | 8 | Back-office + Admin BFF + **both** admin panels, permission-gated | ✅ done |
-| 9 | Catalogue CRUD in **both** admin panels | ⬜ next |
-| 10 | Resiliency, observability and security hardening | ⬜ |
+| 9 | Catalogue CRUD in **both** admin panels | ✅ done |
+| 9.5 | Product variants - size, colour, audience, per-variant stock, category-defined size scales ([ADR-0020](docs/adr/0020-product-variants.md), [ADR-0021](docs/adr/0021-category-defined-options-and-contextual-facets.md)) | ✅ done |
+| 10 | Resiliency, observability and security hardening | ⬜ next |
 | 11 | React Native (Expo) app + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
-| 13 | Final pass — coverage, docs audit, fresh-machine walkthrough | ⬜ |
+| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ⬜ |
 
 ### What runs today
 
@@ -45,9 +46,13 @@ seven databases, and the observability stack.
 | Keycloak | [:8080](http://localhost:8080) |
 | Seq (logs) · Jaeger (traces) · RabbitMQ | [:8081](http://localhost:8081) · [:16686](http://localhost:16686) · [:15672](http://localhost:15672) |
 
-Sign in as `customer` / `Passw0rd!` and buy something — the order advances from *placed* to *paid* on its
+Sign in as `customer` / `Passw0rd!` and buy something - the order advances from *placed* to *paid* on its
 own as four services and a message broker talk to each other. Order the £5,200 Leather Portfolio and watch
 the saga reserve stock, fail the payment, **release the stock** and cancel the order.
+
+Pick the **Graphic Print T-shirt**: choose Small and it says *"Only 2 left"*; choose Black and XL and it
+says *"Sold out in this option"* - while XL on its own stays selectable, because Ecru still has one. That
+distinction is the whole reason stock is held per variant rather than per product.
 
 Sign into the back office as `administrator`, then `support`, then `ordermgr`: same build, three
 different navigation bars.
@@ -56,14 +61,15 @@ different navigation bars.
 
 | Suite | Count |
 |-------|------:|
-| Domain + architecture tests (no database, 177 ms) | 30 |
-| Frontend unit tests — the same 20 assertions in each of four apps | 80 |
-| Storefront end-to-end, run against React **and** Angular | 53 × 2 |
-| Back-office end-to-end, run against React **and** Angular | 15 × 2 |
+| Domain, common and architecture tests (no database) | 49 |
+| Auth integration tests (a real Keycloak container) | 16 |
+| Frontend unit tests - the same 25 assertions in each of two storefronts | 50 |
+| Storefront end-to-end, run against React **and** Angular | 64 × 2 |
+| Back-office end-to-end, run against React **and** Angular | 26 × 2 |
 
 **Frameworks are built in lockstep.** No phase is complete until the same Playwright specs pass against both
 the React and the Angular app and [`web/parity-checklist.md`](web/parity-checklist.md) has no gaps.
-Documentation ships in the same PR as the code it describes — Phase 13 audits docs, it does not write them.
+Documentation ships in the same PR as the code it describes - Phase 13 audits docs, it does not write them.
 
 ---
 
@@ -118,15 +124,15 @@ graph TB
     SBFF & ABFF & MBFF -.validate JWT via JWKS.-> KC
 ```
 
-A fuller treatment — bounded contexts, why the boundaries fall where they do, the context map with its
-upstream/downstream relationships, and the full service catalogue — lives in
+A fuller treatment - bounded contexts, why the boundaries fall where they do, the context map with its
+upstream/downstream relationships, and the full service catalogue - lives in
 [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
 ## Running it
 
-> **Prerequisites:** Docker Desktop (Linux containers) and ~8 GB of free RAM. Nothing else — the .NET SDK
+> **Prerequisites:** Docker Desktop (Linux containers) and ~8 GB of free RAM. Nothing else - the .NET SDK
 > and Node are only needed if you want to run a service outside its container.
 
 ```bash
@@ -136,18 +142,18 @@ cp .env.example .env          # dev-only values; see the warning below
 docker compose up -d
 ```
 
-This brings up **27 containers**. First run takes 10–25 minutes (image pulls plus twelve .NET builds);
+This brings up **31 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
 afterwards it is about 60 seconds. Use `docker compose up -d --wait` to block until everything reports
-healthy — it also fails if a service starts and then crashes, which a plain `up -d` reports as success.
+healthy - it also fails if a service starts and then crashes, which a plain `up -d` reports as success.
 
 | Surface | URL | Status |
 |---------|-----|--------|
 | **Keycloak** | http://localhost:8080 | ✅ live (`admin` / `dev_only_kc_admin_pw`) |
 | **RabbitMQ management** | http://localhost:15672 | ✅ live (`ecom` / `dev_only_rabbit_pw`) |
-| **Seq** — structured logs | http://localhost:8081 | ✅ live, no login in dev |
-| **Jaeger** — distributed traces | http://localhost:16686 | ✅ live |
-| Services — REST | http://localhost:5001–5009 | ✅ live (identity + health only) |
-| Services — gRPC | localhost:5101–5107 | Phase 4 |
+| **Seq** - structured logs | http://localhost:8081 | ✅ live, no login in dev |
+| **Jaeger** - distributed traces | http://localhost:16686 | ✅ live |
+| Services - REST | http://localhost:5001-5009 | ✅ live (identity + health only) |
+| Services - gRPC | localhost:5101-5107 | Phase 4 |
 | Storefront BFF | http://localhost:6001 | ✅ boots; routes in Phase 4 |
 | Admin BFF | http://localhost:6002 | ✅ boots; routes in Phase 8 |
 | Mobile BFF | http://localhost:6003 | ✅ boots; routes in Phase 11 |
@@ -160,18 +166,18 @@ Quick check that it works:
 
 ```bash
 curl http://localhost:5001/                 # {"service":"catalog","status":"up",...}
-curl http://localhost:5001/health/live      # liveness  — self only
-curl http://localhost:5001/health/ready     # readiness — dependencies
+curl http://localhost:5001/health/live      # liveness  - self only
+curl http://localhost:5001/health/ready     # readiness - dependencies
 curl -i -H "X-Correlation-Id: demo" http://localhost:5001/   # echoed back
 ```
 
-Per-service Postgres instances are published on `15432`–`15440` so you can point psql or DataGrip at any one
+Per-service Postgres instances are published on `15432`-`15440` so you can point psql or DataGrip at any one
 of them. The full port allocation is in [`deploy/.env.example`](deploy/.env.example).
 
 ### ⚠️ On the committed credentials
 
-Every credential in this repository — in `deploy/.env.example`, in
-`identity/keycloak/realm-export.json`, in the seed-user table below — is a **development-only fixture**,
+Every credential in this repository - in `deploy/.env.example`, in
+`identity/keycloak/realm-export.json`, in the seed-user table below - is a **development-only fixture**,
 generated for this repo and valid only against a throwaway local container. They exist so that
 `docker compose up` produces a system you can actually log into and demo in one command, with no
 click-ops. **They are not secrets, they are not reused anywhere, and nothing in this repo should ever be
@@ -188,13 +194,13 @@ All use the password **`Passw0rd!`**.
 | Username | Realm role | Perms | Can demo |
 |----------|------------|:---:|----------|
 | `customer` | `customer` | 5 | Browsing, checkout, own order history, own profile |
-| `support` | `support-agent` | 4 | Read-only helpdesk — can look at orders and users, cannot change anything |
+| `support` | `support-agent` | 4 | Read-only helpdesk - can look at orders and users, cannot change anything |
 | `catalogmgr` | `catalog-manager` | 5 | Product/category CRUD, pricing, price override |
 | `ordermgr` | `order-manager` | 7 | Order search, status changes, refunds, stock adjustment |
 | `administrator` | `admin` | 15 | Everything, including user and role management |
-| `blocked` | `customer` | — | **Disabled account** — proves a disabled user cannot log in at all |
+| `blocked` | `customer` | - | **Disabled account** - proves a disabled user cannot log in at all |
 
-Keycloak admin console: http://localhost:8080 — `admin` / `dev_only_kc_admin_pw`
+Keycloak admin console: http://localhost:8080 - `admin` / `dev_only_kc_admin_pw`
 
 Permissions are **not** assigned to these users directly. Each realm role is a Keycloak **composite** that
 grants a set of fine-grained permissions, which the token carries in a `permissions` claim. `admin` is a
@@ -214,11 +220,11 @@ Paste the result into [jwt.io](https://jwt.io) to see the `permissions` claim an
 
 ---
 
-## Concept map — where each idea is implemented
+## Concept map - where each idea is implemented
 
 The interview cheat sheet: every concept from the Microsoft guide, and the exact file that demonstrates it.
 This table is grown at the end of every phase; see [`docs/concept-map.md`](docs/concept-map.md) for the
-3–5 sentence explanation of each.
+3-5 sentence explanation of each.
 
 | Concept | Implemented in | Phase |
 |---------|----------------|-------|
@@ -236,7 +242,7 @@ This table is grown at the end of every phase; see [`docs/concept-map.md`](docs/
 | Publish/subscribe, competing consumers, DLQ | [`RabbitMqEventBus.cs`](src/building-blocks/EventBus.RabbitMQ/RabbitMqEventBus.cs) | 1 |
 | Idempotent consumer (contract + rationale) | [`IIntegrationEventHandler.cs`](src/building-blocks/EventBus/IIntegrationEventHandler.cs) | 1 |
 | Retry with exponential backoff + jitter | [`RabbitMqConnection.cs`](src/building-blocks/EventBus.RabbitMQ/RabbitMqConnection.cs) | 1 |
-| Health checks — liveness vs readiness | [`HealthCheckExtensions.cs`](src/building-blocks/Observability/HealthCheckExtensions.cs) · [docs](docs/operations/health-checks.md) | 1 |
+| Health checks - liveness vs readiness | [`HealthCheckExtensions.cs`](src/building-blocks/Observability/HealthCheckExtensions.cs) · [docs](docs/operations/health-checks.md) | 1 |
 | Structured logging + correlation IDs | [`CorrelationId.cs`](src/building-blocks/Observability/CorrelationId.cs) | 1 |
 | Distributed tracing (OpenTelemetry) | [`ObservabilityExtensions.cs`](src/building-blocks/Observability/ObservabilityExtensions.cs) | 1 |
 | API gateway / BFF pattern | [`src/gateways/`](src/gateways/) · [ADR-0006](docs/adr/0006-yarp-gateway-and-bff-per-client.md) | 1 (shells) |
@@ -246,7 +252,7 @@ This table is grown at the end of every phase; see [`docs/concept-map.md`](docs/
 | CQRS + MediatR pipeline behaviours | [ADR-0012](docs/adr/0012-cqrs-with-mediatr.md) | 6 |
 | OIDC / PKCE, permission-based policies | [ADR-0005](docs/adr/0005-keycloak-as-identity-provider.md) · [authorization model](docs/authorization-model.md) | 2 |
 
-Every entry above with a phase later than 1 is **decided and argued in an ADR**, not yet coded — the
+Every entry above with a phase later than 1 is **decided and argued in an ADR**, not yet coded - the
 reasoning is written first so the code has something to conform to.
 [`docs/concept-map.md`](docs/concept-map.md) gives each one a full explanation and the interview question it
 answers.
@@ -262,12 +268,12 @@ answers.
   /building-blocks/{EventBus,EventBus.RabbitMQ,Common,Observability,Auth}
 /web
   /react-store  /react-admin  /angular-store  /angular-admin
-  /design-tokens              # colours, spacing, type, radii — one source for web + mobile
+  /design-tokens              # colours, spacing, type, radii - one source for web + mobile
   /shared                     # framework-neutral TS: API client, OIDC, permission helpers, validation
   /ui-spec                    # framework-agnostic screen specs both implementations must satisfy
   parity-checklist.md         # every screen/behaviour × React status × Angular status
 /mobile/rn-store
-/identity/keycloak            # realm-export.json — realm, clients, roles, groups, seed users
+/identity/keycloak            # realm-export.json - realm, clients, roles, groups, seed users
 /tests/{unit,integration,contract,e2e}
 /deploy                       # docker-compose + .env.example
 /docs                         # see the documentation index below
@@ -279,10 +285,10 @@ answers.
 
 Documentation is a first-class deliverable, written in the same PR as the code it describes. Diagrams are
 committed as Mermaid source, never binary images, so they diff and review like code.
-Start at **[`docs/README.md`](docs/README.md)** — every topic is reachable in two clicks.
+Start at **[`docs/README.md`](docs/README.md)** - every topic is reachable in two clicks.
 
 > **🟢 New to microservices?** Start with
-> [**`docs/concepts-explained.md`**](docs/concepts-explained.md) — every concept in this system explained in
+> [**`docs/concepts-explained.md`**](docs/concepts-explained.md) - every concept in this system explained in
 > plain English with everyday analogies, assuming no prior knowledge. What a BFF is, what a saga is, what
 > CQRS means, why services never share a database. Then
 > [**`docs/operations/tooling-guide.md`**](docs/operations/tooling-guide.md) for hands-on use of Seq, Jaeger,
@@ -290,7 +296,7 @@ Start at **[`docs/README.md`](docs/README.md)** — every topic is reachable in 
 
 | Document | What it covers |
 |----------|----------------|
-| [`docs/concepts-explained.md`](docs/concepts-explained.md) | **Start here if the terms are new.** Every concept in plain English — microservices, bounded contexts, BFF, saga, CQRS, DDD, outbox, idempotency, OAuth2/JWT/PKCE, circuit breakers, containers |
+| [`docs/concepts-explained.md`](docs/concepts-explained.md) | **Start here if the terms are new.** Every concept in plain English - microservices, bounded contexts, BFF, saga, CQRS, DDD, outbox, idempotency, OAuth2/JWT/PKCE, circuit breakers, containers |
 | [`docs/operations/tooling-guide.md`](docs/operations/tooling-guide.md) | Hands-on introduction to Seq, Jaeger, RabbitMQ and Keycloak for someone who has never used them |
 | [`docs/getting-started.md`](docs/getting-started.md) | Clean-machine setup: tooling, ports, env vars, first run, verification, troubleshooting |
 | [`docs/architecture.md`](docs/architecture.md) | C4 context/container/component, topology, communication styles |
@@ -298,8 +304,8 @@ Start at **[`docs/README.md`](docs/README.md)** — every topic is reachable in 
 | [`docs/services/`](docs/services/) | One page per service, including the complete endpoint reference |
 | [`docs/events/event-catalogue.md`](docs/events/event-catalogue.md) | Every integration event: schema, publisher, subscribers, idempotency, failure behaviour |
 | [`docs/frontend/`](docs/frontend/) | Screen-by-screen catalogue for storefront and admin, plus the shared layer |
-| [`docs/diagrams/`](docs/diagrams/) | Mermaid source — C4, sequence, ERD, state machine, event flow, deployment |
-| [`docs/adr/`](docs/adr/) | Architecture Decision Records — the *why* behind each choice |
+| [`docs/diagrams/`](docs/diagrams/) | Mermaid source - C4, sequence, ERD, state machine, event flow, deployment |
+| [`docs/adr/`](docs/adr/) | Architecture Decision Records - the *why* behind each choice |
 | [`docs/concept-map.md`](docs/concept-map.md) | Every pattern → what it is, why it's here, the interview question it answers |
 | [`docs/authorization-model.md`](docs/authorization-model.md) | Full role/permission matrix and what each one guards |
 | [`docs/react-vs-angular.md`](docs/react-vs-angular.md) | Per-feature comparison of the two implementations, written as they are built |

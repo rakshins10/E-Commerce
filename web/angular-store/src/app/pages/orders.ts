@@ -21,6 +21,7 @@ import {
   type SagaTimeline,
 } from '../core/basket';
 import { formatDateTime, formatMoney } from '../core/formatting';
+import { Icon } from '../icon';
 
 /**
  * "My orders".
@@ -30,7 +31,7 @@ import { formatDateTime, formatMoney } from '../core/formatting';
 @Component({
   selector: 'app-orders-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink],
+  imports: [RouterLink, Icon],
   template: `
     @if (auth.isLoading()) {
       <div class="centred" aria-busy="true" aria-live="polite"><p class="lede">Loading…</p></div>
@@ -62,6 +63,7 @@ import { formatDateTime, formatMoney } from '../core/formatting';
 
         @if (orders().length === 0) {
           <div class="card stack">
+            <app-icon name="package" variant="empty-state__icon" />
             <p class="lede">You have not placed any orders yet.</p>
             <div><a class="btn btn--primary" routerLink="/products">Browse products</a></div>
           </div>
@@ -137,7 +139,7 @@ export class OrdersPage {
  *
  * The route parameter arrives as a signal `input()` because the route is configured with
  * `withComponentInputBinding()`. React reads it from `useParams`. Angular's version is typed, requires
- * no import, and updates automatically when the id changes — a genuine point for Angular's router.
+ * no import, and updates automatically when the id changes - a genuine point for Angular's router.
  */
 @Component({
   selector: 'app-order-detail-page',
@@ -172,7 +174,7 @@ export class OrdersPage {
       <div class="stack">
         @if (justPlaced()) {
           <div class="card" role="status">
-            <p class="lede">Thank you — your order is confirmed.</p>
+            <p class="lede">Thank you - your order is confirmed.</p>
             <p class="muted">We have sent the details to your email address.</p>
           </div>
         }
@@ -194,7 +196,7 @@ export class OrdersPage {
                 <li [class]="i <= reachedIndex() ? 'timeline__step is-done' : 'timeline__step'">
                   <span>{{ statusLabel(step) }}</span>
                   @if (i <= reachedIndex()) {
-                    <span class="visually-hidden"> — completed</span>
+                    <span class="visually-hidden">, completed</span>
                   }
                 </li>
               }
@@ -203,7 +205,7 @@ export class OrdersPage {
 
           @if (order()!.canBeCancelled) {
             <!-- Hidden once the aggregate says no. Hiding it is a courtesy; the server refusing it is
-                 the actual rule — a dispatched order needs a return, not a cancellation. -->
+                 the actual rule - a dispatched order needs a return, not a cancellation. -->
             <div>
               <button
                 type="button"
@@ -234,7 +236,7 @@ export class OrdersPage {
                 @for (step of timeline.steps; track $index) {
                   <li>
                     <strong>{{ stepLabel(step.name) }}</strong>
-                    <span class="muted small"> — {{ dateTime(step.occurredAt) }}</span>
+                    <span class="muted small"> - {{ dateTime(step.occurredAt) }}</span>
                   </li>
                 }
               </ol>
@@ -257,6 +259,7 @@ export class OrdersPage {
             <thead>
               <tr>
                 <th scope="col">Product</th>
+                <th scope="col">Option</th>
                 <th scope="col">Quantity</th>
                 <th scope="col">Price</th>
                 <th scope="col">Total</th>
@@ -266,6 +269,9 @@ export class OrdersPage {
               @for (item of order()!.items; track item.productId) {
                 <tr>
                   <th scope="row">{{ item.productName }}</th>
+                  <!-- An em dash rather than an empty cell: "this product has no options" and "we
+                       forgot to record them" look identical when the cell is blank. -->
+                  <td>{{ describe(item) || '-' }}</td>
                   <td>{{ item.quantity }}</td>
                   <td>{{ money(item.unitPrice, order()!.currency) }}</td>
                   <td>{{ money(item.lineTotal, order()!.currency) }}</td>
@@ -298,6 +304,12 @@ export class OrdersPage {
   `,
 })
 export class OrderDetailPage implements OnDestroy {
+  /** "M · Navy" - the option chosen, in the words the customer chose it in. */
+  protected describe(item: { size: string | null; colourName: string | null }): string {
+    return [item.size, item.colourName].filter(Boolean).join(' · ');
+  }
+
+
   /** Bound from the route by `withComponentInputBinding()`. */
   readonly id = input.required<string>();
 

@@ -33,7 +33,7 @@ public const decimal DeclineThreshold = 5_000m;
 ```
 
 **A threshold, not a random failure rate.** Random failures make a demo look realistic and make the test
-suite flaky — the compensation path would pass or fail on the roll of a die, which is the fastest way to
+suite flaky - the compensation path would pass or fail on the roll of a die, which is the fastest way to
 get a suite ignored.
 
 A threshold means the failure path is reachable **on demand**: put the £5,200 Leather Portfolio in a
@@ -86,7 +86,7 @@ A `reference` is generated even for a decline, so support has something to quote
 the last step that can fail.
 
 They are written anyway, because **the shape of a saga is what makes adding a step afterwards safe**. If
-a shipping-label step were added tomorrow, this is what would undo the charge — and having it now means
+a shipping-label step were added tomorrow, this is what would undo the charge - and having it now means
 the compensation story is complete rather than aspirational.
 
 It refuses to refund a declined or already-refunded payment, which would create money. Silently, not as

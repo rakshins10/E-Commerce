@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Product illustration">
+  <defs>
+    <linearGradient id="bg-10" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg-10)"/>
+  <rect x="118" y="140" width="18" height="150" rx="9" fill="#92400e"/>
+  <path d="M118 140 L127 112 L136 140 Z" fill="#92400e"/>
+  <rect x="118" y="250" width="18" height="14" fill="#ffffff" opacity="0.6"/>
+  <rect x="150" y="140" width="18" height="150" rx="9" fill="#f59e0b"/>
+  <path d="M150 140 L159 112 L168 140 Z" fill="#f59e0b"/>
+  <rect x="150" y="250" width="18" height="14" fill="#ffffff" opacity="0.6"/>
+  <rect x="182" y="140" width="18" height="150" rx="9" fill="#0e7490"/>
+  <path d="M182 140 L191 112 L200 140 Z" fill="#0e7490"/>
+  <rect x="182" y="250" width="18" height="14" fill="#ffffff" opacity="0.6"/>
+  <rect x="214" y="140" width="18" height="150" rx="9" fill="#4338ca"/>
+  <path d="M214 140 L223 112 L232 140 Z" fill="#4338ca"/>
+  <rect x="214" y="250" width="18" height="14" fill="#ffffff" opacity="0.6"/>
+  <rect x="246" y="140" width="18" height="150" rx="9" fill="#be123c"/>
+  <path d="M246 140 L255 112 L264 140 Z" fill="#be123c"/>
+  <rect x="246" y="250" width="18" height="14" fill="#ffffff" opacity="0.6"/>
+  <rect x="278" y="140" width="18" height="150" rx="9" fill="#15803d"/>
+  <path d="M278 140 L287 112 L296 140 Z" fill="#15803d"/>
+  <rect x="278" y="250" width="18" height="14" fill="#ffffff" opacity="0.6"/>
+</svg>

@@ -11,7 +11,7 @@ namespace ECommerce.BackOffice.Api.Features;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Append-only, and that is the entire security property.</b> There is no update and no delete — not
+/// <b>Append-only, and that is the entire security property.</b> There is no update and no delete - not
 /// as an oversight, but because an audit log somebody can edit is not evidence of anything. If the code
 /// cannot modify a row, a compromised service cannot cover its tracks.
 /// </para>
@@ -58,7 +58,7 @@ public sealed class AuditEntry
     /// </remarks>
     public string ActorName { get; private set; } = string.Empty;
 
-    /// <summary>What they did — <c>order.cancelled</c>, <c>stock.adjusted</c>, <c>user.disabled</c>.</summary>
+    /// <summary>What they did - <c>order.cancelled</c>, <c>stock.adjusted</c>, <c>user.disabled</c>.</summary>
     public string Action { get; private set; } = string.Empty;
 
     /// <summary>What they did it to. An order number, a SKU, a username.</summary>

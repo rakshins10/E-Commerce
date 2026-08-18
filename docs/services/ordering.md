@@ -3,14 +3,14 @@
 > **Bounded context:** Ordering (**core**) · **Port:** 5003 · **Store:** PostgreSQL
 > **Code:** [`src/services/ordering/`](../../src/services/ordering/)
 > **Related:** [Basket](basket.md) · [Transactional outbox](#the-transactional-outbox) ·
-> [ADR-0012 — CQRS](../adr/0012-cqrs-with-mediatr.md)
+> [ADR-0012 - CQRS](../adr/0012-cqrs-with-mediatr.md)
 
 ## Purpose
 
 Turning a basket into an order, and moving that order through its life: submitted → stock confirmed →
 paid → shipped → delivered, or cancelled along the way.
 
-This is the **core subdomain** — the part that makes this a shop rather than a database — and it is the
+This is the **core subdomain** - the part that makes this a shop rather than a database - and it is the
 one place in the repo where full DDD earns its keep.
 
 ---
@@ -20,7 +20,7 @@ one place in the repo where full DDD earns its keep.
 | Service | Shape | Why |
 |---------|-------|-----|
 | Catalog | One project, light model | Supporting. Mostly CRUD over product data. |
-| Basket | One project, plain class | Supporting. Almost no rules — see [basket.md](basket.md). |
+| Basket | One project, plain class | Supporting. Almost no rules - see [basket.md](basket.md). |
 | **Ordering** | **Four projects, rich aggregate** | **Core.** The rules here are the business. |
 
 The four projects are `Api → Application → Domain`, with `Infrastructure` implementing the interfaces the
@@ -54,6 +54,8 @@ classDiagram
         <<Entity, internal ctor>>
         +string Sku
         +string ProductName
+        +string Size
+        +string ColourName
         +Money UnitPrice
         +int Quantity
         +Money LineTotal
@@ -73,6 +75,21 @@ classDiagram
     OrderItem "1" *-- "1" Money
 ```
 
+### A line is a variant, and it snapshots what was chosen
+
+`Sku` is the **variant** SKU since [ADR-0020](../adr/0020-product-variants.md) - the thing the warehouse
+picks - and `Size` and `ColourName` are copied onto the line beside the name and the price.
+
+The SKU alone identifies the variant precisely, so the size and colour are strictly redundant to a
+machine. They are there for a person: a customer reading their order history needs *"Medium, Navy"*, not
+`NW-TS-001-M-NAV`, and renaming a colour next year must not rewrite what last year's dispatch note said.
+Same reasoning as every other snapshot on an order.
+
+**Lines merge on SKU, not on product id.** The remark in `AddItem` always said "two lines for the same
+SKU produce two picking instructions for one shelf" - before variants the two were indistinguishable, so
+nothing noticed the code used the product. Merging on the product would collapse a Medium and a Large into
+one line, and the picking instruction would say "two of NW-TS-001" without saying which two.
+
 ### The boundary is enforced by the compiler
 
 Nothing outside can reach an `OrderItem`:
@@ -82,7 +99,7 @@ Nothing outside can reach an `OrderItem`:
 - there is **no repository** for a line, and no way to load one on its own
 
 That is not ceremony. It is the only way *"the total equals the sum of the lines"* can be a **guarantee**
-rather than a convention. A second entry point — an admin tool, a CSV import, a data-fix script — goes
+rather than a convention. A second entry point - an admin tool, a CSV import, a data-fix script - goes
 through the same methods and obeys the same rules. Validation written in an HTTP handler protects exactly
 one caller.
 
@@ -95,7 +112,7 @@ public Money Total => _items.Aggregate(Money.Zero(Currency), (running, item) => 
 A stored total is a second source of truth for the same fact, and the two drift the first time a line is
 edited by a path that forgets to recalculate. Deriving it makes the inconsistency **unrepresentable**.
 
-(If a report needed to filter on it at scale, the read model — not the aggregate — is where a denormalised
+(If a report needed to filter on it at scale, the read model - not the aggregate - is where a denormalised
 copy belongs.)
 
 ### `Money` carries its currency
@@ -105,7 +122,7 @@ silently: nothing stops you adding pounds to euros, and the result looks entirel
 currency part of the type turns that into an **exception at the point of the mistake** instead of a wrong
 number on an invoice.
 
-`decimal`, not `double`, because binary floating point cannot represent 0.1 exactly — summing ten items at
+`decimal`, not `double`, because binary floating point cannot represent 0.1 exactly - summing ten items at
 0.10 gives 0.9999999999999999, and a total that is a penny out once in a thousand orders is a support
 ticket nobody can reproduce. Rounded on construction with `MidpointRounding.ToEven` (banker's rounding),
 which is the accountancy default because always rounding .5 up introduces a systematic upward bias.
@@ -132,8 +149,8 @@ book will not alter this."*
       └────────────────┴──────────────┴──────────► Cancelled
 ```
 
-Each transition is a method that checks the current state first. The alternative — `IsPaid`,
-`IsCancelled`, `IsShipped` booleans and callers who remember to check them — permits *"cancelled and
+Each transition is a method that checks the current state first. The alternative - `IsPaid`,
+`IsCancelled`, `IsShipped` booleans and callers who remember to check them - permits *"cancelled and
 shipped"* to be true at once, and something eventually produces it.
 
 **Cancellation is legal up to and including `Paid`**, because a paid order that has not left the building
@@ -142,7 +159,7 @@ process:
 
 > Order ORD-… has already been dispatched and cannot be cancelled. Raise a return instead.
 
-Not a generic "invalid state" error, because the caller's next step is genuinely different — a
+Not a generic "invalid state" error, because the caller's next step is genuinely different - a
 cancellation and a return move different money and different stock.
 
 ### Idempotency is designed in, not bolted on
@@ -157,7 +174,7 @@ public void MarkAsPaid(string paymentReference)
 
 RabbitMQ delivers **at least once**, so a payment confirmation *will* arrive twice eventually. Throwing
 would dead-letter a message describing something already true; raising a second event would email the
-customer twice. `Cancel` is idempotent for the same reason, and keeps the **first** reason — a compensating
+customer twice. `Cancel` is idempotent for the same reason, and keeps the **first** reason - a compensating
 retry must not rewrite why something happened.
 
 ### Cancellation records whether there was stock to release
@@ -167,7 +184,7 @@ RaiseDomainEvent(new OrderCancelledDomainEvent(..., stockWasReserved));
 ```
 
 The saga needs this to know whether to compensate. **Releasing stock that was never reserved inflates the
-available count** — a corruption in the opposite direction from the one being fixed, and harder to notice.
+available count** - a corruption in the opposite direction from the one being fixed, and harder to notice.
 
 ---
 
@@ -195,7 +212,7 @@ to an order that was never saved.
 
 Two-phase commit across PostgreSQL and RabbitMQ needs XA support on both, holds locks for the duration of
 a network round trip, and blocks indefinitely if the coordinator dies at the wrong moment. It converts an
-availability problem into a distributed-locking problem — which is why microservice architectures almost
+availability problem into a distributed-locking problem - which is why microservice architectures almost
 universally do not use it.
 
 ### The outbox
@@ -227,8 +244,8 @@ separate transaction.
 
 | Gain | Cost |
 |------|------|
-| Atomicity without 2PC | Publication is **asynchronous** — consumers see the event a moment later |
-| Nothing is ever lost | Delivery is **at-least-once** — every consumer must be idempotent |
+| Atomicity without 2PC | Publication is **asynchronous** - consumers see the event a moment later |
+| Nothing is ever lost | Delivery is **at-least-once** - every consumer must be idempotent |
 
 Exactly-once delivery across a network is not achievable, so at-least-once is not a flaw to engineer away.
 [`ProcessedMessage`](../../src/building-blocks/Outbox/ProcessedMessage.cs) provides the receiving half for
@@ -280,7 +297,7 @@ shows what an application layer is actually for: **orchestration, and nothing el
 
 1. Read the basket (synchronous call to Basket). No basket, no order.
 2. **Re-price every line from Catalog.** ← the security step
-3. Ask the aggregate to build the order — every invariant applies here, in one place.
+3. Ask the aggregate to build the order - every invariant applies here, in one place.
 4. Write the order **and** the integration event in **one** transaction.
 5. Clear the basket afterwards, outside the transaction, tolerating failure.
 
@@ -297,7 +314,7 @@ it at checkout means:
 - a product withdrawn from sale can still be bought.
 
 So every line is re-priced from Catalog at the moment the order is placed, and the product **name** comes
-from Catalog too — a renamed product shows its real name on the invoice rather than whatever the client
+from Catalog too - a renamed product shows its real name on the invoice rather than whatever the client
 sent.
 
 A price that has *moved* is logged, not rejected: that is normal, and blocking the order would be worse
@@ -310,7 +327,7 @@ better than a silent discount.
 
 ### Clearing the basket is not part of the transaction
 
-It cannot be — different service, different database. If it fails, the order still exists and is correct;
+It cannot be - different service, different database. If it fails, the order still exists and is correct;
 the customer merely sees stale items, which is an annoyance rather than a lost order. Letting that failure
 roll back a committed, paid-for order would be strictly worse.
 
@@ -325,7 +342,7 @@ roll back a committed, paid-for order would be strictly worse.
 
 | Side | Technology | Returns |
 |------|-----------|---------|
-| Write | EF Core + the aggregate | Nothing — commands mutate |
+| Write | EF Core + the aggregate | Nothing - commands mutate |
 | Read | **Dapper**, hand-written SQL | Purpose-built DTOs |
 
 [`OrderQueries`](../../src/services/ordering/ECommerce.Ordering.Application/Orders/OrderQueries.cs) holds
@@ -334,21 +351,21 @@ an `IDbConnection`, **not** a `DbContext`. It has no way to reach a domain type 
 ### Why bother
 
 The two sides genuinely want different things. A write needs the whole aggregate loaded so its invariants
-can be checked. A read of "my orders" needs a reference, a date, a status and a total for twenty rows —
+can be checked. A read of "my orders" needs a reference, a date, a status and a total for twenty rows -
 and materialising twenty aggregates with every line, to display none of them, is an order of magnitude
 more work and more data than the screen uses.
 
 ### What it costs
 
 Hand-written SQL is **not refactor-safe**: rename a column and the compiler says nothing. That is a real
-cost, paid deliberately, and the reason integration tests run against a real PostgreSQL — a typo here can
+cost, paid deliberately, and the reason integration tests run against a real PostgreSQL - a typo here can
 only be caught by executing it.
 
 Two bugs from this phase make the point concretely:
 
 **PostgreSQL folds unquoted identifiers to lowercase.** EF's default `"Id"` column is invisible to
 `SELECT o.id`. EF quotes everything it generates, so the *write* side was perfectly happy and only the
-query failed — at runtime, with `column o.id does not exist`. Every key column is now named explicitly.
+query failed - at runtime, with `column o.id does not exist`. Every key column is now named explicitly.
 
 **Dapper matches column names exactly and does not translate `snake_case`.** The unaliased order query
 silently left every property at its default, producing an order with no reference and a total of **zero**.
@@ -373,7 +390,7 @@ aliased now.
 ### Two kinds of authorization
 
 The **permission** answers *"may this kind of user do this kind of thing"*. **Ownership** answers *"to
-whose order"* — and that cannot be checked until the order is loaded, so it happens in the handler and in
+whose order"* - and that cannot be checked until the order is loaded, so it happens in the handler and in
 the query's `WHERE` clause.
 
 Both are needed. `order:read:own` without an ownership check would let any customer read any order.
@@ -411,7 +428,7 @@ Published through the outbox, into the `ecommerce.events` topic exchange.
 | `OrderPaidIntegrationEvent` | Payment taken |
 | `OrderShippedIntegrationEvent` | Dispatched |
 | `OrderDeliveredIntegrationEvent` | Delivered |
-| `OrderCancelledIntegrationEvent` | Cancelled — carries the reason **and** `StockWasReserved` |
+| `OrderCancelledIntegrationEvent` | Cancelled - carries the reason **and** `StockWasReserved` |
 
 ### Domain events are not integration events
 
@@ -419,7 +436,7 @@ Published through the outbox, into the `ecommerce.events` topic exchange.
 |---|---|
 | Stays inside this service | Crosses the network |
 | Raised by the aggregate, in memory | Published by infrastructure |
-| Free to reference `Money`, `OrderStatus` | Primitives only — a published contract |
+| Free to reference `Money`, `OrderStatus` | Primitives only - a published contract |
 | Renaming it is a refactor | Renaming it is an outage |
 
 The aggregate raises `OrderPaidDomainEvent` carrying a `Money`; the application layer translates it into
@@ -429,13 +446,13 @@ seam that lets the inside change freely.**
 ### Events carry their data
 
 `OrderSubmitted` includes every line. An event holding only an order id would force each consumer to call
-back to Ordering — reintroducing the runtime coupling that asynchronous messaging exists to remove, and
+back to Ordering - reintroducing the runtime coupling that asynchronous messaging exists to remove, and
 meaning Ordering being down stops Inventory working.
 
 ### The shared contracts project
 
 [`src/contracts/ECommerce.Contracts`](../../src/contracts/ECommerce.Contracts/) is the **one** thing
-services share. The alternative — every service hand-copying the record it consumes — makes a field added
+services share. The alternative - every service hand-copying the record it consumes - makes a field added
 to `OrderPaid` a silent mismatch nobody notices until a null appears in production.
 
 What keeps it safe is the strict rule on what may live there: records with primitive properties, no
@@ -455,7 +472,7 @@ Four tables: `orders`, `order_items`, `outbox_messages`, `processed_messages`.
 | `status` stored as `int` | The enum values are explicit and never reordered. Storing names would make renaming a status a data migration. |
 | `unit_price numeric(18,2)` | Never a floating-point type. |
 | `ShippingAddress` as owned columns | A value object with no identity. A join to fetch five strings only ever read with their parent is cost without benefit. |
-| All keys `ValueGeneratedNever()` | The domain assigns `Guid.CreateVersion7()` in constructors. Without this, EF infers "already exists" from a non-default key and issues an UPDATE for a row that was never inserted — failing with a `DbUpdateConcurrencyException` that points nowhere near the cause. Learned the expensive way in Phase 5. |
+| All keys `ValueGeneratedNever()` | The domain assigns `Guid.CreateVersion7()` in constructors. Without this, EF infers "already exists" from a non-default key and issues an UPDATE for a row that was never inserted - failing with a `DbUpdateConcurrencyException` that points nowhere near the cause. Learned the expensive way in Phase 5. |
 
 ---
 
@@ -466,12 +483,12 @@ Four tables: `orders`, `order_items`, `outbox_messages`, `processed_messages`.
 | `ConnectionStrings__OrderingDb` | `Host=ordering-db;Database=ordering;…` |
 | `Services__Basket` | `http://basket-api:8080` |
 | `Services__Catalog` | `http://catalog-api:8080` |
-| `Outbox__PollingIntervalMs` | `1000` — the floor on how stale a consumer's view can be |
+| `Outbox__PollingIntervalMs` | `1000` - the floor on how stale a consumer's view can be |
 | `Outbox__BatchSize` | `50` |
 | `EventBus__HostName` | `rabbitmq` |
 
 Both HTTP clients use `AddStandardResilienceHandler()`: retry with exponential backoff **and jitter**
-(jitter stops fifty instances retrying in lockstep and re-creating the load spike — the thundering herd),
+(jitter stops fifty instances retrying in lockstep and re-creating the load spike - the thundering herd),
 plus a circuit breaker so a genuinely-down dependency fails fast instead of consuming the caller's threads.
 
 A 10-second timeout bounds both, because checkout is a request a person is waiting on.

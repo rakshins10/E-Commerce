@@ -14,8 +14,8 @@ namespace ECommerce.Auth;
 /// <list type="number">
 ///   <item><description><b>Testable.</b> A handler that depends on <see cref="ICurrentUser"/> can be unit
 ///   tested with a stub. One that reads <c>HttpContext</c> needs an HTTP context faked into existence.</description></item>
-///   <item><description><b>One place to be wrong.</b> The mapping from claim names to concepts is subtle —
-///   <c>sub</c> vs <c>preferred_username</c> vs <c>email</c> — and scattering it means fixing it in a dozen
+///   <item><description><b>One place to be wrong.</b> The mapping from claim names to concepts is subtle -
+///   <c>sub</c> vs <c>preferred_username</c> vs <c>email</c> - and scattering it means fixing it in a dozen
 ///   places when the identity provider changes.</description></item>
 ///   <item><description><b>It keeps the application layer free of ASP.NET.</b> A command handler asking
 ///   "who is this?" should not need a reference to the web framework.</description></item>
@@ -24,7 +24,7 @@ namespace ECommerce.Auth;
 public interface ICurrentUser
 {
     /// <summary>
-    /// The Keycloak <c>sub</c> claim — the stable, opaque identifier for this user.
+    /// The Keycloak <c>sub</c> claim - the stable, opaque identifier for this user.
     /// <see langword="null"/> when the request is anonymous.
     /// </summary>
     /// <remarks>
@@ -40,16 +40,16 @@ public interface ICurrentUser
 
     bool IsAuthenticated { get; }
 
-    /// <summary>Realm roles held by the caller — job titles, for display.</summary>
+    /// <summary>Realm roles held by the caller - job titles, for display.</summary>
     IReadOnlyCollection<string> Roles { get; }
 
-    /// <summary>Permissions held by the caller — capabilities, what authorization actually checks.</summary>
+    /// <summary>Permissions held by the caller - capabilities, what authorization actually checks.</summary>
     IReadOnlyCollection<string> Permissions { get; }
 
     /// <summary>Whether the caller holds a permission.</summary>
     /// <remarks>
     /// Prefer declaring the requirement on the endpoint (<c>.RequirePermission(...)</c>) so it is visible in
-    /// the routing table. Use this only where the decision is genuinely conditional — for example choosing
+    /// the routing table. Use this only where the decision is genuinely conditional - for example choosing
     /// between a full and a redacted response shape.
     /// </remarks>
     bool HasPermission(string permission);
@@ -89,7 +89,7 @@ public static class CurrentUserExtensions
     /// <remarks>
     /// <para>
     /// Every <c>/me</c> route needs this and none of them can proceed without it, so the alternative is
-    /// the same four-line null check copied into every handler in every service — where it will
+    /// the same four-line null check copied into every handler in every service - where it will
     /// eventually be written as <c>?? string.Empty</c> by someone in a hurry, silently turning "no
     /// subject" into "the customer whose id is the empty string".
     /// </para>

@@ -4,12 +4,15 @@
   "private": true,
   "description": "Storefront - Angular. Functionally and visually identical to @ecommerce/react-store.",
   "scripts": {
-    "ng": "ng",
+    "sync:assets": "node ../scripts/sync-assets.mjs",
+    "prestart": "npm run sync:assets",
     "start": "ng serve --port 4200",
+    "prebuild": "npm run sync:assets",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development",
+    "lint": "ng build --configuration development",
     "test": "ng test",
-    "lint": "ng build --configuration development"
+    "ng": "ng",
+    "watch": "ng build --watch --configuration development"
   },
   "dependencies": {
     "@angular/common": "^22.0.0",

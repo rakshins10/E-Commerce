@@ -1,4 +1,4 @@
-# ADR-0019 — Integration event contracts live in one shared project
+# ADR-0019 - Integration event contracts live in one shared project
 
 **Status:** Accepted · **Date:** 2026-07-26 · **Phase:** 6
 
@@ -10,7 +10,7 @@ Notification and the saga will all consume them from Phase 7.
 Every consumer needs the shape of those messages. There are three ways to arrange that, and the choice
 matters because it decides whether services stay independently deployable.
 
-### Option A — each service hand-copies the record it consumes
+### Option A - each service hand-copies the record it consumes
 
 The purist answer, and the one most microservice writing recommends. No shared code at all: Inventory
 writes its own `OrderSubmitted` class with the fields it cares about.
@@ -20,10 +20,10 @@ if the *wire format* changes, which is the honest boundary.
 
 **What goes wrong in practice:** adding a field to `OrderPaid` is a silent mismatch. The producer sends
 it, the consumer ignores it, and nobody finds out until someone asks why a report is empty. Removing one
-is worse — the consumer deserialises a null into a non-nullable field and fails at 3am. There is no
+is worse - the consumer deserialises a null into a non-nullable field and fails at 3am. There is no
 compile step that can tell you the two have drifted, because by construction they are unrelated types.
 
-### Option B — a shared library containing the domain model
+### Option B - a shared library containing the domain model
 
 The version people fall into. Ordering exposes its `Order` class, consumers reference it.
 
@@ -31,7 +31,7 @@ This is the failure mode this ADR exists to prevent. The moment a domain type cr
 renaming a property inside the aggregate becomes a breaking change for three other teams, and the services
 are no longer independently deployable. They are one distributed monolith with extra network calls.
 
-### Option C — a shared library containing only the contract
+### Option C - a shared library containing only the contract
 
 One project holding integration event **records**: primitive properties, no behaviour, no domain types.
 
@@ -45,7 +45,7 @@ reads it first:
 
 - records with **primitive** and primitive-collection properties, nothing else
 - **no** behaviour, **no** domain types, **no** validation, **no** reference to any service
-- **additive changes only** — a removed or renamed property breaks every consumer that has not redeployed
+- **additive changes only** - a removed or renamed property breaks every consumer that has not redeployed
 
 ## Consequences
 
@@ -76,7 +76,7 @@ properties must therefore be optional. When a genuinely incompatible change is n
 ### The enum-to-string rule
 
 `OrderCancelledIntegrationEvent.Reason` is a `string`, not the domain enum. Adding a new cancellation
-reason must not break a consumer that has not been redeployed — an unknown string falls into a default
+reason must not break a consumer that has not been redeployed - an unknown string falls into a default
 branch, whereas an unknown enum value is a deserialisation failure.
 
 ### What this costs
@@ -90,9 +90,9 @@ to the model behind it.
 
 If someone adds a helper method, a validation attribute, or a reference to `ECommerce.Ordering.Domain` to
 this project, the boundary is gone and nobody will notice for months. That is why the reasoning sits in the
-`.csproj` comment rather than only here — the warning belongs where the mistake would be made.
+`.csproj` comment rather than only here - the warning belongs where the mistake would be made.
 
 ## Related
 
 - [Ordering service](../services/ordering.md#8-integration-events)
-- [ADR-0012 — CQRS](0012-cqrs-with-mediatr.md)
+- [ADR-0012 - CQRS](0012-cqrs-with-mediatr.md)

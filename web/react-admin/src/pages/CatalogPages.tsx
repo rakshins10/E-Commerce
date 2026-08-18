@@ -78,8 +78,28 @@ export function CatalogPage() {
           row.sku
         ),
     },
-    { header: 'Name', render: (row) => row.name },
+    {
+      header: 'Name',
+      // A thumbnail beside the name, because a catalogue manager recognises the product long before
+      // they finish reading the SKU. Decorative - the name is right next to it, so a screen reader
+      // would only hear the same thing twice.
+      render: (row) => (
+        <span className="cell-with-thumb">
+          <img
+            className="thumb"
+            src={row.imageUrl ?? '/img/placeholder.svg'}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            width={40}
+            height={40}
+          />
+          {row.name}
+        </span>
+      ),
+    },
     { header: 'Category', render: (row) => row.categoryName },
+    { header: 'For', render: (row) => row.audience },
     { header: 'Brand', render: (row) => row.brandName },
     {
       header: 'Price',
@@ -204,6 +224,7 @@ const EMPTY = {
   sku: '',
   name: '',
   description: '',
+  audience: 'Unisex',
   price: '0',
   categoryId: '',
   brandId: '',
@@ -214,7 +235,7 @@ const EMPTY = {
  * Add or edit a product.
  *
  * ---
- * **Price is handled separately when editing.** Creating a product sets its price in the same request —
+ * **Price is handled separately when editing.** Creating a product sets its price in the same request -
  * there is nothing to override yet. Changing an existing price is a distinct action with a distinct
  * permission, so it gets its own field and its own button, and somebody with `catalog:write` but not
  * `price:override` sees the field disabled rather than the whole form.
@@ -230,7 +251,7 @@ export function ProductEditPage() {
   /**
    * The form, as one object.
    *
-   * Every handler below uses the FUNCTIONAL updater — `setForm((current) => …)` — never
+   * Every handler below uses the FUNCTIONAL updater - `setForm((current) => …)` - never
    * `setForm({ ...form, x })`. The second form captures `form` from the render it was created in, so
    * a value written by an effect between two keystrokes is silently discarded by the next one.
    *
@@ -278,6 +299,7 @@ export function ProductEditPage() {
       categoryId: taxonomy.categories.find((c) => c.slug === product.categorySlug)?.id ?? '',
       brandId: taxonomy.brands.find((b) => b.slug === product.brandSlug)?.id ?? '',
       imageUrl: product.imageUrl ?? '',
+      audience: product.audience,
     });
 
     setPrice(String(product.price));
@@ -309,6 +331,7 @@ export function ProductEditPage() {
             categoryId: form.categoryId,
             brandId: form.brandId,
             imageUrl: form.imageUrl || null,
+            audience: form.audience,
           })
         : api.updateProduct(id!, {
             name: form.name,
@@ -316,6 +339,7 @@ export function ProductEditPage() {
             categoryId: form.categoryId,
             brandId: form.brandId,
             imageUrl: form.imageUrl || null,
+            audience: form.audience,
           }),
     onSuccess: (product) => {
       void queryClient.invalidateQueries({ queryKey: ['admin-products'] });
@@ -348,6 +372,13 @@ export function ProductEditPage() {
   }
 
   const taxonomy = taxonomyQuery.data;
+
+  /** Read-only here - stock is Inventory's to change, and options are fixed when a variant is made. */
+  const variants = productQuery.data?.variants ?? [];
+
+  /** The category currently chosen in the form, so its size scale can be shown beside the select. */
+  const selectedCategory = taxonomy?.categories.find((category) => category.id === form.categoryId);
+
   // Requires the taxonomy too, not just the text fields. Belt and braces after the stale-closure bug
   // above: even if a default is somehow lost, the form cannot post an empty Guid.
   const canSubmit =
@@ -396,7 +427,7 @@ export function ProductEditPage() {
           />
           {!isNew && (
             <p className="muted small">
-              A SKU cannot be changed — historic orders reference it. Withdraw this product and add a
+              A SKU cannot be changed - historic orders reference it. Withdraw this product and add a
               new one instead.
             </p>
           )}
@@ -425,6 +456,43 @@ export function ProductEditPage() {
           />
         </div>
 
+        {/* --- Image URL -------------------------------------------------------------------
+            This field was missing, and its absence cost a product its picture.
+
+            `PUT /products/{id}` replaces the whole resource, so a field the form does not send is a
+            field the server sets to NULL. React happened to survive it by round-tripping `imageUrl`
+            through component state; Angular did not track it at all, so the shared "a product can be
+            edited" spec wiped the artwork off NW-TS-001 every time it ran against the Angular admin.
+
+            The form is now the fix AND the evidence: a value you can see is a value you notice
+            disappearing. */}
+        <div className="field">
+          <label htmlFor="imageUrl">Image URL</label>
+          <input
+            id="imageUrl"
+            className="input"
+            maxLength={500}
+            placeholder="/img/tshirt-classic.svg"
+            value={form.imageUrl}
+            onChange={(event) => setForm((current) => ({ ...current, imageUrl: event.target.value }))}
+          />
+          <p className="muted small">
+            A path served by the storefront, such as <code>/img/mug-ceramic.svg</code>. Leave it empty
+            and the shop shows a placeholder.
+          </p>
+
+          {form.imageUrl && (
+            <img
+              className="thumb"
+              src={form.imageUrl}
+              alt=""
+              aria-hidden="true"
+              width={40}
+              height={40}
+            />
+          )}
+        </div>
+
         <div className="field">
           <label htmlFor="category">Category</label>
           <select
@@ -439,6 +507,22 @@ export function ProductEditPage() {
               </option>
             ))}
           </select>
+
+          {/* What the chosen category means for this product's options.
+              A merchandiser adding a hoodie should be able to see that it will be sold in S/M/L/XL, and
+              one adding a notebook should see that size does not apply here at all - without having to
+              read the seeder to find out (ADR-0021). */}
+          {selectedCategory &&
+            (selectedCategory.sizes.length > 0 ? (
+              <p className="muted small">
+                Sold in sizes <strong>{selectedCategory.sizes.join(', ')}</strong> (
+                {selectedCategory.sizeScaleName}). Variants of this product may use these sizes.
+              </p>
+            ) : (
+              <p className="muted small">
+                This category is not sized, so its products have no size option.
+              </p>
+            ))}
         </div>
 
         <div className="field">
@@ -455,6 +539,23 @@ export function ProductEditPage() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="field">
+          <label htmlFor="audience">Sold to</label>
+          <select
+            id="audience"
+            className="input"
+            value={form.audience}
+            onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))}
+          >
+            <option value="Unisex">Everyone</option>
+            <option value="Men">Men</option>
+            <option value="Women">Women</option>
+          </select>
+          <p className="muted small">
+            An attribute, not a category - the taxonomy says what a thing is, this says who it is for.
+          </p>
         </div>
 
         {isNew && (
@@ -486,6 +587,57 @@ export function ProductEditPage() {
           </Link>
         </div>
       </form>
+
+      {variants.length > 0 && (
+        <section className="card stack" aria-labelledby="variants-heading">
+          <h2 id="variants-heading" style={{ marginTop: 0 }}>
+            Variants
+          </h2>
+
+          <p className="muted small">
+            What a customer actually buys. Each row has its own SKU, and Inventory holds stock against
+            that SKU rather than against the product - which is why that service needed no schema change
+            when sizes arrived.
+          </p>
+
+          <table className="table">
+            <caption className="visually-hidden">Sellable variants of this product</caption>
+            <thead>
+              <tr>
+                <th scope="col">SKU</th>
+                <th scope="col">Size</th>
+                <th scope="col">Colour</th>
+                <th scope="col" style={{ textAlign: 'right' }}>
+                  Stock
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {variants.map((variant) => (
+                <tr key={variant.id}>
+                  <th scope="row">{variant.sku}</th>
+                  <td>{variant.size ?? '-'}</td>
+                  <td>
+                    {variant.colourName ? (
+                      <span className="cell-with-thumb">
+                        <span
+                          className="swatch"
+                          style={{ background: variant.colourHex ?? 'transparent' }}
+                          aria-hidden="true"
+                        />
+                        {variant.colourName}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right' }}>{variant.stockOnHand}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {!isNew && (
         <section className="card stack" aria-labelledby="price-heading">

@@ -17,7 +17,7 @@ namespace ECommerce.Auth;
 /// </code>
 /// <para>
 /// That property matters more than it looks. Authorization spread through handler bodies cannot be audited
-/// by reading — you have to trust that every path checked. Declared on the route, an unprotected endpoint is
+/// by reading - you have to trust that every path checked. Declared on the route, an unprotected endpoint is
 /// visible as an <i>absence</i>, and absences are much easier to spot in review than a missing line buried
 /// three levels into a method.
 /// </para>
@@ -29,7 +29,7 @@ public static class EndpointExtensions
     /// </summary>
     /// <remarks>
     /// The policy name <i>is</i> the permission string, and every one is registered from
-    /// <see cref="Permissions.All"/> by <see cref="AuthenticationExtensions.AddPermissionPolicies"/> — so
+    /// <see cref="Permissions.All"/> by <see cref="AuthenticationExtensions.AddPermissionPolicies"/> - so
     /// referencing a permission that was never registered fails fast at startup rather than silently
     /// allowing the request.
     /// </remarks>
@@ -41,7 +41,7 @@ public static class EndpointExtensions
     /// Requires the caller to hold <b>any one</b> of the given permissions.
     /// </summary>
     /// <remarks>
-    /// For endpoints reachable by two different capabilities — an order detail page readable either by staff
+    /// For endpoints reachable by two different capabilities - an order detail page readable either by staff
     /// with <c>order:read</c> or by the customer who placed it with <c>order:read:own</c>. The ownership half
     /// still needs a resource check inside the handler; this only gets the request through the door.
     /// See <see cref="ResourceOwnerRequirement"/>.

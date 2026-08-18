@@ -232,7 +232,15 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-.stack > * + * {
+/* `:not(:first-child)` rather than `* + *`, for SPECIFICITY rather than style.
+   Both select the same elements, but `.stack > * + *` scores (0,1,0) - exactly the
+   same as a plain class - so any child carrying its own margin reset wins on source
+   order alone. `.plain-list { margin: 0 }` is defined 300 lines further down, so
+   every list inside a stack silently lost its top margin and sat jammed against
+   whatever came before it. Visible under "Add to basket" on the product page.
+   `:not(:first-child)` scores (0,2,0), so the container that OWNS the rhythm wins -
+   which is the right way round. An inline `margin-top: 0` still overrides it. */
+.stack > :not(:first-child) {
   margin-block-start: var(--space-4);
 }
 
@@ -411,8 +419,8 @@ body {
   color: inherit;
 }
 
-/* A placeholder tile standing in for product photography, so the layout is
-   honest about its proportions without shipping binary assets. */
+/* Kept for anything still rendering a letter placeholder; real product imagery
+   now uses .product-media. */
 .product-card__image,
 .product-detail__image {
   display: grid;
@@ -574,4 +582,792 @@ body {
   background: var(--color-brand-50);
   color: var(--color-brand-700);
   font-weight: 600;
+}
+
+/* ===========================================================================
+   Shop UI
+   ===========================================================================
+   The visual layer that makes this read as a shop rather than a form over a
+   database. Everything here is built from the existing tokens - no new colours,
+   no hard-coded hex - so the palette check and both themes keep working.
+
+   Three rules held throughout:
+
+   1. Nothing conveys meaning by colour alone (WCAG 1.4.1). A stock badge has a
+      word, a discount has a label, a validation state has text.
+   2. Interactive things are BUTTONS and LINKS, never divs with click handlers,
+      so the keyboard and the shared Playwright specs both keep working.
+   3. Decorative imagery is aria-hidden or alt="", because a screen reader
+      announcing "Product illustration" twelve times is worse than silence.
+   =========================================================================== */
+
+/* --- Product imagery ------------------------------------------------------
+   The frame is fixed at 4:3 and the image is `contain`ed inside it, so a grid
+   of cards never jumps as images load and an odd aspect ratio is letterboxed
+   rather than cropped through the middle of a product. */
+.product-media {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.product-media__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  /* A slow, subtle lift on hover. Fast enough to feel responsive, small enough
+     not to shift what the pointer is aiming at. */
+  transition: transform 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-media__img {
+    transition: none;
+  }
+}
+
+/* --- Product card ---------------------------------------------------------
+   The whole card is a link target via a stretched pseudo-element, so the click
+   area is the card while the accessible name stays the product name alone.
+   Wrapping the card in an <a> would make a screen reader read the price, the
+   badge and the brand as part of the link text. */
+.product-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+
+.product-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.product-card:hover .product-media__img {
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card,
+  .product-card:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* The focus ring belongs to the CARD when the link inside it has focus, so
+   keyboard users see the same target mouse users click. */
+.product-card:focus-within {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.product-card__link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.product-card__link:focus-visible {
+  outline: none;
+}
+
+.product-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+}
+
+.product-card__brand {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.product-card__footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+.price {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.price--lg {
+  font-size: var(--font-size-3xl);
+}
+
+/* --- Icons ----------------------------------------------------------------
+   Inline SVG rather than an icon font or a library: no extra request, no
+   flash of missing glyph, and `currentColor` means an icon inherits whatever
+   it sits inside without a second colour to keep in step. */
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon--sm {
+  width: 1em;
+  height: 1em;
+}
+
+/* --- Cart button with a live count ---------------------------------------- */
+.cart-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The number is decorative: the button's accessible name already says
+   "Basket, 3 items", so announcing the digit again would be repetition. */
+.cart-badge {
+  position: absolute;
+  top: -0.4rem;
+  right: -0.5rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--color-brand-600);
+  color: var(--color-text-on-brand);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* --- Hero ----------------------------------------------------------------- */
+.hero {
+  display: grid;
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--color-brand-50), var(--color-brand-100));
+  border: 1px solid var(--color-border-subtle);
+}
+
+@media (min-width: 48rem) {
+  .hero {
+    grid-template-columns: 1.2fr 1fr;
+    padding: var(--space-12) var(--space-10);
+  }
+}
+
+.hero__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-4xl);
+  line-height: var(--font-line-height-tight);
+  /* Explicit, not inherited: the hero sits on a brand-tinted surface in both
+     themes, and text-primary is the pair the contrast check verifies. */
+  color: var(--color-text-primary);
+}
+
+.hero__lede {
+  margin: 0 0 var(--space-5);
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+  max-width: 46ch;
+}
+
+.hero__art {
+  display: none;
+}
+
+@media (min-width: 48rem) {
+  .hero__art {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .hero__art img {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    background: var(--color-surface-base);
+  }
+}
+
+/* --- Category tiles ------------------------------------------------------- */
+.category-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-raised);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.category-tile:hover {
+  border-color: var(--color-brand-500);
+  box-shadow: var(--shadow-md);
+}
+
+.category-tile__name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.category-tile__count {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* --- Basket lines --------------------------------------------------------- */
+.line-item {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  align-items: start;
+}
+
+.line-item:last-child {
+  border-bottom: none;
+}
+
+.line-item__media {
+  width: 5rem;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  object-fit: contain;
+}
+
+.line-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.line-item__top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.line-item__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* --- Quantity stepper ----------------------------------------------------
+   Three real controls: two buttons and a number input. A pair of arrows drawn
+   on a div would be invisible to the keyboard, and the input alone makes
+   changing quantity a typing exercise on a phone. */
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-base);
+}
+
+.stepper__btn {
+  width: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+}
+
+.stepper__btn:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+}
+
+.stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepper__input {
+  width: 3rem;
+  border: none;
+  border-left: 1px solid var(--color-border-subtle);
+  border-right: 1px solid var(--color-border-subtle);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: center;
+  font: inherit;
+  padding: var(--space-2) 0;
+  /* Chrome's spinners duplicate the buttons either side and look broken next
+     to them. */
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.stepper__input::-webkit-outer-spin-button,
+.stepper__input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* --- Order summary -------------------------------------------------------- */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.summary__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.summary__total {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+/* Grid only on a wide screen; below that the summary simply follows the lines. */
+.checkout-layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+/* Sticky on a wide screen so the total stays visible while a long basket
+   scrolls, static on a narrow one where sticky would eat the viewport. */
+@media (min-width: 64rem) {
+  .checkout-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .checkout-layout__aside {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+/* --- Section heading with an action --------------------------------------- */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-4);
+}
+
+.section-head h2 {
+  margin: 0;
+}
+
+/* --- Empty state ---------------------------------------------------------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+
+.empty-state__icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-text-muted);
+}
+
+/* --- Admin: thumbnails and stat tiles ------------------------------------- */
+.thumb {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  object-fit: contain;
+  flex: none;
+}
+
+.cell-with-thumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.stat-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  /* A left rule rather than a tinted background: the number stays on the same
+     surface as every other card, so a tile that needs attention is the only
+     thing that differs. */
+  border-left: 3px solid transparent;
+}
+
+.stat__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.stat__value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--font-line-height-tight);
+  /* Tabular figures, so a column of numbers lines up and a changing value does
+     not make the tile twitch. */
+  font-variant-numeric: tabular-nums;
+}
+
+/* The tone is a hint, never the message: the label beside it always says what
+   the number is, so the colour adds emphasis rather than meaning. */
+.stat--warning {
+  border-left-color: var(--color-status-warning-fg);
+}
+
+.stat--danger {
+  border-left-color: var(--color-status-danger-fg);
+}
+
+/* --- Utilities used by the shop screens ----------------------------------- */
+.row--between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.stack--tight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Four across on a wide screen, for the featured row on the shopfront. Steps down through 2 rather
+   than collapsing straight to 1, so a tablet is not given a single column of enormous cards. */
+@media (min-width: 48rem) {
+  .grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 64rem) {
+  .grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* --- Button sizes --------------------------------------------------------- */
+/* A smaller button for actions that sit INSIDE a row of content - "Remove" on a
+   basket line should not compete with "Checkout". */
+.btn--sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+}
+
+/* Full width, for a button that is the only thing in a narrow column. */
+.btn--block {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+/* --- Browse layout -------------------------------------------------------
+   A category rail beside the results, the way a real shop organises a
+   department. Below 64rem it becomes a horizontally scrolling strip above the
+   grid: a 15rem sidebar on a phone is most of the screen, and a shopper who
+   came to look at products should see products. */
+.browse-layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 64rem) {
+  .browse-layout {
+    grid-template-columns: 15rem 1fr;
+    align-items: start;
+  }
+}
+
+.category-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (min-width: 64rem) {
+  .category-rail {
+    position: sticky;
+    top: var(--space-4);
+  }
+}
+
+.category-rail__title {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* The department name. A link too, because "show me everything in Clothing" is
+   a real thing to want and the server rolls child categories up for it. */
+.category-rail__heading {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.category-rail__link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.category-rail__heading .category-rail__link {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+}
+
+.category-rail__link:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+}
+
+/* Current selection is marked with weight and a rule, not colour alone -
+   colour alone fails WCAG 1.4.1 and is invisible to a shopper who cannot
+   distinguish it. */
+.category-rail__link[aria-current] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: inset 3px 0 0 var(--color-brand-500);
+}
+
+.category-rail__count {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Department board (home page) ----------------------------------------
+   One card per department listing what is inside it. The same information the
+   rail carries, laid out for somebody who has not chosen anything yet. */
+.department {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.department__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.department__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.department__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-base);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.department__chip:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+/* --- Variant pickers -----------------------------------------------------
+   Radio inputs behind the labels, not buttons. A native radio group gives
+   arrow-key navigation, a single tab stop, and "Size, Medium, 2 of 4" from a
+   screen reader - all of which a div with a click handler has to reimplement
+   and usually does not. The input is visually hidden, never display:none,
+   because display:none removes it from the accessibility tree too. */
+.option-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.option-group__legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.option-group__hint {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.option {
+  position: relative;
+  display: inline-flex;
+}
+
+.option__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 3rem;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.option__input:checked + .option__label {
+  border-color: var(--color-brand-500);
+  box-shadow: inset 0 0 0 1px var(--color-brand-500);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* :focus-visible on the hidden input has to show on the label, or keyboard
+   focus is invisible. */
+.option__input:focus-visible + .option__label {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Sold out. Struck through AND disabled AND labelled - never colour alone,
+   which WCAG 1.4.1 forbids and which is invisible to plenty of people. */
+.option__input:disabled + .option__label {
+  color: var(--color-text-muted);
+  border-color: var(--color-border-subtle);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.swatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-strong);
+  flex: none;
+}
+
+/* The stock line under the pickers. Reserves its height so choosing a size
+   does not shift the Add to basket button out from under the pointer. */
+.variant-stock {
+  min-height: 1.5rem;
+  font-size: var(--font-size-sm);
+}
+
+/* --- Audience -------------------------------------------------------------
+   Men / Women / Unisex as a top-level axis, the way a clothing shop presents
+   it, rather than buried in the filter bar. */
+.audience-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.audience-tab {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.audience-tab:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.audience-tab[aria-current] {
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+  font-weight: var(--font-weight-semibold);
 }

@@ -32,7 +32,7 @@ public interface IBasketService
 /// <summary>A basket as Ordering sees it.</summary>
 /// <remarks>
 /// Ordering's own shape, not Basket's class. If it shared Basket's model, adding a field for the basket
-/// UI would recompile and redeploy Ordering — which is exactly the coupling that separate services are
+/// UI would recompile and redeploy Ordering - which is exactly the coupling that separate services are
 /// meant to remove.
 /// </remarks>
 public sealed record BasketSnapshot(string BuyerId, IReadOnlyList<BasketLineSnapshot> Items);
@@ -43,7 +43,9 @@ public sealed record BasketLineSnapshot(
     string ProductName,
     decimal UnitPrice,
     string Currency,
-    int Quantity);
+    int Quantity,
+    string? Size = null,
+    string? ColourName = null);
 
 /// <summary>
 /// What Ordering needs from the Catalog service: the <b>authoritative</b> price.

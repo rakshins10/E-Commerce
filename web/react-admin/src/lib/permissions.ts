@@ -46,7 +46,7 @@ export const Permissions = {
 
 type Leaves<T> = T extends string ? T : { [K in keyof T]: Leaves<T[K]> }[keyof T];
 
-/** Union of every valid permission string — a typo is a compile error. */
+/** Union of every valid permission string - a typo is a compile error. */
 export type Permission = Leaves<typeof Permissions>;
 
 export const Roles = {
@@ -61,7 +61,7 @@ export type Role = (typeof Roles)[keyof typeof Roles];
 
 /** What the UI knows about the signed-in user. */
 export interface AuthenticatedUser {
-  /** Keycloak `sub` — the only stable identifier. */
+  /** Keycloak `sub` - the only stable identifier. */
   readonly id: string;
   readonly username: string;
   readonly email?: string;
@@ -77,7 +77,7 @@ export interface AuthenticatedUser {
  * **This is a user-experience helper, not a security control.**
  *
  * Hiding a button the user cannot use stops an honest person attempting
- * something that will fail. It stops a dishonest one from nothing at all —
+ * something that will fail. It stops a dishonest one from nothing at all -
  * anyone can open devtools, copy the token and call the API directly.
  *
  * Every permission checked here is *independently* enforced on the server, and

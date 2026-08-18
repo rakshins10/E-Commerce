@@ -14,13 +14,13 @@ namespace ECommerce.Ordering.Application.Orders;
 /// <remarks>
 /// <para>
 /// Every one of these follows the same four steps: load the aggregate, call the method, translate the
-/// domain event into the published contract, commit both together. The repetition is the point — when
+/// domain event into the published contract, commit both together. The repetition is the point - when
 /// every state change looks identical, a reviewer can see at a glance that none of them writes to the
 /// database without also writing the outbox.
 /// </para>
 /// <para>
 /// <b>No MediatR.</b> Plain classes, injected and called directly. MediatR earns its place when you want
-/// pipeline behaviours — validation, logging, transactions — applied uniformly across dozens of
+/// pipeline behaviours - validation, logging, transactions - applied uniformly across dozens of
 /// handlers. With a handful, it adds a layer of indirection that makes "find the code that runs when I
 /// call this" a multi-step search, for no benefit. This is a deliberate divergence from
 /// eShopOnContainers, recorded in docs/adr/0012.
@@ -135,7 +135,7 @@ public sealed class CancelOrderHandler(
 /// </summary>
 /// <remarks>
 /// In Phase 6 these are driven by staff endpoints so the flow can be exercised end to end. In Phase 7
-/// the same methods are called by the saga in response to payment and inventory events — which is
+/// the same methods are called by the saga in response to payment and inventory events - which is
 /// possible only because the rules live in the aggregate rather than in the endpoint.
 /// </remarks>
 public sealed class AdvanceOrderHandler(

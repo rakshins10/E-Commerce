@@ -6,7 +6,7 @@ namespace ECommerce.OrderingSaga.Api.Model;
 /// <remarks>
 /// <para>
 /// <b>This row is the reason orchestration was chosen.</b> In a choreographed saga the question "where is
-/// order 12345 stuck?" has no single answer — it is distributed across four services' logs and exists
+/// order 12345 stuck?" has no single answer - it is distributed across four services' logs and exists
 /// nowhere as a fact. Here it is a <c>SELECT</c>.
 /// </para>
 /// <para>
@@ -38,7 +38,7 @@ public sealed class OrderSaga
     /// </summary>
     /// <remarks>
     /// Deliberately not a separate identifier. One order has exactly one saga, so a distinct key would be
-    /// a second thing to join on and a second thing to get wrong — and using the order id makes the
+    /// a second thing to join on and a second thing to get wrong - and using the order id makes the
     /// unique constraint do the deduplication work when <c>OrderSubmitted</c> is delivered twice.
     /// </remarks>
     public Guid OrderId { get; private set; }
@@ -58,7 +58,7 @@ public sealed class OrderSaga
     /// </summary>
     /// <remarks>
     /// The single most important field here. It is what stops the saga issuing a
-    /// <c>ReleaseStockCommand</c> for a reservation that never happened — which would inflate the
+    /// <c>ReleaseStockCommand</c> for a reservation that never happened - which would inflate the
     /// available count, a corruption in the opposite direction from the failure being compensated.
     /// </remarks>
     public bool StockReserved { get; private set; }
@@ -75,7 +75,7 @@ public sealed class OrderSaga
     /// An append-only log of everything that happened, in order.
     /// </summary>
     /// <remarks>
-    /// Not merely for debugging — it is what the customer's order timeline and the admin panel render.
+    /// Not merely for debugging - it is what the customer's order timeline and the admin panel render.
     /// A saga that records only its current state can tell you it failed but not what it tried, and
     /// "compensation ran at 14:02" is exactly the fact somebody needs at 14:05.
     /// </remarks>

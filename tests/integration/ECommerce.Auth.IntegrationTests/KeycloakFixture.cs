@@ -13,13 +13,13 @@ namespace ECommerce.Auth.IntegrationTests;
 /// <remarks>
 /// <para>
 /// That detail matters more than it sounds. If the tests used their own trimmed-down realm, they would pass
-/// happily while the real realm had a missing audience mapper or a broken composite role — the exact class of
+/// happily while the real realm had a missing audience mapper or a broken composite role - the exact class of
 /// mistake they exist to catch. Importing the shipped file means <b>a realm change that breaks authorization
 /// breaks the build</b>.
 /// </para>
 /// <para>
 /// The container is started once and shared by every test class via a collection fixture, because Keycloak
-/// takes 30–40 seconds to boot. Per-class would multiply that by the number of test classes for no benefit —
+/// takes 30-40 seconds to boot. Per-class would multiply that by the number of test classes for no benefit -
 /// nothing here mutates the realm.
 /// </para>
 /// </remarks>
@@ -77,7 +77,7 @@ public sealed class KeycloakFixture : IAsyncLifetime
     /// Obtains a genuine, Keycloak-signed access token for a seed user.
     /// </summary>
     /// <remarks>
-    /// Uses the password grant via the <c>test-harness</c> client — the only client in the realm with direct
+    /// Uses the password grant via the <c>test-harness</c> client - the only client in the realm with direct
     /// access grants enabled, precisely so no real application client needs the deprecated grant. See
     /// <c>identity/keycloak/realm-export.json</c>.
     /// </remarks>
@@ -106,7 +106,7 @@ public sealed class KeycloakFixture : IAsyncLifetime
         return payload.GetProperty("access_token").GetString()!;
     }
 
-    /// <summary>Whether a login attempt succeeds at all — used to assert a disabled user cannot sign in.</summary>
+    /// <summary>Whether a login attempt succeeds at all - used to assert a disabled user cannot sign in.</summary>
     public async Task<bool> CanAuthenticateAsync(string username, string password = "Passw0rd!")
     {
         try

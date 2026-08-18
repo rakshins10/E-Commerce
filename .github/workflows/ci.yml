@@ -37,7 +37,38 @@ env:
 jobs:
 
   # ---------------------------------------------------------------------------
-  #  .NET — build, style, test
+  #  Repository hygiene - cheap checks that should fail in seconds, not minutes
+  # ---------------------------------------------------------------------------
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Em dashes, en dashes and curly quotes have plain ASCII equivalents doing the same job. They
+      # render inconsistently across terminals and diff tools, and a codebase where they appear
+      # uniformly in prose reads as machine-written. See the script header for what IS allowed - this
+      # is not a ban on non-ASCII.
+      - name: ASCII punctuation
+        run: node scripts/check-ascii-punctuation.mjs
+
+      # Contrast ratios and cross-app palette drift across all four stylesheets.
+      - name: Design tokens
+        run: node scripts/check-design-tokens.mjs
+
+      # Documentation ships in the same PR as the code, so links get written against a tree that is
+      # still moving. Five were already broken when this check was first run.
+      - name: Documentation links
+        run: node scripts/check-doc-links.mjs
+
+  # ---------------------------------------------------------------------------
+  #  .NET - build, style, test
   # ---------------------------------------------------------------------------
   dotnet:
     name: .NET build & test
@@ -95,10 +126,10 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------
-  #  Frontends — all four, in parallel
+  #  Frontends - all four, in parallel
   # ---------------------------------------------------------------------------
   #  A matrix rather than four jobs: adding the mobile app later is one line.
-  #  fail-fast is off so one broken app does not hide the state of the others —
+  #  fail-fast is off so one broken app does not hide the state of the others -
   #  under the lockstep rule (docs/adr/0014) knowing whether React AND Angular
   #  are broken, or only one, is the useful signal.
   # ---------------------------------------------------------------------------
@@ -164,11 +195,11 @@ jobs:
         run: npm test --workspace ${{ matrix.app }} --if-present
 
   # ---------------------------------------------------------------------------
-  #  End-to-end — the same specs, run against React and against Angular
+  #  End-to-end - the same specs, run against React and against Angular
   # ---------------------------------------------------------------------------
   #  This job IS the parity proof required by docs/adr/0014. One suite, a
   #  parameterised base URL, executed twice. A behavioural difference between the
-  #  two implementations fails CI — including differences nobody thought to check.
+  #  two implementations fails CI - including differences nobody thought to check.
   # ---------------------------------------------------------------------------
   e2e:
     name: e2e (${{ matrix.surface }}/${{ matrix.target }})
@@ -282,7 +313,7 @@ jobs:
       - name: Bring the stack up and wait for health
         working-directory: deploy
         # --wait blocks until every service with a healthcheck reports healthy,
-        # so this fails on a service that starts and then crashes — which a plain
+        # so this fails on a service that starts and then crashes - which a plain
         # `up -d` would report as success.
         run: docker compose up -d --wait --wait-timeout 420
 

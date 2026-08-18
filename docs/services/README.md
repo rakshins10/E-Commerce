@@ -1,6 +1,6 @@
 # Service reference
 
-One page per backend service. Each is written **in the same pull request as the service it documents** — a
+One page per backend service. Each is written **in the same pull request as the service it documents** - a
 service page that lags its code is a bug, not a backlog item.
 
 ## What each page contains
@@ -8,7 +8,7 @@ service page that lags its code is a bug, not a backlog item.
 - Purpose and bounded context, and what it deliberately does **not** own
 - Domain model and aggregates
 - Database schema and migrations
-- Dependencies — synchronous and asynchronous
+- Dependencies - synchronous and asynchronous
 - Events published and consumed, with payload schemas
 - Configuration keys
 - **Complete endpoint reference**: for every endpoint the method, route, purpose, auth and required
@@ -35,6 +35,6 @@ OpenAPI is generated from the code; the written reference is kept in step with i
 | Mobile BFF | `mobile-bff.md` | Phase 11 |
 
 **Everything else** exists as a deployable that boots, reports liveness and readiness, and emits traces,
-metrics and logs — but has no domain yet. That baseline shape is
+metrics and logs - but has no domain yet. That baseline shape is
 [`Program.cs`](../../src/services/catalog/ECommerce.Catalog.Api/Program.cs) plus
 [the shared building blocks](../architecture.md#8-cross-cutting-building-blocks).

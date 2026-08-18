@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * ONE suite, run TWICE — once against React, once against Angular.
+ * ONE suite, run TWICE - once against React, once against Angular.
  *
  * The base URL is the only thing that differs, which is what makes this the
  * objective parity proof required by docs/adr/0014. A behavioural difference
@@ -17,7 +17,7 @@ const target = process.env.E2E_TARGET ?? 'react';
  * Which application the specs run against.
  *
  * The storefront and the back office are separate applications, on separate ports, with separate
- * Keycloak clients — so they get separate spec directories. What does NOT change is the parity
+ * Keycloak clients - so they get separate spec directories. What does NOT change is the parity
  * property: each surface is still one suite, run twice, once per framework.
  */
 const surface = process.env.E2E_SURFACE ?? 'storefront';

@@ -6,8 +6,8 @@ must all satisfy.
 
 ## Why specify first
 
-Because the alternative is specifying by accident. If React is built first, its incidental choices — the
-wording of a validation message, what an empty list shows, whether the button disables during submit — become
+Because the alternative is specifying by accident. If React is built first, its incidental choices - the
+wording of a validation message, what an empty list shows, whether the button disables during submit - become
 the de facto specification, and the Angular implementation either copies them (a port, which
 [ADR-0014](../../docs/adr/0014-react-and-angular-in-lockstep.md) exists to prevent) or quietly differs
 (divergence nobody notices until a customer does).
@@ -17,16 +17,16 @@ specs are written from, so a behaviour absent from the spec is a behaviour nothi
 
 ## What a spec must cover
 
-Every one of these, even when the answer is "nothing special" — writing that down is itself a decision:
+Every one of these, even when the answer is "nothing special" - writing that down is itself a decision:
 
 - **Route** and whether it is public, authenticated, or permission-gated (name the exact permission).
-- **Purpose** — one sentence on what the user is trying to achieve.
-- **Layout** — regions and their responsive behaviour at mobile, tablet, desktop.
+- **Purpose** - one sentence on what the user is trying to achieve.
+- **Layout** - regions and their responsive behaviour at mobile, tablet, desktop.
 - **Components** used, by role rather than by framework class name.
 - **Every state**: loading, empty, error, unauthorised (403), partial, success.
 - **Every user action**, what it triggers, and what the user sees while it is in flight.
 - **API calls** behind it, including which are parallel and which sequential.
-- **Validation rules and their exact messages** — the messages are part of the contract, because the e2e specs
+- **Validation rules and their exact messages** - the messages are part of the contract, because the e2e specs
   assert on them.
 - **Optimistic behaviour**, if any, and what a rollback looks like.
 - **Accessibility**: heading structure, focus management on navigation and on error, the accessible name of
@@ -90,5 +90,5 @@ Anything unresolved. An empty section means the spec is ready to implement.
 ---
 
 Specs arrive from Phase 3 onward, alongside the features they describe. Each is cross-linked from
-[`docs/frontend/`](../../docs/frontend/), which holds the same content as the screen catalogue — deliberately
+[`docs/frontend/`](../../docs/frontend/), which holds the same content as the screen catalogue - deliberately
 unified rather than duplicated, so there is only one place to keep current.

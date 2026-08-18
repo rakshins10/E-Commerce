@@ -8,7 +8,7 @@ namespace ECommerce.Outbox;
 /// <remarks>
 /// Called from each service's <c>OnModelCreating</c>, so the tables appear in that service's own
 /// migrations and are created by its own deployment. There is no shared outbox database and no shared
-/// migration story — each service owns its data, including the parts that happen to be infrastructure.
+/// migration story - each service owns its data, including the parts that happen to be infrastructure.
 /// </remarks>
 public static class OutboxModelBuilderExtensions
 {

@@ -12,7 +12,7 @@
 #  Built and deployed by .github/workflows/docs.yml.
 # =============================================================================
 
-site_name: E-Commerce — .NET Microservices Reference
+site_name: E-Commerce - .NET Microservices Reference
 site_description: >-
   A production-grade reference platform demonstrating every architectural concept in Microsoft's
   .NET Microservices guide, with the reasoning behind each decision written down.
@@ -140,4 +140,9 @@ nav:
       - 0014 React & Angular lockstep: adr/0014-react-and-angular-in-lockstep.md
       - 0015 Manual mappers: adr/0015-manual-mappers-over-automapper.md
       - 0016 RabbitMQ behind IEventBus: adr/0016-rabbitmq-behind-ieventbus.md
+      - 0017 Cloud-portable architecture: adr/0017-cloud-portable-architecture.md
+      - 0018 Self-contained frontends: adr/0018-self-contained-frontends.md
+      - 0019 Shared event contracts: adr/0019-shared-integration-event-contracts.md
+      - 0020 Product variants: adr/0020-product-variants.md
+      - 0021 Category options & facets: adr/0021-category-defined-options-and-contextual-facets.md
       - Template: adr/0000-template.md

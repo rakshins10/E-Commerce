@@ -19,7 +19,7 @@ order.
 | **Reserved** | Spoken for by an order that has not shipped. **Still on the shelf.** |
 | **Available** | `on_hand − reserved`. What a new order may take. |
 
-Collapsing reserved into on-hand — decrementing the count when an order is placed — is the obvious
+Collapsing reserved into on-hand - decrementing the count when an order is placed - is the obvious
 simplification and it is wrong in a way that costs money:
 
 - the warehouse would report fewer items than are physically present;
@@ -33,12 +33,38 @@ source of truth that drifts the first time somebody updates one number and not t
 
 ---
 
+## Stock is held per SKU, and the SKU is a variant
+
+**This service does not know what a size is, and that is the point.**
+
+`StockItem` keys on a **SKU string**. When Catalog gained sizes and colours
+([ADR-0020](../adr/0020-product-variants.md)), the sellable SKU moved from the product down to the
+variant - and Inventory needed **no schema change at all**. It has more rows.
+
+```
+Before: NW-TS-001                 42 on hand
+After:  NW-TS-001-S-NAV          200 on hand
+        NW-TS-001-M-NAV          200
+        NW-TS-001-L-NAV          200
+        ...                            49 rows across 12 products
+```
+
+That is not luck. SKU was already the one string crossing this context boundary - Catalog publishes it,
+Ordering snapshots it onto an order line, Basket carries it - so putting the boundary there is what made
+a change to *merchandising* stop at merchandising.
+
+**The lesson generalises:** a boundary drawn at the identifier both sides already agree on survives
+changes to what that identifier means. Had Inventory keyed on `product_id` with a size column beside it,
+this would have been a migration, a backfill and a coordinated deploy across two services.
+
+---
+
 ## Reservation is asynchronous, and that is a decision
 
 The customer is **not waiting** on it. They clicked "Place order", got an order number, and are looking
 at a confirmation. Whether the warehouse can fulfil it is answered afterwards.
 
-Compare the basket, which Ordering fetches *synchronously* during checkout — there is nothing to order
+Compare the basket, which Ordering fetches *synchronously* during checkout - there is nothing to order
 without it.
 
 > The rule of thumb: **synchronous when the caller cannot proceed without the answer; asynchronous when
@@ -55,7 +81,7 @@ customers are blocked from buying the items now sitting reserved for an order ab
 
 Enforced by the transaction: every `Reserve` happens before a single `SaveChangesAsync`, so a rejection
 part way through leaves the database exactly as it was. **All-or-nothing needs no compensating action
-precisely because nothing was ever committed** — `ChangeTracker.Clear()` discards the lot.
+precisely because nothing was ever committed** - `ChangeTracker.Clear()` discards the lot.
 
 One ordering detail matters there: clear the tracker **first**, then add the rejection outbox row. The
 other way round throws the rejection away along with the reservations, and the saga waits forever for an
@@ -74,7 +100,7 @@ public void Release(int quantity)
 
 **Clamped at zero on purpose.** A compensating action will be retried, possibly long after the original
 succeeded. Subtracting again would push `Reserved` negative and inflate `Available` **above what
-physically exists** — and the shop would cheerfully sell stock it does not have.
+physically exists** - and the shop would cheerfully sell stock it does not have.
 
 Idempotent at two levels: the reservation is marked released and ignored on a second visit, *and* the
 clamp catches anything that gets past that.
@@ -83,7 +109,7 @@ A release for a reservation that does not exist is logged at **warning**, not sw
 saga and Inventory disagree about what happened, which is worth someone looking at.
 
 `Ship` is the only place `on_hand` finally falls. Until dispatch the goods are physically present and
-merely spoken for — which is exactly what the reserved/on-hand split exists to express.
+merely spoken for - which is exactly what the reserved/on-hand split exists to express.
 
 ---
 
@@ -100,7 +126,7 @@ endpoint that could reserve stock directly would let someone create a reservatio
 nothing will ever release.
 
 The adjustment endpoint **requires a reason**, because an unexplained stock movement is impossible to
-audit — and it is logged at Information with that reason, so somebody investigating a discrepancy can
+audit - and it is logged at Information with that reason, so somebody investigating a discrepancy can
 find it.
 
 Low stock is calculated against **available**, not on-hand: stock that is spoken for cannot be sold, so a
@@ -113,8 +139,8 @@ shelf full of reserved items still needs reordering.
 Catalog keeps a cached `stock_on_hand` so the product grid can show "Only 2 left" without calling
 Inventory on every page load. Inventory holds the authoritative figure.
 
-That duplication is a considered trade — a browse page that fans out to another service on every render
-is a browse page that falls over — and the seed data sets both to the same values so the demo starts
+That duplication is a considered trade - a browse page that fans out to another service on every render
+is a browse page that falls over - and the seed data sets both to the same values so the demo starts
 consistent.
 
 **The gap, named rather than hidden:** in a complete implementation Catalog would subscribe to a
@@ -142,9 +168,26 @@ no trace is indistinguishable from nothing having happened.
 
 ## Seed data
 
-Twelve SKUs matching the catalogue, with a spread of levels so every UI state is reachable: plenty in
-stock, low stock, and out of stock.
+**49 variant SKUs** across the catalogue's 12 products, with levels spread so every UI state is reachable
+without editing the database:
 
-`FB-ST-003` — the £5,200 Leather Portfolio — has stock **on purpose**: it reserves successfully and is
+| State | Where |
+|---|---|
+| In stock in every size | `NW-TS-001`, `NW-HD-001` |
+| **Low in one size, fine in the others** | `CT-TS-003-S-BLA` has 2 |
+| One size sold out while the product is not | `CT-TS-003-XL-BLA` has 0; the Ecru XL has 1 |
+| Low in TOTAL, so the product *card* says so | `CT-HD-002` - 2 altogether |
+| Sold out entirely | `FB-HD-003`, `CT-ST-002` |
+
+`FB-ST-003` - the £5,200 Leather Portfolio - has stock **on purpose**: it reserves successfully and is
 then declined by the payment simulator, which is how the compensation path is demonstrated from the
 storefront.
+
+**Products the e2e suite buys hold 200 of every variant.** A paid order keeps its reservation until it
+ships and nothing here ships automatically, so every run permanently consumes stock. A realistic figure on
+a spec-bought SKU drains within a day of testing, and the saga specs then fail with a perfectly correct
+"Out of stock" - correct behaviour, unhelpful seed data.
+
+> These figures are **mirrored exactly** in Catalog's cached `stock_on_hand`, and the two lists must be
+> changed together. Duplicated across the service boundary on purpose: a shared seed library would couple
+> two services that are supposed to own their own data.

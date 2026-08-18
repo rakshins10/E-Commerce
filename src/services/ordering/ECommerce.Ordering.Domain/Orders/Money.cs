@@ -63,7 +63,7 @@ public sealed class Money : ValueObject
         return new Money(Amount - other.Amount, Currency);
     }
 
-    /// <summary>Multiplies by a whole quantity — a line total.</summary>
+    /// <summary>Multiplies by a whole quantity - a line total.</summary>
     public Money Multiply(int quantity)
     {
         Guard.AgainstNonPositive(quantity);
@@ -91,7 +91,7 @@ public sealed class Money : ValueObject
         if (!string.Equals(Currency, other.Currency, StringComparison.Ordinal))
         {
             // Deliberately an exception rather than a silent conversion. Converting would need an
-            // exchange rate, and the rate that matters is the one at the time of the transaction —
+            // exchange rate, and the rate that matters is the one at the time of the transaction -
             // a decision this type has no business making on its own.
             throw new DomainException(
                 $"Cannot combine {Currency} with {other.Currency}. Convert explicitly first.");

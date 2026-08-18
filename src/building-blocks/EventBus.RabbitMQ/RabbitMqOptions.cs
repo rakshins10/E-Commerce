@@ -8,7 +8,7 @@ namespace ECommerce.EventBus.RabbitMQ;
 /// </summary>
 /// <remarks>
 /// Validated with <c>ValidateOnStart()</c> so a missing host name fails the moment the process boots, with a
-/// message naming the property — rather than at the first publish attempt, minutes later, inside a background
+/// message naming the property - rather than at the first publish attempt, minutes later, inside a background
 /// service where the failure is easy to miss. Fail fast, and fail where someone is looking.
 /// </remarks>
 public sealed class RabbitMqOptions
@@ -41,12 +41,12 @@ public sealed class RabbitMqOptions
     public string ExchangeName { get; set; } = "ecommerce.events";
 
     /// <summary>
-    /// This service's name, used to prefix its queues — e.g. <c>inventory.OrderStartedIntegrationEvent</c>.
+    /// This service's name, used to prefix its queues - e.g. <c>inventory.OrderStartedIntegrationEvent</c>.
     /// </summary>
     /// <remarks>
     /// <b>Queue per service per event</b> is the reason each subscriber gets its own copy of a message and its
     /// own failure handling. A poison message in Notification must not stall Inventory. A single shared queue
-    /// would make them compete for messages instead — which is the right model <i>within</i> a service (see
+    /// would make them compete for messages instead - which is the right model <i>within</i> a service (see
     /// competing consumers below) and precisely wrong <i>between</i> services.
     /// </remarks>
     [Required(AllowEmptyStrings = false)]
@@ -65,7 +65,7 @@ public sealed class RabbitMqOptions
     /// </summary>
     /// <remarks>
     /// The single most consequential tuning knob here. Unset (0 = unlimited), RabbitMQ pushes the entire queue to
-    /// the first consumer that connects, which both exhausts its memory and defeats load balancing — the other
+    /// the first consumer that connects, which both exhausts its memory and defeats load balancing - the other
     /// instances sit idle with nothing left to take. A small prefetch keeps work spread across instances; too
     /// small and throughput suffers on network round trips.
     /// </remarks>
@@ -76,7 +76,7 @@ public sealed class RabbitMqOptions
     /// Delivery attempts before a message is dead-lettered.
     /// </summary>
     /// <remarks>
-    /// Without a cap, a message that <i>can never</i> succeed — malformed payload, a bug in the handler — is
+    /// Without a cap, a message that <i>can never</i> succeed - malformed payload, a bug in the handler - is
     /// redelivered forever, saturating the consumer and blocking everything behind it. That is a
     /// denial-of-service against yourself. Capping and dead-lettering makes the failure visible and bounded.
     /// </remarks>

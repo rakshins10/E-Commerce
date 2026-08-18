@@ -13,7 +13,7 @@
 ARG NODE_VERSION=22
 
 # -----------------------------------------------------------------------------
-#  Stage 1 — build
+#  Stage 1 - build
 # -----------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine AS build
 WORKDIR /app
@@ -39,7 +39,7 @@ ARG APP_DIST
 RUN npm run build --workspace ${APP_WORKSPACE}
 
 # -----------------------------------------------------------------------------
-#  Stage 2 — serve
+#  Stage 2 - serve
 # -----------------------------------------------------------------------------
 #  nginx, not `vite preview` or `ng serve`. Those are development servers: single
 #  process, no caching strategy, and explicitly documented as not for production.

@@ -24,7 +24,7 @@ namespace ECommerce.Inventory.Api.Model;
 ///   </item>
 /// </list>
 /// <para>
-/// Collapsing reserved into on-hand — decrementing the count when an order is placed — is the obvious
+/// Collapsing reserved into on-hand - decrementing the count when an order is placed - is the obvious
 /// simplification and it is wrong in a way that costs money. The warehouse would report fewer items than
 /// are physically present, a stock take would disagree with the system, and cancelling an order could not
 /// be distinguished from a sale. Keeping them separate means the physical count and the commercial count
@@ -65,7 +65,7 @@ public sealed class StockItem
     /// <summary>What a new order may take. Derived.</summary>
     public int Available => OnHand - Reserved;
 
-    /// <summary>Below this, the buyer should reorder. Not enforced — a signal, not a rule.</summary>
+    /// <summary>Below this, the buyer should reorder. Not enforced - a signal, not a rule.</summary>
     public int ReorderLevel { get; private set; } = 5;
 
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -75,7 +75,7 @@ public sealed class StockItem
     /// </summary>
     /// <remarks>
     /// Refuses rather than going negative. A reservation system that allows a negative available count
-    /// has stopped being a reservation system — it accepts every order and discovers the problem in the
+    /// has stopped being a reservation system - it accepts every order and discovers the problem in the
     /// warehouse, which is the failure this service exists to prevent.
     /// </remarks>
     public void Reserve(int quantity)
@@ -100,7 +100,7 @@ public sealed class StockItem
     /// <remarks>
     /// <b>Clamped at zero on purpose.</b> A compensating action will be retried, and it may arrive for a
     /// reservation that was already released. Subtracting again would push <see cref="Reserved"/>
-    /// negative and inflate <see cref="Available"/> above what physically exists — a corruption in the
+    /// negative and inflate <see cref="Available"/> above what physically exists - a corruption in the
     /// opposite direction from the failure being fixed, and one nobody notices until a stock take
     /// disagrees.
     /// </remarks>
@@ -126,7 +126,7 @@ public sealed class StockItem
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>A manual correction — goods in, damage, or a stock take.</summary>
+    /// <summary>A manual correction - goods in, damage, or a stock take.</summary>
     public void Adjust(int delta)
     {
         if (OnHand + delta < 0)

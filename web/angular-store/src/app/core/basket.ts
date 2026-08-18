@@ -7,14 +7,17 @@ import { environment } from '../../environments/environment';
 /**
  * Basket and order API types and access.
  *
- * Owned by this application — the React storefront has its own equivalent in `src/lib/basket.ts`.
+ * Owned by this application - the React storefront has its own equivalent in `src/lib/basket.ts`.
  * See docs/adr/0018-self-contained-frontends.md.
  */
 
 export interface BasketItem {
   readonly productId: string;
+  /** The VARIANT sku. This identifies the line - two sizes of one shirt are two lines. */
   readonly sku: string;
   readonly productName: string;
+  readonly size: string | null;
+  readonly colourName: string | null;
   readonly imageUrl: string | null;
   readonly unitPrice: number;
   readonly currency: string;
@@ -38,6 +41,8 @@ export interface AddToBasketRequest {
   readonly productId: string;
   readonly sku: string;
   readonly productName: string;
+  readonly size?: string | null;
+  readonly colourName?: string | null;
   readonly imageUrl?: string | null;
   readonly unitPrice: number;
   readonly currency: string;
@@ -48,6 +53,8 @@ export interface OrderItem {
   readonly productId: string;
   readonly sku: string;
   readonly productName: string;
+  readonly size: string | null;
+  readonly colourName: string | null;
   readonly quantity: number;
   readonly unitPrice: number;
   readonly lineTotal: number;
@@ -196,7 +203,7 @@ export const SAGA_STEP_LABELS: Record<string, string> = {
  * The signal is genuinely simpler to read, and it is enough here because every endpoint returns the
  * whole basket and there is one consumer. What it does not give you is the rollback: the optimistic
  * update below is hand-written, including saving and restoring the previous value. That is the shape of
- * this comparison throughout — Angular's primitives are smaller and more predictable, and TanStack
+ * this comparison throughout - Angular's primitives are smaller and more predictable, and TanStack
  * Query has simply already solved more of the problem.
  */
 @Injectable({ providedIn: 'root' })
@@ -223,21 +230,19 @@ export class BasketService {
    * Sets a line's quantity, optimistically.
    *
    * Changing a quantity is a click a customer repeats several times in a row, and the outcome is
-   * completely predictable — setting it to 3 results in 3. So the signal is updated immediately and
+   * completely predictable - setting it to 3 results in 3. So the signal is updated immediately and
    * reconciled with the server's answer afterwards, with the previous value restored on failure.
    *
    * My Account deliberately does NOT do this, because there the server's answer legitimately differs
    * from the request. Optimism is right when you can predict the result and wrong when you cannot.
    */
-  async setQuantity(productId: string, quantity: number): Promise<void> {
+  async setQuantity(sku: string, quantity: number): Promise<void> {
     const previous = this.basket();
 
     if (previous) {
       const items = previous.items
         .map((item) =>
-          item.productId === productId
-            ? { ...item, quantity, lineTotal: item.unitPrice * quantity }
-            : item,
+          item.sku === sku ? { ...item, quantity, lineTotal: item.unitPrice * quantity } : item,
         )
         .filter((item) => item.quantity > 0);
 
@@ -254,7 +259,7 @@ export class BasketService {
       // so the guess above is replaced by the truth even when the two agree.
       this.basket.set(
         await firstValueFrom(
-          this.http.put<Basket>(`${this.baseUrl}/items/${productId}`, { quantity }),
+          this.http.put<Basket>(`${this.baseUrl}/items/${encodeURIComponent(sku)}`, { quantity }),
         ),
       );
     } catch (error) {
@@ -264,9 +269,13 @@ export class BasketService {
     }
   }
 
-  async remove(productId: string): Promise<void> {
+  // Keyed by variant SKU, not product id. A Medium and a Large of one shirt are two lines, and
+  // addressing them by product would remove both.
+  async remove(sku: string): Promise<void> {
     this.basket.set(
-      await firstValueFrom(this.http.delete<Basket>(`${this.baseUrl}/items/${productId}`)),
+      await firstValueFrom(
+        this.http.delete<Basket>(`${this.baseUrl}/items/${encodeURIComponent(sku)}`),
+      ),
     );
   }
 

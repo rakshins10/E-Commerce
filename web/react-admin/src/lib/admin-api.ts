@@ -1,11 +1,11 @@
 /**
  * The admin API.
  *
- * Owned by this application — the Angular admin panel has its own equivalent in `core/admin-api.ts`.
+ * Owned by this application - the Angular admin panel has its own equivalent in `core/admin-api.ts`.
  * See docs/adr/0018-self-contained-frontends.md.
  *
  * Note the base URL: the **admin** BFF on :6002, never the storefront's on :6001. The two gateways are
- * separate on purpose, and pointing this at the wrong one would be a security bug rather than a typo —
+ * separate on purpose, and pointing this at the wrong one would be a security bug rather than a typo -
  * the storefront BFF does not expose these routes at all.
  */
 
@@ -126,6 +126,21 @@ export interface AdminProduct {
   readonly brandName: string;
   readonly brandSlug: string;
   readonly imageUrl: string | null;
+  /** The TOTAL across variants. Per-variant figures are on `variants`. */
+  readonly stockOnHand: number;
+  readonly audience: string;
+  /** Present on the detail response only - the list projection does not carry them. */
+  readonly variants?: readonly AdminProductVariant[];
+}
+
+/** One sellable size-and-colour. The SKU here is what Inventory holds stock against. */
+export interface AdminProductVariant {
+  readonly id: string;
+  readonly productId: string;
+  readonly sku: string;
+  readonly size: string | null;
+  readonly colourName: string | null;
+  readonly colourHex: string | null;
   readonly stockOnHand: number;
 }
 
@@ -135,6 +150,16 @@ export interface AdminCategory {
   readonly slug: string;
   readonly parentSlug: string | null;
   readonly productCount: number;
+
+  /**
+   * The sizes products in this category are sold in, already in the scale's order.
+   *
+   * Resolved server-side, so a child category reports its parent's scale rather than each client
+   * reimplementing the inheritance. Empty means the category is not sized - a notebook has no size, which
+   * is a different claim from having one size.
+   */
+  readonly sizeScaleName: string | null;
+  readonly sizes: readonly string[];
 }
 
 export interface AdminBrand {
@@ -153,9 +178,10 @@ export interface SaveProductRequest {
   readonly categoryId: string;
   readonly brandId: string;
   readonly imageUrl?: string | null;
+  readonly audience?: string;
 }
 
-/** Roles a manager may assign. Mirrors the server's allow-list — the server is what enforces it. */
+/** Roles a manager may assign. Mirrors the server's allow-list - the server is what enforces it. */
 export const ASSIGNABLE_ROLES = [
   'customer',
   'support-agent',

@@ -22,7 +22,7 @@ namespace ECommerce.Ordering.Infrastructure;
 /// zero. That is a domain guarantee, not a data-access abstraction.
 /// </para>
 /// <para>
-/// <b>The outbox tables live here, in this database.</b> That is not incidental — it is the entire
+/// <b>The outbox tables live here, in this database.</b> That is not incidental - it is the entire
 /// mechanism. Because <c>outbox_messages</c> is in the same database as <c>orders</c>, one
 /// <c>SaveChangesAsync</c> commits both atomically, with no distributed transaction and no window in
 /// which an order exists but nobody was told.
@@ -138,6 +138,11 @@ public sealed class OrderingDbContext(DbContextOptions<OrderingDbContext> option
                 item.Property(i => i.Sku).HasColumnName("sku").HasMaxLength(64).IsRequired();
                 item.Property(i => i.ProductName).HasColumnName("product_name")
                     .HasMaxLength(200).IsRequired();
+
+                // Nullable: not every product has a size or a colour axis. Snapshotted like the name and
+                // the price - see OrderItem.
+                item.Property(i => i.Size).HasColumnName("size").HasMaxLength(20);
+                item.Property(i => i.ColourName).HasColumnName("colour_name").HasMaxLength(40);
                 item.Property(i => i.Quantity).HasColumnName("quantity").IsRequired();
 
                 // numeric(18,2), never a floating-point type. Binary floating point cannot represent

@@ -4,7 +4,7 @@ import { expect, test, type ConsoleMessage } from '@playwright/test';
  * Sign-in, sign-out, and permission rendering.
  *
  * Written ONCE and run against both storefronts. Every selector is a role and
- * an accessible name — never a CSS class or a test id — because those differ
+ * an accessible name - never a CSS class or a test id - because those differ
  * between two independent implementations. That constraint is what drags
  * accessibility up as a side effect: a div-soup implementation cannot pass.
  *
@@ -25,14 +25,14 @@ function collectFailures(page: import('@playwright/test').Page) {
   });
   page.on('pageerror', (error) => messages.push(`pageerror: ${error.message}`));
   page.on('requestfailed', (request) =>
-    messages.push(`requestfailed: ${request.method()} ${request.url()} — ${request.failure()?.errorText}`),
+    messages.push(`requestfailed: ${request.method()} ${request.url()} - ${request.failure()?.errorText}`),
   );
 
   return messages;
 }
 
 /**
- * Drives the Keycloak login form. Identical for both apps — it is the same realm.
+ * Drives the Keycloak login form. Identical for both apps - it is the same realm.
  *
  * Scoped to the `banner` landmark because the page deliberately has two "Sign in"
  * buttons (the header and the call-to-action card). Scoping by landmark rather
@@ -56,7 +56,7 @@ test.describe('authentication', () => {
   test('an anonymous visitor sees the sign-in prompt', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Storefront', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Everyday things, properly made', level: 1 })).toBeVisible();
     await expect(page.getByRole('banner').getByRole('button', { name: 'Sign in' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeHidden();
   });
@@ -125,13 +125,21 @@ test.describe('shell', () => {
   test('navigation works and marks the current page', async ({ page }) => {
     await page.goto('/');
 
-    await page.getByRole('link', { name: 'Products' }).click();
+    // Scoped to the header, and exact.
+    //
+    // This spec is about the SHELL, and the home page now legitimately holds four other links whose
+    // accessible names contain the word "products" - "Shop all products", "All products", and the
+    // category tiles. `getByRole` matches a name as a substring by default, so an unscoped locator
+    // was five elements the moment the shopfront started selling anything.
+    const productsLink = page.getByRole('banner').getByRole('link', { name: 'Products', exact: true });
+
+    await productsLink.click();
     await expect(page).toHaveURL(/\/products$/);
     await expect(page.getByRole('heading', { name: 'Products', level: 1 })).toBeVisible();
 
     // aria-current is the accessible signal for "you are here". Both apps must
     // set it - React via NavLink, Angular via ariaCurrentWhenActive.
-    await expect(page.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
+    await expect(productsLink).toHaveAttribute('aria-current', 'page');
   });
 
   test('a deep link survives a full page reload', async ({ page }) => {

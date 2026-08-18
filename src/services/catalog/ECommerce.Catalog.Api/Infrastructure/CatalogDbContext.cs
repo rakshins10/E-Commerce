@@ -4,20 +4,24 @@ using Microsoft.EntityFrameworkCore;
 namespace ECommerce.Catalog.Api.Infrastructure;
 
 /// <summary>
-/// Catalog's own database. No other service reads these tables — see
+/// Catalog's own database. No other service reads these tables - see
 /// <c>docs/architecture.md §7</c>.
 /// </summary>
 /// <remarks>
 /// The <c>DbContext</c> <b>is</b> the Unit of Work: it tracks changes across the whole request and
 /// <c>SaveChangesAsync</c> commits them atomically. There is deliberately no hand-written
-/// <c>IUnitOfWork</c> wrapper — that would be an abstraction over an abstraction, adding a layer and no
+/// <c>IUnitOfWork</c> wrapper - that would be an abstraction over an abstraction, adding a layer and no
 /// capability.
 /// </remarks>
 public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbContext(options)
 {
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+
     public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<SizeScale> SizeScales => Set<SizeScale>();
 
     public DbSet<Brand> Brands => Set<Brand>();
 
@@ -53,10 +57,45 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
                 .HasForeignKey(p => p.BrandId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Stored as its NAME, not its integer value: a row that says 'Women' can be read with psql and
+            // survives someone reordering the enum. See Domain/Audience.cs.
+            entity.Property(p => p.Audience).HasConversion<string>().HasMaxLength(10).IsRequired();
+
             // Indexes chosen from how the browse endpoint actually filters, not speculatively.
             entity.HasIndex(p => p.CategoryId);
             entity.HasIndex(p => p.BrandId);
             entity.HasIndex(p => p.IsActive);
+            entity.HasIndex(p => p.Audience);
+        });
+
+        modelBuilder.Entity<ProductVariant>(entity =>
+        {
+            entity.ToTable("product_variants");
+            entity.HasKey(v => v.Id);
+
+            // The constraint that matters commercially. `products.sku` is unique too, but it guarantees
+            // unique STYLES; this guarantees unique sellable units, which is what Inventory keys on.
+            entity.HasIndex(v => v.Sku).IsUnique();
+
+            entity.Property(v => v.Sku).HasMaxLength(64).IsRequired();
+            entity.Property(v => v.Size).HasMaxLength(20);
+            entity.Property(v => v.ColourName).HasMaxLength(40);
+            entity.Property(v => v.ColourHex).HasMaxLength(7);
+
+            entity.HasOne(v => v.Product)
+                .WithMany(p => p.Variants)
+                .HasForeignKey(v => v.ProductId)
+                // Cascade here, unlike everywhere else in this file. A variant has no meaning without its
+                // product - it is a child entity, not an independent one - so an orphaned row would be
+                // unreachable rather than merely untidy. Nothing deletes a product anyway; withdrawal is a
+                // soft delete.
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(v => v.ProductId);
+
+            // The size and colour facets filter on these, across the whole catalogue.
+            entity.HasIndex(v => v.Size);
+            entity.HasIndex(v => v.ColourName);
         });
 
         modelBuilder.Entity<Category>(entity =>
@@ -71,6 +110,41 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
                 .WithMany()
                 .HasForeignKey(c => c.ParentId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Restrict: a scale still in use by a category must not be deletable out from under it, or the
+            // category silently becomes unsized and its products stop being orderable by size.
+            entity.HasOne(c => c.SizeScale)
+                .WithMany()
+                .HasForeignKey(c => c.SizeScaleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SizeScale>(entity =>
+        {
+            entity.ToTable("size_scales");
+            entity.HasKey(s => s.Id);
+            entity.HasIndex(s => s.Slug).IsUnique();
+            entity.Property(s => s.Name).HasMaxLength(100).IsRequired();
+            entity.Property(s => s.Slug).HasMaxLength(100).IsRequired();
+        });
+
+        modelBuilder.Entity<SizeScaleValue>(entity =>
+        {
+            entity.ToTable("size_scale_values");
+            entity.HasKey(v => v.Id);
+            entity.Property(v => v.Value).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(v => v.SizeScale)
+                .WithMany(s => s.Values)
+                .HasForeignKey(v => v.SizeScaleId)
+                // Cascade: a size has no meaning without its scale. Unlike the category link above, this is
+                // a child entity rather than a reference.
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One position per scale AND one value per scale. Both are how a scale stays a well-formed
+            // ordered set rather than a bag that happens to sort correctly today.
+            entity.HasIndex(v => new { v.SizeScaleId, v.Position }).IsUnique();
+            entity.HasIndex(v => new { v.SizeScaleId, v.Value }).IsUnique();
         });
 
         modelBuilder.Entity<Brand>(entity =>
@@ -94,7 +168,7 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
     /// <para>
     /// EF Core defaults to the .NET property name, so <c>StockOnHand</c> becomes a column called
     /// <c>StockOnHand</c>. PostgreSQL folds unquoted identifiers to lower case, which means every reference
-    /// to that column in hand-written SQL must be quoted — <c>p."StockOnHand"</c> — and forgetting a quote
+    /// to that column in hand-written SQL must be quoted - <c>p."StockOnHand"</c> - and forgetting a quote
     /// produces <c>column p.stockonhand does not exist</c>.
     /// </para>
     /// <para>
@@ -104,7 +178,7 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
     /// </para>
     /// <para>
     /// This is applied in <c>OnModelCreating</c> rather than by hand per property so a new entity cannot
-    /// forget it — the convention is enforced by construction rather than by discipline.
+    /// forget it - the convention is enforced by construction rather than by discipline.
     /// </para>
     /// </remarks>
     private static void ApplySnakeCaseNames(ModelBuilder modelBuilder)

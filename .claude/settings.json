@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/check-ascii-punctuation.mjs)"
+    ]
+  }
+}

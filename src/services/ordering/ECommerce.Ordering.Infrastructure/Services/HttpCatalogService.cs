@@ -8,7 +8,7 @@ namespace ECommerce.Ordering.Infrastructure.Services;
 /// Fetches authoritative prices from the Catalog service.
 /// </summary>
 /// <remarks>
-/// See <see cref="ICatalogService"/> for why this exists at all — it is the step that stops a client
+/// See <see cref="ICatalogService"/> for why this exists at all - it is the step that stops a client
 /// choosing what it pays.
 /// </remarks>
 public sealed class HttpCatalogService(HttpClient client) : ICatalogService

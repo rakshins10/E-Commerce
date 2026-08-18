@@ -1,34 +1,34 @@
 # React vs Angular, feature by feature
 
-> **Related:** [ADR-0014 — lockstep delivery](adr/0014-react-and-angular-in-lockstep.md) ·
-> [ADR-0018 — self-contained frontends](adr/0018-self-contained-frontends.md) ·
+> **Related:** [ADR-0014 - lockstep delivery](adr/0014-react-and-angular-in-lockstep.md) ·
+> [ADR-0018 - self-contained frontends](adr/0018-self-contained-frontends.md) ·
 > [`web/parity-checklist.md`](../web/parity-checklist.md)
 
 Written **as each feature is built**, while the memory of what was awkward is fresh. Retrospective
 comparisons turn into generic listicles; notes taken at the moment of the decision do not.
 
 This is an unusually controlled comparison. Both apps implement the same specs, satisfy the same end-to-end
-tests, and — since [ADR-0018](adr/0018-self-contained-frontends.md) — each owns its own copy of every
+tests, and - since [ADR-0018](adr/0018-self-contained-frontends.md) - each owns its own copy of every
 supporting module. So the differences recorded here are genuinely attributable to the framework, not to one
 app being a thin wrapper over shared code.
 
 ---
 
-## Phase 3 — application shell, routing, theming, OIDC login
+## Phase 3 - application shell, routing, theming, OIDC login
 
 **Parity rows:** S1, S2, S4 · **Specs:** [`tests/e2e/specs/auth.spec.ts`](../tests/e2e/specs/auth.spec.ts)
 (9 specs, passing against both)
 
 ### The one that actually bit: post-login redirect
 
-**Angular needed no code. React did — and the bug was invisible.**
+**Angular needed no code. React did - and the bug was invisible.**
 
 `angular-auth-oidc-client` restores the pre-login route itself once the authorization code is exchanged.
 `oidc-client-ts` does not: it exchanges the code and updates its own state, but leaves the browser sitting on
 `/auth/callback`.
 
 The failure mode was nasty precisely because it *half* worked. The header rendered the user's name and a
-"Sign out" button — authentication had genuinely succeeded — while the page body still read
+"Sign out" button - authentication had genuinely succeeded - while the page body still read
 *"Completing sign-in…"* forever. Nothing errored. Nothing logged. Keycloak's logs showed a clean exchange.
 
 The fix is five lines:
@@ -44,7 +44,7 @@ useEffect(() => {
 generally: more opinions, fewer decisions left to you, fewer places to get it subtly wrong.
 
 **How it was found:** the shared Playwright suite. Its page snapshot showed the header signed in and the body
-still loading — which stated the problem more clearly than any amount of staring at the code would have.
+still loading - which stated the problem more clearly than any amount of staring at the code would have.
 That is the parity suite paying for itself on its first run.
 
 ### State: hook vs injectable service
@@ -56,13 +56,13 @@ That is the parity suite paying for itself on its first run.
 | Recomputation | `useMemo` with an explicit dependency array | `computed()`, dependencies tracked automatically |
 
 ```ts
-// React — dependencies declared by hand
+// React - dependencies declared by hand
 const user = useMemo(
   () => (auth.user?.access_token ? toAuthenticatedUser(auth.user.access_token) : null),
   [auth.user?.access_token],
 );
 
-// Angular — dependencies inferred
+// Angular - dependencies inferred
 readonly user = computed(() => {
   const token = this.accessToken();
   return token ? toAuthenticatedUser(token) : null;
@@ -71,7 +71,7 @@ readonly user = computed(() => {
 
 **Point for Angular**, narrowly. A forgotten dependency in a React array is a stale-closure bug that is easy
 to write and hard to see; signals remove the category. The counter-argument is real though: React's array
-*documents* the dependency, and Angular's tracking is implicit — you cannot tell what an `effect` depends on
+*documents* the dependency, and Angular's tracking is implicit - you cannot tell what an `effect` depends on
 without reading its whole body.
 
 **Point for Angular on DI.** `inject(Auth)` works anywhere with no provider in the component tree. React
@@ -85,11 +85,11 @@ runtime error rather than a compile error.
 | Definition | JSX `<Route>` elements | a `Routes` data structure |
 | Layout | element wrapping `<Outlet />` | `<router-outlet>` in the root component |
 | Active link | `NavLink` sets a class | `routerLinkActive` directive |
-| Lazy loading | `React.lazy` — opt-in, easy to forget | `loadComponent` — the default shape of a route |
+| Lazy loading | `React.lazy` - opt-in, easy to forget | `loadComponent` - the default shape of a route |
 
 **Point for Angular on two counts.** `ariaCurrentWhenActive="page"` sets the accessible state and the visual
 state from the *same directive*, so they cannot disagree. In React they are separate concerns and it is
-entirely possible to style an active link while forgetting `aria-current` — which the shared specs assert on,
+entirely possible to style an active link while forgetting `aria-current` - which the shared specs assert on,
 so it would have failed CI.
 
 And lazy loading being the *default idiom* of a route definition means you get code splitting without
@@ -130,7 +130,7 @@ versus
 {isAuthenticated ? (…) : (…)}
 ```
 
-**Point for Angular** in templates. **Point for React** in that JSX is just JavaScript — no new syntax to
+**Point for Angular** in templates. **Point for React** in that JSX is just JavaScript - no new syntax to
 learn, and any expression is available.
 
 ### Bundle size
@@ -166,19 +166,19 @@ did not: `noPropertyAccessFromIndexSignature` rejected `headers.Authorization` o
 | Theming | Draw |
 
 Angular looks ahead on this scorecard, and for *this* phase it is. That is a fair reflection of what the
-phase consisted of: framework plumbing — auth, routing, DI — which is precisely where Angular's opinions pay
+phase consisted of: framework plumbing - auth, routing, DI - which is precisely where Angular's opinions pay
 off. The comparison should get more interesting from Phase 4, where data fetching, caching and forms arrive
 and TanStack Query enters the picture.
 
 ---
 
-## Phase 4 — product browsing
+## Phase 4 - product browsing
 
 **Parity rows:** S5, S6, S7 · **Specs:** [`tests/e2e/specs/catalog.spec.ts`](../tests/e2e/specs/catalog.spec.ts)
 (16 more specs, 25 total, passing against both)
 
 This is the first phase where the comparison gets genuinely interesting, because it is about **server state**
-rather than framework plumbing — and the verdict flips.
+rather than framework plumbing - and the verdict flips.
 
 ### Data fetching: React wins clearly
 
@@ -194,7 +194,7 @@ React uses **TanStack Query**. Angular has no framework equivalent, so the same 
 | Request cancellation | `queryFn({ signal })` | `withFetch()` + manual plumbing |
 
 ```ts
-// React — declarative, and the caching is not code you own
+// React - declarative, and the caching is not code you own
 const productsQuery = useQuery({
   queryKey: ['products', filters],
   queryFn: ({ signal }) => searchProducts(filters, signal),
@@ -203,7 +203,7 @@ const productsQuery = useQuery({
 ```
 
 ```ts
-// Angular — the same behaviours, written out
+// Angular - the same behaviours, written out
 protected readonly result = signal<PagedResult<ProductSummary> | null>(null);
 protected readonly isLoading = signal(false);
 protected readonly error = signal<string | null>(null);
@@ -212,7 +212,7 @@ effect(() => { void this.load(this.filters()); });
 ```
 
 **Point for React, decisively.** TanStack Query solves a problem Angular expects you to solve yourself, and
-the hand-rolled version is both more code and less capable — no deduplication, no background refetch, no
+the hand-rolled version is both more code and less capable - no deduplication, no background refetch, no
 cache invalidation story. Angular's `resource()`/`httpResource` are closing this gap, but as of Angular 22
 they are not yet a full replacement.
 
@@ -243,7 +243,7 @@ up with signals yet.
 ### Route parameters
 
 ```ts
-// Angular — bound directly from the route by withComponentInputBinding()
+// Angular - bound directly from the route by withComponentInputBinding()
 readonly id = input.required<string>();
 
 // React
@@ -268,7 +268,7 @@ readable; React's JSX with nested ternaries and `&&` gets noisy:
 
 | Dimension | Winner |
 |-----------|--------|
-| **Server state, caching, request lifecycle** | **React** — and it is not close |
+| **Server state, caching, request lifecycle** | **React** - and it is not close |
 | Route parameter binding | Angular |
 | Deriving state without dependency arrays | Angular |
 | Template readability at scale | Angular |
@@ -277,11 +277,11 @@ readable; React's JSX with nested ternaries and `&&` gets noisy:
 
 The honest summary for an interview: **Angular gives you more, React lets you choose more.** Angular's
 batteries cover routing, DI and forms extremely well but stop at server state; React's core is smaller and
-the ecosystem fills the gap — better, in the case of TanStack Query, but only because you went and picked it.
+the ecosystem fills the gap - better, in the case of TanStack Query, but only because you went and picked it.
 
 ---
 
-## Phase 5 — My Account (forms, validation, mutations)
+## Phase 5 - My Account (forms, validation, mutations)
 
 The first screen in this repo that **writes**. Reading data is where React's ecosystem clearly won; writing
 it, with validation and eight mutating endpoints, is where Angular claws a large amount back.
@@ -306,7 +306,7 @@ const [addressDraft, setAddressDraft] = useState<SaveAddressRequest>(EMPTY_ADDRE
 ```
 
 Every field costs a `value`, an `onChange`, an object spread and a validation attribute. There is no
-`isDirty`, no `touched`, no cross-field validity — you build them or you go without. Six address fields and
+`isDirty`, no `touched`, no cross-field validity - you build them or you go without. Six address fields and
 seven preference fields make that repetition the dominant shape of the file.
 
 Angular declares the whole form once, typed, with validators as data:
@@ -326,12 +326,12 @@ protected readonly addressForm = this.fb.nonNullable.group({
 <button [disabled]="addressForm.invalid || saving()">Save address</button>
 ```
 
-`nonNullable.group` gives a **typed** `value` — `addressForm.value.postcode` is `string`, and a typo in a
+`nonNullable.group` gives a **typed** `value` - `addressForm.value.postcode` is `string`, and a typo in a
 control name is a compile error. `invalid`, `dirty`, `touched` and `pristine` come free, so disabling the
 submit button is one expression rather than a derived boolean somebody has to remember to update.
 
 The honest counterweight: **React Hook Form closes most of this gap.** It was left out on purpose, so the
-comparison shows what each framework gives you *in the box*. In production I would add it — and the fact that
+comparison shows what each framework gives you *in the box*. In production I would add it - and the fact that
 you have to is the point. Angular ships forms; React ships a `useState` hook and a healthy npm ecosystem.
 
 | | React (built-in) | Angular (built-in) |
@@ -356,7 +356,7 @@ const contactMutation = useMutation({
 ```
 
 `isPending`, `isError` and `error` come per-mutation, so one form spinning does not disable the others.
-`setQueryData` writes the server's response straight into the cache — no refetch, no round trip.
+`setQueryData` writes the server's response straight into the cache - no refetch, no round trip.
 
 Angular has no mutation primitive, so the service holds one signal that each call replaces:
 
@@ -366,7 +366,7 @@ async updateContact(displayName: string | null, phoneNumber: string | null): Pro
 }
 ```
 
-Simpler to read, and correct — because every endpoint returns the *whole* aggregate and there is exactly one
+Simpler to read, and correct - because every endpoint returns the *whole* aggregate and there is exactly one
 consumer. But the component has to own `saving()`, `error()` and `banner()` signals by hand and share them
 across all five operations, which is why the page has a `run()` wrapper:
 
@@ -378,17 +378,17 @@ private async run(action: () => Promise<void>): Promise<void> {
 }
 ```
 
-That wrapper *is* the thing TanStack Query hands you per mutation. Nine lines is not a crisis — but multiply
+That wrapper *is* the thing TanStack Query hands you per mutation. Nine lines is not a crisis - but multiply
 it by every screen that writes, and the difference compounds.
 
 ### Loading and error states
 
-React returns early four times — auth loading, signed-out, query pending, query error — and TypeScript
+React returns early four times - auth loading, signed-out, query pending, query error - and TypeScript
 narrows `profileQuery.data` to non-null after them, so the happy path needs no optional chaining. That is a
 genuinely elegant property of early returns in a function component.
 
 Angular's equivalent is `@if` / `@else if` in the template. Slightly more verbose to read, but the states sit
-next to the markup they replace rather than 60 lines above it. **Preference, not a winner** — though the
+next to the markup they replace rather than 60 lines above it. **Preference, not a winner** - though the
 React version does re-declare the same four blocks on every page, where Angular can factor them into a
 component with content projection.
 
@@ -398,7 +398,7 @@ TanStack Query supports optimistic mutation, and it was not used.
 
 The aggregate's invariants make the *server's* response differ from what you sent: adding your first address
 silently makes it the default for both shipping and billing, and removing a default promotes another. An
-optimistic client would have to reimplement those rules to guess the outcome — a second copy of the domain
+optimistic client would have to reimplement those rules to guess the outcome - a second copy of the domain
 logic, in TypeScript, drifting from the first.
 
 Optimism is right for a basket, where the outcome is obvious and latency is felt on every click. It is wrong
@@ -407,7 +407,7 @@ here. **A pattern being available is not a reason to use it**, and knowing which
 ### The bug this phase found, and where
 
 None of the above. The e2e suite failed on `403 Forbidden` for staff users, which turned out to be a **domain
-modelling error** — `profile:read:own` had been granted to `customer` only. Both frontends were correct.
+modelling error** - `profile:read:own` had been granted to `customer` only. Both frontends were correct.
 
 Worth stating plainly: across five phases, **the frontend framework has never been the source of a real
 defect**. The costly bugs were EF Core key generation, a Serilog ordering mistake, a container health check
@@ -418,14 +418,14 @@ and least-consequential decision on the list.
 
 | Dimension | Winner |
 |-----------|--------|
-| **Server state, caching, request lifecycle** | **React** — and it is not close |
-| **Mutations — per-call pending/error state** | **React** |
-| **Forms — typed, validated, in the box** | **Angular** — and it is not close |
+| **Server state, caching, request lifecycle** | **React** - and it is not close |
+| **Mutations - per-call pending/error state** | **React** |
+| **Forms - typed, validated, in the box** | **Angular** - and it is not close |
 | Route parameter binding | Angular |
 | Deriving state without dependency arrays | Angular |
 | Template readability at scale | Angular |
 | Framework plumbing (DI, routing, auth) | Angular |
-| Bundle size | **Angular** — the position reversed, see below |
+| Bundle size | **Angular** - the position reversed, see below |
 | Loading/error state ergonomics | Draw |
 
 ### Bundle size: React lost the lead it started with
@@ -434,14 +434,14 @@ Measured on the production builds at the end of this phase:
 
 | | Raw | Gzipped |
 |---|---:|---:|
-| React — JS + CSS | 387.5 kB | **112.9 kB** |
-| Angular — initial total | 404.8 kB | **96.8 kB** |
+| React - JS + CSS | 387.5 kB | **112.9 kB** |
+| Angular - initial total | 404.8 kB | **96.8 kB** |
 
 React started Phase 3 at 59 kB gzipped against Angular's 94 kB and has nearly doubled; Angular has barely
-moved. The cause is not React itself — it is what a React app must add to become a real application.
+moved. The cause is not React itself - it is what a React app must add to become a real application.
 `@tanstack/react-query`, `oidc-client-ts` + `react-oidc-context` and `react-router` are all runtime
 dependencies shipped to the browser. Angular's equivalents are compiled, tree-shaken parts of the framework
-that was already being paid for, and its raw output — larger — compresses better because generated code
+that was already being paid for, and its raw output - larger - compresses better because generated code
 repeats itself.
 
 The lesson generalises beyond these two frameworks: **"small core" is a starting position, not a steady
@@ -451,13 +451,13 @@ bundle size as a decision criterion is quoting the least durable number availabl
 
 The Phase 4 summary still holds and Phase 5 sharpens it: **React's core is smaller and its ecosystem is
 better; Angular's box is fuller and more consistent.** A React app that adds TanStack Query *and* React Hook
-Form matches Angular on both axes — but that is two library choices, two upgrade paths and two sets of
+Form matches Angular on both axes - but that is two library choices, two upgrade paths and two sets of
 conventions the team has to agree on, and the app that skips them is measurably worse. Angular's answer is
 already in the framework, already typed, and identical in every codebase you will ever join.
 
 ---
 
-## Phase 6 — basket, checkout and orders
+## Phase 6 - basket, checkout and orders
 
 The first screens with **optimistic updates**, and the phase where the comparison stops being about syntax
 and starts being about which framework has already solved the problem for you.
@@ -506,7 +506,7 @@ async setQuantity(productId: string, quantity: number): Promise<void> {
 
 The Angular version is shorter and easier to read. It is also **missing something**: `cancelQueries`.
 Without it, a refetch that started before the change can land after it and overwrite the optimistic value
-with the stale one. Angular has no equivalent because it has no request cache to cancel — so the bug is not
+with the stale one. Angular has no equivalent because it has no request cache to cancel - so the bug is not
 present here, but neither is the machinery that would prevent it once a second component starts reading the
 same data.
 
@@ -517,13 +517,13 @@ is the part that becomes necessary as the app grows.
 |---|---|---|
 | Optimistic write | `onMutate` | manual |
 | Rollback on failure | `onError` + context | manual `try`/`catch` |
-| Cancel in-flight refetches | `cancelQueries` | n/a — no cache |
+| Cancel in-flight refetches | `cancelQueries` | n/a - no cache |
 | Per-mutation `isPending` | free | one shared `saving()` signal |
 | Lines for the quantity update | ~18 | ~14, but with fewer guarantees |
 
 The per-mutation pending state matters more than it sounds. Angular's page owns one `saving()` signal for
 *all* operations, so removing one line disables every other button on the page. Fixing that properly means
-a signal per operation — which is exactly the bookkeeping TanStack Query does for you.
+a signal per operation - which is exactly the bookkeeping TanStack Query does for you.
 
 ### Route parameters: Angular wins clearly
 
@@ -539,11 +539,11 @@ const justPlaced = searchParams.get('placed') === '1';
 ```
 
 Angular's is typed, needs no import, and updates automatically. React's `id` is `string | undefined`
-forever, so every use is `id!` or a guard — and `useParams` has no idea what the route actually declared.
+forever, so every use is `id!` or a guard - and `useParams` has no idea what the route actually declared.
 
 **The trap that cost time here.** A required signal input is **not populated until after the constructor
 runs**, so reading `this.id()` there throws `NG0950`. The catch block reported it to the customer as "order
-not found", hiding the real cause entirely — the page looked like a data problem and was a lifecycle
+not found", hiding the real cause entirely - the page looked like a data problem and was a lifecycle
 problem. The fix is a `queueMicrotask`, and the lesson is that Angular's lifecycle has more moving parts
 than React's "the function body runs on every render".
 
@@ -563,7 +563,7 @@ version needs someone to remember to extend that expression; the Angular version
 ### Control flow in templates
 
 Angular's `@if` / `@for` / `@else if` read well at this size, and `@for (…; track …)` makes the key
-mandatory rather than a lint rule. React's `{condition && <X/>}` is fine until a nested ternary appears —
+mandatory rather than a lint rule. React's `{condition && <X/>}` is fine until a nested ternary appears -
 and the JSX fragment requirement bit once here: three `<NavLink>`s inside an `&&` is a compile error
 without a `<>` wrapper, which has no counterpart in Angular at all.
 
@@ -577,7 +577,7 @@ Worth listing, because the pattern is now consistent across six phases:
 | Bug | Layer |
 |-----|-------|
 | PostgreSQL folding `"Id"` to `id` | Backend |
-| Dapper not translating `snake_case` — silent zeros | Backend |
+| Dapper not translating `snake_case` - silent zeros | Backend |
 | Outbox serialising camelCase, deserialising PascalCase | Backend |
 | Staff 403 on `/orders/me` | Permission model |
 | Angular reading a required input too early | **Frontend** |
@@ -591,10 +591,10 @@ list.**
 
 | Dimension | Winner |
 |-----------|--------|
-| **Server state, caching, request lifecycle** | **React** — and it is not close |
+| **Server state, caching, request lifecycle** | **React** - and it is not close |
 | **Optimistic updates and rollback** | **React** |
-| **Mutations — per-call pending/error state** | **React** |
-| **Forms — typed, validated, in the box** | **Angular** — and it is not close |
+| **Mutations - per-call pending/error state** | **React** |
+| **Forms - typed, validated, in the box** | **Angular** - and it is not close |
 | **Route parameter binding** | **Angular** |
 | Deriving state without dependency arrays | Angular |
 | Template readability at scale | Angular |
@@ -606,6 +606,188 @@ list.**
 The summary has not moved since Phase 5, and Phase 6 sharpened it into something worth saying in an
 interview: **React's ecosystem has solved server state better than anything in Angular's box, and
 Angular's box has solved forms and routing better than anything React ships.** A team that adds TanStack
-Query and React Hook Form gets the best of both — at the price of two library choices, two upgrade paths
+Query and React Hook Form gets the best of both - at the price of two library choices, two upgrade paths
 and two sets of conventions to agree on. A team on Angular gets a good answer to both without deciding
 anything, and pays for it in bundle size and lifecycle subtlety.
+
+---
+
+## The shop UI rebuild - one shared piece of state, two mechanisms
+
+This was not a phase. The storefront worked but looked like a test harness, so both apps were rebuilt
+around real product imagery, a header cart badge, a quantity stepper and a sticky order summary. It
+produced one comparison worth keeping.
+
+### Deriving a header count from a page's data
+
+The header shows how many items are in the basket. The basket page shows the same number. They must
+never disagree - a header reading 2 beside a basket reading 3 is the classic symptom of a count kept in
+its own piece of state, updated by hand in three places and forgotten in a fourth.
+
+**React** declares the same query the basket page declares:
+
+```tsx
+const basketQuery = useQuery({
+  queryKey: ['basket'],       // the SAME key the basket page uses
+  queryFn: () => api.getBasket(),
+  enabled: isAuthenticated,
+});
+
+const itemCount = basketQuery.data?.totalUnits ?? 0;
+```
+
+Two components, one cache entry. Adding an item anywhere writes to `['basket']` and both re-render.
+There is no fetch here at all if the basket page already loaded it.
+
+**Angular** derives from the singleton service:
+
+```ts
+readonly basket = signal<Basket | null>(null);
+readonly itemCount = computed(() => this.basket()?.totalUnits ?? 0);
+```
+
+Two components, one signal. A `computed` **cannot** disagree with its source - it is not a copy, it is a
+function of it.
+
+Both are right, and for once neither is clearly better. What is worth noticing is *why* they are right:
+in both cases the count is **derived**, not stored. The mechanism differs; the rule does not.
+
+The one asymmetry: Angular needs `enabled: isAuthenticated`'s equivalent written out as an effect,
+because sign-in resolves after the shell has already rendered:
+
+```ts
+effect(() => {
+  if (this.auth.isAuthenticated()) void this.basketService.load().catch(() => {});
+});
+```
+
+TanStack Query has a flag for that. Angular has a primitive you assemble it from. That is the same trade
+this document has recorded since Phase 4, appearing in a new place.
+
+### The divergence this found
+
+Angular's `Auth` had no `error` signal. React has rendered `auth.error` on the home page since Phase 3,
+and the Angular home page silently showed nothing, because `angular-auth-oidc-client` reports a failed
+sign-in by resolving `checkAuth()` with `isAuthenticated: false` rather than by throwing - so there was
+nothing obvious to render, and nobody noticed there was nothing.
+
+No spec covered it. A failed sign-in is awkward to provoke on purpose, so this sat undeclared for six
+phases. It is fixed (`Auth.error`, fed from `checkAuth`'s error channel) and recorded as row X10 of the
+parity checklist.
+
+**The lesson is about the shape of the gap, not the gap itself.** The e2e suite catches drift on paths a
+spec walks. It cannot catch drift on a path nobody walks, and the error paths are exactly the paths
+nobody walks. Two independent implementations will diverge there first.
+
+---
+
+## Category browsing - writing a filter into the URL from a link
+
+The products page grew a category rail: every department and everything inside it, laid out instead of
+folded into a `<select>`. Each entry is a real link that sets `?category=`, keeping the other filters.
+
+**React** builds the address by hand and hands it to `<Link>`:
+
+```tsx
+const categoryHref = (slug: string) => {
+  const next = new URLSearchParams(searchParams);
+  if (slug) next.set('category', slug);
+  else next.delete('category');
+  next.delete('page');
+  const query = next.toString();
+  return query ? `/products?${query}` : '/products';
+};
+```
+
+**Angular** declares the change and lets the router merge it:
+
+```html
+<a routerLink="/products"
+   [queryParams]="categoryParams(child.slug)"
+   queryParamsHandling="merge">
+```
+
+```ts
+categoryParams(slug: string): Record<string, string | null> {
+  return { category: slug || null, page: null };
+}
+```
+
+**Angular wins this one clearly.** It says *what changes* - set the category, drop the page - and the
+router works out the rest, including that `null` removes a parameter. React's version has to reconstruct
+the entire query string on every render, and every rule about what survives a category change is written
+out longhand. Both are six lines; only one of them can be read as a sentence.
+
+It is also the first place in this document where Angular's framework-supplied routing beats a React
+idiom on something a real screen needs, rather than on ceremony. React Router has no `queryParamsHandling`
+equivalent - `useSearchParams` gives you the object and leaves the merging to you.
+
+### Where the frameworks did not differ at all
+
+`groupIntoDepartments` - turning the flat category list into a tree - is the same twenty lines in both
+apps, because it is plain TypeScript over plain data. Duplicated per
+[ADR-0018](adr/0018-self-contained-frontends.md), guarded by six identical unit assertions in each suite.
+
+That is worth noticing. The parts of a front end that are genuinely *logic* are framework-shaped only when
+you let them be. Everything above about hooks, signals, `useMemo` and `computed` is about **when code
+runs**; none of it is about what the code does.
+
+---
+
+## Product variants - the same UI state, two ways of holding it
+
+A product page with sizes and colours is a small state machine: which option is chosen, which
+combinations exist, which are sold out, and whether the buy button may be enabled. It is the most
+genuinely *stateful* screen in this application, so it is a fair test.
+
+**React** holds two `useState` values and derives the rest inline:
+
+```tsx
+const [size, setSize] = useState<string | null>(null);
+const [colour, setColour] = useState<string | null>(null);
+
+const variants = query.data?.variants ?? [];
+const sizes = sizesOf(variants);
+const selected = findVariant(variants, size, colour);
+const needsSize = sizes.length > 0 && size === null;
+```
+
+**Angular** holds two signals and derives with `computed`:
+
+```ts
+protected readonly size = signal<string | null>(null);
+protected readonly colour = signal<string | null>(null);
+
+protected readonly variants = computed(() => this.product()?.variants ?? []);
+protected readonly sizes = computed(() => sizesOf(this.variants()));
+protected readonly selected = computed(() => findVariant(this.variants(), this.size(), this.colour()));
+protected readonly needsSize = computed(() => this.sizes().length > 0 && this.size() === null);
+```
+
+**Angular is tidier here, and for a reason that only shows up at this size.** React recomputes all four
+values on every render - cheap, and correct, but they are recomputed whether or not anything they depend
+on changed. Angular's `computed` are memoised on their actual dependencies without a dependency array to
+maintain. With four derivations the difference is aesthetic; the point is that the aesthetic one scales
+and the dependency array does not.
+
+The one place React is clearly ahead is the default-colour effect. Both apps pre-select the first colour
+with stock once the product loads, and React's `useEffect` needs an eslint-disabled dependency array to
+avoid re-running on every keystroke of derived state:
+
+```tsx
+useEffect(() => {
+  if (colours.length === 0 || colour !== null) return;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [query.data]);
+```
+
+Angular does it inside the load, with no lifecycle involved at all. A disabled lint rule is a signal that
+the model and the problem do not quite fit - and that is the honest summary of `useEffect` for anything
+that is not genuinely a subscription.
+
+### What did not differ
+
+`sizesOf`, `coloursOf`, `findVariant`, `sizeHasStock` and `colourHasStock` are the same functions in both
+apps, duplicated per [ADR-0018](adr/0018-self-contained-frontends.md) and guarded by identical unit tests.
+Same conclusion as `groupIntoDepartments`: the parts of a front end that are genuinely *logic* are not
+framework-shaped unless you let them be.

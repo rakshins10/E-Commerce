@@ -3,7 +3,7 @@
 - **Status:** Proposed | Accepted | Superseded by ADR-NNNN | Deprecated
 - **Date:** YYYY-MM-DD
 - **Phase:** N
-- **Supersedes / Superseded by:** —
+- **Supersedes / Superseded by:** -
 
 ## Context
 
@@ -15,15 +15,15 @@ decision rather than a context.
 
 ## Options considered
 
-Genuinely considered — not straw men. For each: what it is, and its honest strengths.
+Genuinely considered - not straw men. For each: what it is, and its honest strengths.
 
-### Option A — <name>
+### Option A - <name>
 …
 
-### Option B — <name>
+### Option B - <name>
 …
 
-### Option C — <name>
+### Option C - <name>
 …
 
 ## Decision
@@ -42,7 +42,7 @@ probe, so it should stand on its own.
 Be specific and unflattering. Every real decision has a cost; an ADR with no downsides is marketing.
 
 ### What we will have to revisit
-The conditions under which this decision stops being right — the trigger for a superseding ADR.
+The conditions under which this decision stops being right - the trigger for a superseding ADR.
 
 ## References
 

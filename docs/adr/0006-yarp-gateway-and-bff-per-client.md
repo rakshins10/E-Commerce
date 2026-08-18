@@ -19,7 +19,7 @@ latency- and battery-sensitive over an unreliable network and wants fewer, coars
 
 ## Options considered
 
-### Option A — One gateway for everything
+### Option A - One gateway for everything
 A single Ocelot or YARP instance routing all five clients to all nine services.
 
 Operationally simplest: one thing to deploy, one place for cross-cutting concerns. It is also how most
@@ -28,14 +28,14 @@ systems start, and how they get into trouble.
 It fails as a **coupling magnet**. Every client's needs accumulate in one codebase, so aggregation logic
 grows conditionals (`if (client == "mobile")`), and a change the mobile app needs is deployed to a component
 the admin panel depends on. One team's release cadence gates everyone's. Its threat model becomes the union
-of all clients' threat models — the public storefront and the privileged admin surface share a process,
+of all clients' threat models - the public storefront and the privileged admin surface share a process,
 which is a poor security boundary. And it is a single point of failure and a single scaling unit: storefront
 traffic spikes force you to scale the admin path too.
 
-### Option B — A BFF per client family
+### Option B - A BFF per client family
 One edge component per client experience, each owned by the team owning that client.
 
-### Option C — GraphQL federation
+### Option C - GraphQL federation
 One endpoint, each client queries exactly the shape it wants, no per-client backend needed.
 
 Genuinely attractive for the over/under-fetching problem, and worth naming because it is the modern
@@ -46,7 +46,7 @@ admin audit log. Reconsidered in a real product if client data needs diverge fas
 
 ## Decision
 
-**Three BFFs — `storefront-bff`, `admin-bff`, `mobile-bff` — each built with YARP, each doing both reverse
+**Three BFFs - `storefront-bff`, `admin-bff`, `mobile-bff` - each built with YARP, each doing both reverse
 proxying and purpose-built aggregation.**
 
 | BFF | Serves | Character |
@@ -61,7 +61,7 @@ proxying and purpose-built aggregation.**
 identical UX by requirement, therefore identical data needs, therefore one BFF. Splitting them would be pure
 duplication.
 
-This is not merely tidy — it is what makes parity *provable*. Both apps consume the same endpoints returning
+This is not merely tidy - it is what makes parity *provable*. Both apps consume the same endpoints returning
 the same payloads, so any behavioural difference is unambiguously a client-side bug rather than a backend
 difference. The same reasoning underpins [ADR-0014](0014-react-and-angular-in-lockstep.md).
 
@@ -71,12 +71,12 @@ Both are viable .NET reverse proxies. YARP wins on:
 
 - **It is a library, not a framework.** YARP is middleware in an ordinary ASP.NET Core application, so a BFF
   is a normal app that happens to proxy. Adding a hand-written aggregation endpoint next to proxied routes
-  is just adding a Minimal API endpoint — no plugin model, no escape hatch. Since aggregation is half the
+  is just adding a Minimal API endpoint - no plugin model, no escape hatch. Since aggregation is half the
   job, this matters more than routing features.
 - **Actively developed by Microsoft**, used in production at scale internally. Ocelot is community-maintained
   and quieter.
 - **Direct integration** with `HttpClientFactory`, Polly resilience handlers, health checks, and
-  OpenTelemetry — the same building blocks every other service uses, rather than a parallel configuration
+  OpenTelemetry - the same building blocks every other service uses, rather than a parallel configuration
   system.
 - **Configuration or code.** Routes come from `appsettings.json` for the simple cases and from code when
   dynamic.
@@ -98,11 +98,11 @@ to shape the answer; it may never decide what is true.**
 
 ### What this buys us
 - Each client family evolves at its own pace without coordinating releases.
-- Fewer round trips per screen — the product page is one call instead of three.
+- Fewer round trips per screen - the product page is one call instead of three.
 - Client-shaped payloads: mobile is not forced to over-fetch a desktop-sized response.
 - Independent scaling and independent failure domains: a storefront traffic spike cannot exhaust the admin
   path.
-- Sharply separated threat models — the public edge and the privileged edge are different processes.
+- Sharply separated threat models - the public edge and the privileged edge are different processes.
 - Services keep clean, general-purpose APIs instead of accreting client-specific endpoints.
 
 ### What this costs us
@@ -125,7 +125,7 @@ The trigger is aggregation logic being copied a third time.
 
 ## References
 
-- [.NET microservices guide — API gateway pattern](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/architect-microservice-container-applications/direct-client-to-microservice-communication-versus-the-api-gateway-pattern)
-- [Sam Newman — Backends For Frontends](https://samnewman.io/patterns/architectural/bff/)
+- [.NET microservices guide - API gateway pattern](https://learn.microsoft.com/en-us/dotnet/architecture/microservices/architect-microservice-container-applications/direct-client-to-microservice-communication-versus-the-api-gateway-pattern)
+- [Sam Newman - Backends For Frontends](https://samnewman.io/patterns/architectural/bff/)
 - [YARP documentation](https://microsoft.github.io/reverse-proxy/)
-- [ADR-0014](0014-react-and-angular-in-lockstep.md) — why the two storefronts share one BFF
+- [ADR-0014](0014-react-and-angular-in-lockstep.md) - why the two storefronts share one BFF

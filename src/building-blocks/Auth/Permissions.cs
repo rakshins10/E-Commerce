@@ -9,7 +9,7 @@ namespace ECommerce.Auth;
 /// </para>
 /// <para>
 /// <b>Why constants rather than raw strings at the call site.</b> A typo in
-/// <c>RequirePermission("catalog:writ")</c> compiles, deploys, and then denies every request — or worse,
+/// <c>RequirePermission("catalog:writ")</c> compiles, deploys, and then denies every request - or worse,
 /// if the policy is registered by the same typo'd name, it silently matches nothing and the endpoint's
 /// protection quietly evaporates. Authorization failures in the permissive direction are the ones nobody
 /// notices. A constant turns that class of mistake into a build error.
@@ -21,7 +21,7 @@ namespace ECommerce.Auth;
 /// </para>
 /// <para>
 /// <b>Naming convention: <c>resource:action</c>, optionally <c>:own</c>.</b> The <c>:own</c> suffix marks a
-/// permission that cannot be decided from the token alone — <c>order:read:own</c> depends on <i>which</i>
+/// permission that cannot be decided from the token alone - <c>order:read:own</c> depends on <i>which</i>
 /// order is being read, which is what resource-based authorization exists for. See
 /// <see cref="ResourceOwnerRequirement"/>.
 /// </para>
@@ -49,7 +49,7 @@ public static class Permissions
         /// <summary>Read <b>any</b> order. Staff only.</summary>
         public const string Read = "order:read";
 
-        /// <summary>Read only orders you placed yourself. Requires a resource check — see remarks on this class.</summary>
+        /// <summary>Read only orders you placed yourself. Requires a resource check - see remarks on this class.</summary>
         public const string ReadOwn = "order:read:own";
 
         public const string Write = "order:write";
@@ -119,7 +119,7 @@ public static class Permissions
 /// <remarks>
 /// <b>Deliberately not used to guard endpoints.</b> Endpoints require <see cref="Permissions"/>, never these.
 /// A role is a job title; an endpoint cares about a capability. Guarding on the title means that when
-/// "support agents can now issue refunds" arrives, you must find and edit every endpoint — and the ones you
+/// "support agents can now issue refunds" arrives, you must find and edit every endpoint - and the ones you
 /// miss fail silently in the permissive direction. Guarding on the capability means that change is a
 /// composite-role edit in Keycloak and no deployment at all.
 /// See <c>docs/authorization-model.md</c>.

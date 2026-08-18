@@ -96,7 +96,13 @@ public static class ProductAdminEndpoints
             request.Currency,
             request.CategoryId,
             request.BrandId,
-            request.ImageUrl);
+            request.ImageUrl,
+            ParseAudience(request.Audience));
+
+        // A product must be sellable the moment it is created, so it gets one variant with no size and
+        // no colour - the same shape a leather portfolio has. Adding sizes afterwards is a separate
+        // action, and this way there is never a product that exists but cannot be bought.
+        product.AddVariant(request.Sku, size: null, colourName: null, colourHex: null);
 
         db.Products.Add(product);
 
@@ -146,6 +152,7 @@ public static class ProductAdminEndpoints
         // because a second copy of a rule is a rule that eventually disagrees with itself.
         product.UpdateDetails(request.Name, request.Description, request.ImageUrl);
         product.MoveTo(request.CategoryId, request.BrandId);
+        product.SetAudience(ParseAudience(request.Audience));
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -199,13 +206,13 @@ public static class ProductAdminEndpoints
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>The route is DELETE and the row survives.</b> That is not a compromise — it is the correct
+    /// <b>The route is DELETE and the row survives.</b> That is not a compromise - it is the correct
     /// behaviour, and the verb is kept because withdrawing is what "delete" means to the person clicking
     /// it.
     /// </para>
     /// <para>
     /// Hard-deleting a product breaks history. Orders copy the product name and price onto their own
-    /// lines precisely so an old invoice still reads correctly — but the <c>product_id</c> on those lines
+    /// lines precisely so an old invoice still reads correctly - but the <c>product_id</c> on those lines
     /// would dangle, the admin panel could not link from an order to what was bought, and any report
     /// joining orders to products would silently lose rows.
     /// </para>
@@ -263,9 +270,21 @@ public static class ProductAdminEndpoints
         Results.Ok(await queries.GetWithdrawnAsync(cancellationToken));
 
     /// <remarks>
-    /// A category or brand id that does not exist would otherwise fail as a foreign-key violation — a
+    /// A category or brand id that does not exist would otherwise fail as a foreign-key violation - a
     /// 500 naming a constraint. Checked up front so the caller is told which one is wrong.
     /// </remarks>
+    /// <summary>
+    /// Reads an audience from the wire.
+    /// </summary>
+    /// <remarks>
+    /// Falls back to <see cref="Audience.Unisex"/> rather than rejecting an unknown value. A product that
+    /// arrives without an audience is not an error - most of the catalogue is unisex, and the field was
+    /// added long after the endpoint - so defaulting is the honest behaviour rather than a 400 telling a
+    /// client to send something it has never had to send before.
+    /// </remarks>
+    private static Audience ParseAudience(string? value) =>
+        Enum.TryParse(value, ignoreCase: true, out Audience audience) ? audience : Audience.Unisex;
+
     private static async Task AssertTaxonomyExistsAsync(
         CatalogDbContext db,
         Guid categoryId,
@@ -308,6 +327,9 @@ public sealed record CreateProductRequest
     public required Guid BrandId { get; init; }
 
     public string? ImageUrl { get; init; }
+
+    /// <summary>"Men", "Women" or "Unisex". Defaults to Unisex when absent or unrecognised.</summary>
+    public string? Audience { get; init; }
 }
 
 public sealed record UpdateProductRequest
@@ -321,6 +343,9 @@ public sealed record UpdateProductRequest
     public required Guid BrandId { get; init; }
 
     public string? ImageUrl { get; init; }
+
+    /// <summary>"Men", "Women" or "Unisex". Defaults to Unisex when absent or unrecognised.</summary>
+    public string? Audience { get; init; }
 }
 
 /// <remarks>

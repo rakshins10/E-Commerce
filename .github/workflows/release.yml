@@ -1,5 +1,5 @@
 # =============================================================================
-#  Release — build and publish container images to GitHub Container Registry
+#  Release - build and publish container images to GitHub Container Registry
 # =============================================================================
 #  Runs on every push to main and on every version tag. Produces one published,
 #  multi-architecture image per service in ghcr.io/<owner>/e-commerce-<service>.
@@ -203,5 +203,5 @@ jobs:
             echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-catalog-api:sha-${{ github.sha }}"
             echo '```'
             echo
-            echo "Deploy the \`sha-\` tag or the digest, never \`latest\` — see docs/operations/deployment.md."
+            echo "Deploy the \`sha-\` tag or the digest, never \`latest\` - see docs/operations/deployment.md."
           } >> "$GITHUB_STEP_SUMMARY"

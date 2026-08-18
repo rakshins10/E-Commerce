@@ -25,8 +25,8 @@ namespace ECommerce.Observability;
 /// </para>
 /// <para>
 /// <b>Why this is a shared building block rather than copied setup.</b> With nine services, configuration that
-/// is copied will diverge — one service ends up with a different service-name convention, another omits an
-/// enricher — and the moment they diverge, cross-service correlation quietly stops working. Since the entire
+/// is copied will diverge - one service ends up with a different service-name convention, another omits an
+/// enricher - and the moment they diverge, cross-service correlation quietly stops working. Since the entire
 /// value of tracing is joining spans <i>across</i> services, "roughly the same everywhere" is worth much less
 /// than "identical everywhere".
 /// </para>
@@ -37,7 +37,7 @@ public static class ObservabilityExtensions
     /// Adds Serilog and OpenTelemetry to the host.
     /// </summary>
     /// <param name="builder">The web application builder.</param>
-    /// <param name="serviceName">Logical service name — appears as <c>service.name</c> on every span and metric,
+    /// <param name="serviceName">Logical service name - appears as <c>service.name</c> on every span and metric,
     /// and is how you filter one service out of a shared trace backend. Keep it stable across restarts and
     /// versions.</param>
     public static WebApplicationBuilder AddObservability(this WebApplicationBuilder builder, string serviceName)
@@ -131,7 +131,7 @@ public static class ObservabilityExtensions
     }
 
     /// <summary>
-    /// Adds the observability middleware. Call early in the pipeline — see the ordering note below.
+    /// Adds the observability middleware. Call early in the pipeline - see the ordering note below.
     /// </summary>
     /// <remarks>
     /// <b>Order is load-bearing.</b> Correlation must come first so that a request failing in exception handling
@@ -174,7 +174,7 @@ public static class ObservabilityExtensions
 /// </summary>
 /// <remarks>
 /// Automatic instrumentation covers incoming HTTP and outgoing <c>HttpClient</c> calls, but it cannot see across
-/// a message broker — from the publisher's point of view the work ends at publish, and from the consumer's it
+/// a message broker - from the publisher's point of view the work ends at publish, and from the consumer's it
 /// begins from nothing. These sources are where the trace is stitched back together by hand, using the
 /// <c>traceparent</c> carried on the message.
 /// </remarks>

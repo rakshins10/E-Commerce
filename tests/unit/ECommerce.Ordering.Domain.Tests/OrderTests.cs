@@ -18,12 +18,27 @@ public class OrderTests
     private static ShippingAddress AnAddress() =>
         new("Casey Customer", "12 Rosewood Avenue", null, "Bristol", "BS1 4TP", "GB");
 
+    /// <summary>
+    /// A line. <paramref name="sku"/> is what makes two lines the same line.
+    /// </summary>
+    /// <remarks>
+    /// This used to hard-code one SKU and vary only <paramref name="productId"/>, which was harmless while
+    /// the aggregate merged on the product. It stopped being harmless when merging moved to the SKU
+    /// (ADR-0020): every "two distinct products" test was quietly building two lines with one SKU, so they
+    /// merged and the assertions about totals and limits stopped meaning anything.
+    ///
+    /// A distinct SKU per distinct product is also just true - `product_variants.sku` is unique across the
+    /// whole catalogue - so the fixture now says what the database already guaranteed.
+    /// </remarks>
     private static OrderLineRequest ALine(
         string name = "Aurora Wireless Headphones",
         decimal price = 89.99m,
         int quantity = 1,
-        Guid? productId = null) =>
-        new(productId ?? Guid.CreateVersion7(), "AUR-HP-001", name, new Money(price, "GBP"), quantity);
+        Guid? productId = null,
+        string sku = "AUR-HP-001",
+        string? size = null,
+        string? colourName = null) =>
+        new(productId ?? Guid.CreateVersion7(), sku, name, new Money(price, "GBP"), quantity, size, colourName);
 
     private static Order AnOrder(params OrderLineRequest[] lines) =>
         Order.Submit(
@@ -80,24 +95,52 @@ public class OrderTests
     {
         Order order = AnOrder(
             ALine(price: 89.99m, quantity: 2),
-            ALine("Nimbus Laptop Stand", 34.50m, 1, Guid.CreateVersion7()));
+            ALine("Nimbus Laptop Stand", 34.50m, 1, Guid.CreateVersion7(), sku: "NIM-LS-002"));
 
         order.Total.Should().Be(new Money(214.48m, "GBP"));
         order.TotalUnits.Should().Be(3);
     }
 
     [Fact]
-    public void two_lines_for_the_same_product_are_merged_into_one()
+    public void two_lines_for_the_same_variant_are_merged_into_one()
     {
         Guid productId = Guid.CreateVersion7();
 
         // Two picking instructions for one shelf is a warehouse problem, and an invoice the customer
         // cannot follow is a support problem.
         Order order = AnOrder(
-            ALine(quantity: 2, productId: productId),
-            ALine(quantity: 3, productId: productId));
+            ALine(quantity: 2, productId: productId, sku: "AUR-HP-001"),
+            ALine(quantity: 3, productId: productId, sku: "AUR-HP-001"));
 
         order.Items.Should().ContainSingle().Which.Quantity.Should().Be(5);
+    }
+
+    [Fact]
+    public void two_variants_of_the_same_product_are_NOT_merged()
+    {
+        Guid productId = Guid.CreateVersion7();
+
+        // The distinction the SKU exists to make. A Medium and a Large are one product and two things to
+        // pick, and merging them would send the warehouse "two of NW-TS-001" without saying which two.
+        Order order = AnOrder(
+            ALine(quantity: 1, productId: productId, sku: "NW-TS-001-M-NAV", size: "M", colourName: "Navy"),
+            ALine(quantity: 1, productId: productId, sku: "NW-TS-001-L-NAV", size: "L", colourName: "Navy"));
+
+        order.Items.Should().HaveCount(2);
+        order.Items.Select(item => item.Size).Should().BeEquivalentTo(["M", "L"]);
+    }
+
+    [Fact]
+    public void an_order_line_snapshots_the_size_and_colour_bought()
+    {
+        // A snapshot, like the name and the price. The SKU already identifies the variant, but a customer
+        // reading their history needs "Medium, Navy" rather than NW-TS-001-M-NAV - and renaming a colour
+        // next year must not rewrite what last year's dispatch note said.
+        Order order = AnOrder(ALine(sku: "NW-TS-001-M-NAV", size: "M", colourName: "Navy"));
+
+        OrderItem item = order.Items.Should().ContainSingle().Subject;
+        item.Size.Should().Be("M");
+        item.ColourName.Should().Be("Navy");
     }
 
     [Fact]
@@ -116,8 +159,8 @@ public class OrderTests
         // The interesting case: each line is individually legal, and the merge is not. A limit checked
         // only in the constructor would let this through.
         Action submit = () => AnOrder(
-            ALine(quantity: 60, productId: productId),
-            ALine(quantity: 60, productId: productId));
+            ALine(quantity: 60, productId: productId, sku: "AUR-HP-001"),
+            ALine(quantity: 60, productId: productId, sku: "AUR-HP-001"));
 
         submit.Should().Throw<DomainException>().WithMessage("*may not exceed*");
     }
@@ -127,7 +170,7 @@ public class OrderTests
     {
         OrderLineRequest[] lines = Enumerable
             .Range(0, Order.MaxItems + 1)
-            .Select(i => ALine($"Product {i}", productId: Guid.CreateVersion7()))
+            .Select(i => ALine($"Product {i}", productId: Guid.CreateVersion7(), sku: $"SKU-{i:D3}"))
             .ToArray();
 
         Action submit = () => AnOrder(lines);
@@ -211,7 +254,7 @@ public class OrderTests
     }
 
     // -------------------------------------------------------------------------
-    //  Idempotency — the rules that make at-least-once delivery survivable
+    //  Idempotency - the rules that make at-least-once delivery survivable
     // -------------------------------------------------------------------------
 
     [Fact]

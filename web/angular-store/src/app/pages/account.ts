@@ -11,7 +11,7 @@ import {
 } from '../core/profile';
 
 /**
- * My Account — profile, addresses and preferences.
+ * My Account - profile, addresses and preferences.
  *
  * Behaviourally identical to the React `AccountPage`: same labels, same
  * sections, same states, so the shared Playwright specs pass against both.
@@ -22,7 +22,7 @@ import {
  * This is the first screen with real forms, and it is where Angular's
  * **reactive forms** earn their keep. React uses uncontrolled inputs read via
  * `FormData` for the two simple forms and a `useState` object for the address
- * draft — workable, but validation is manual and the types are hand-written.
+ * draft - workable, but validation is manual and the types are hand-written.
  * Angular's `FormBuilder` gives a typed form group, declarative validators, and
  * `dirty`/`invalid` state for free.
  */

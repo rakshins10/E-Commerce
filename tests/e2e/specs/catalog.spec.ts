@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
  * Product browsing: search, filter, sort, page, detail.
  *
  * Written ONCE and run against both storefronts. Every selector is a role and
- * an accessible name — never a CSS class or test id — because those differ
+ * an accessible name - never a CSS class or test id - because those differ
  * between two independent implementations.
  *
  * @see docs/adr/0014-react-and-angular-in-lockstep.md
@@ -74,6 +74,40 @@ test.describe('product browsing', () => {
     await expect(page.getByRole('status')).toContainText('6 products');
   });
 
+  test('the category rail offers the whole taxonomy without opening a menu', async ({ page }) => {
+    await page.goto('/products');
+
+    const rail = page.getByRole('navigation', { name: 'Categories' });
+
+    // Departments AND what is inside them, visible at once. A dropdown can hold the same
+    // information; it cannot show it.
+    await expect(rail.getByRole('link', { name: 'Clothing' })).toBeVisible();
+    await expect(rail.getByRole('link', { name: 'Hoodies' })).toBeVisible();
+    await expect(rail.getByRole('link', { name: 'T-shirts' })).toBeVisible();
+
+    await rail.getByRole('link', { name: 'Hoodies' }).click();
+
+    // A real link, so the filter is in the address and survives a reload.
+    await expect(page).toHaveURL(/category=hoodies/);
+    await expect(page.getByRole('status')).toContainText('3 products');
+
+    // aria-current marks the selection for a screen reader, not colour alone.
+    await expect(rail.getByRole('link', { name: 'Hoodies' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  test('a department counts the products inside its children', async ({ page }) => {
+    await page.goto('/products');
+
+    // Clothing holds no products directly - T-shirts and Hoodies do. The count has to say 6, the
+    // number selecting it returns, or it advertises an empty shop.
+    await expect(
+      page.getByRole('navigation', { name: 'Categories' }).getByRole('link', { name: 'Clothing' }),
+    ).toContainText('6');
+  });
+
   test('filtering by brand works', async ({ page }) => {
     await page.goto('/products');
     await expect(page.getByRole('status')).toContainText('12 products');
@@ -136,6 +170,76 @@ test.describe('product browsing', () => {
     await page.goto('/products?page=2');
     await expect(page.getByRole('navigation', { name: 'Pagination' })).toBeHidden();
   });
+
+  test('the size filter disappears for a category that is not sized', async ({ page }) => {
+    await page.goto('/products');
+
+    // Clothing is sized, so the control is there.
+    await expect(page.getByLabel('Size')).toBeVisible();
+
+    // Stationery is not. The control must GO, not merely return nothing when used - offering "M" for a
+    // notebook walks the customer into a guaranteed empty result, which is the bug this asserts against.
+    await page.getByLabel('Category').selectOption('stationery');
+
+    await expect(page.getByRole('status')).toContainText('3 products');
+    await expect(page.getByLabel('Size')).toBeHidden();
+  });
+
+  test('the options offered narrow to what the current filter contains', async ({ page }) => {
+    await page.goto('/products?category=drinkware');
+    await expect(page.getByRole('status')).toContainText('3 products');
+
+    const colours = page.getByLabel('Colour');
+    await expect(colours).toBeVisible();
+
+    // Only the colours drinkware is actually sold in. A clothing-only colour must not be on the list,
+    // because choosing it would return nothing.
+    await expect(colours.getByRole('option', { name: /Speckled White/ })).toHaveCount(1);
+    await expect(colours.getByRole('option', { name: /^Navy/ })).toHaveCount(0);
+  });
+
+  test('choosing a size still leaves the other sizes selectable', async ({ page }) => {
+    await page.goto('/products?category=clothing&size=M');
+
+    // A facet computed WITH its own filter applied would collapse to "M" alone, and a shopper could
+    // never change their mind. Each axis is counted with its own filter left out.
+    const sizes = page.getByLabel('Size');
+
+    for (const size of ['S', 'M', 'L', 'XL']) {
+      await expect(sizes.getByRole('option', { name: new RegExp(`^${size} `) })).toHaveCount(1);
+    }
+  });
+
+  test('sizes are listed in the scale order, not alphabetically', async ({ page }) => {
+    await page.goto('/products?category=clothing');
+
+    // S, M, L, XL. Sorted either alphabetically or numerically this comes out wrong, which is why the
+    // order is stored as data on the size scale rather than inferred (ADR-0021).
+    const options = page.getByLabel('Size').getByRole('option');
+
+    // toHaveCount retries; allTextContents() does not, and reads an empty list on a panel that has not
+    // finished loading. Same hazard as count() - only expect(locator) waits.
+    await expect(options).toHaveCount(5);
+
+    const labels = (await options.allTextContents()).map((text) => text.trim().split(' ')[0]);
+
+    expect(labels).toEqual(['All', 'S', 'M', 'L', 'XL']);
+  });
+
+  test('the catalogue can be filtered by size and by who it is for', async ({ page }) => {
+    await page.goto('/products');
+    await expect(page.getByRole('status')).toContainText('12 products');
+
+    // Only clothing has sizes, so filtering by one excludes the mugs and the notebooks.
+    await page.getByLabel('Size').selectOption('S');
+    await expect(page.getByRole('status')).toContainText('6 products');
+
+    await page.goto('/products');
+    await page.getByRole('navigation', { name: 'Shop for' }).getByRole('link', { name: 'Women' }).click();
+
+    await expect(page).toHaveURL(/audience=Women/);
+    await expect(page.getByRole('status')).toContainText('2 products');
+  });
 });
 
 test.describe('product detail', () => {
@@ -169,13 +273,96 @@ test.describe('product detail', () => {
     await expect(page.getByRole('link', { name: 'Back to products' })).toBeVisible();
   });
 
-  test('add to basket is offered on an in-stock product', async ({ page }) => {
+  test('add to basket is offered on an in-stock product, once a size is chosen', async ({ page }) => {
     await page.goto('/products?search=Pullover');
     await page.getByRole('link', { name: /Pullover Hoodie/ }).click();
 
-    // Enabled now that the basket exists. Out-of-stock products keep the disabled-with-a-reason
-    // treatment: a missing button looks broken, a disabled one with a title explains itself.
-    // What the button DOES is covered by shopping.spec.ts.
-    await expect(page.getByRole('button', { name: 'Add to basket' })).toBeEnabled();
+    // Disabled UNTIL a size is picked. A size is never pre-selected, because defaulting it means
+    // somebody buys a Small because it happened to be first in the list.
+    const addToBasket = page.getByRole('button', { name: 'Add to basket' });
+    await expect(addToBasket).toBeDisabled();
+
+    // The label, not the input: the radio is visually hidden and pointer-events:none, so it is the
+    // label a person clicks.
+    await page.getByRole('group', { name: 'Size' }).getByText('M', { exact: true }).click();
+
+    // Enabled now. Out-of-stock keeps the disabled-with-a-reason treatment: a missing button looks
+    // broken, a disabled one with a title explains itself. What the button DOES is in shopping.spec.
+    await expect(addToBasket).toBeEnabled();
   });
+
+  test('a colour is pre-selected but a size is not', async ({ page }) => {
+    await page.goto('/products?search=Pullover');
+    await page.getByRole('link', { name: /Pullover Hoodie/ }).click();
+    await expect(page.getByRole('heading', { name: 'Pullover Hoodie', level: 1 })).toBeVisible();
+
+    // The asymmetry is the decision, not an oversight. The photograph already shows a colour, so
+    // defaulting to one is honest; a size is a choice only the customer can make.
+    await expect(page.getByRole('group', { name: 'Colour' }).getByRole('radio').first()).toBeChecked();
+
+    const sizes = page.getByRole('group', { name: 'Size' }).getByRole('radio');
+    const count = await sizes.count();
+    expect(count).toBeGreaterThan(0);
+
+    for (let index = 0; index < count; index++) {
+      await expect(sizes.nth(index)).not.toBeChecked();
+    }
+  });
+
+  test('stock is reported for the chosen size, not for the product', async ({ page }) => {
+    // Graphic Print T-shirt: 2 left in Black S, none in Black XL, and the product itself in stock.
+    // The whole reason per-variant stock exists.
+    await page.goto('/products?search=Graphic');
+    await page.getByRole('link', { name: /Graphic Print T-shirt/ }).click();
+
+    const sizeGroup = page.getByRole('group', { name: 'Size' });
+
+    // Black is the first colour and is pre-selected, so these are Black's figures.
+    await sizeGroup.getByText('S', { exact: true }).click();
+    await expect(page.getByText('Only 2 left')).toBeVisible();
+
+    await sizeGroup.getByText('M', { exact: true }).click();
+
+    // Scoped to the live region. "In stock" also appears as the product-level badge beside the
+    // price, and it is the per-variant figure this test is about.
+    await expect(page.getByRole('status').filter({ hasText: 'In stock' })).toBeVisible();
+  });
+
+  test('a combination that does not exist is reported, not silently allowed', async ({ page }) => {
+    await page.goto('/products?search=Graphic');
+    await page.getByRole('link', { name: /Graphic Print T-shirt/ }).click();
+
+    // XL itself is NOT disabled - Ecru has one left, so the size is genuinely available. It is the
+    // COMBINATION Black + XL that has none, which is exactly the distinction per-variant stock
+    // exists to express, and exactly the thing a size-level "sold out" flag would get wrong.
+    const sizeGroup = page.getByRole('group', { name: 'Size' });
+    await expect(sizeGroup.getByRole('radio', { name: 'XL' })).toBeEnabled();
+
+    await page.getByRole('group', { name: 'Colour' }).getByText('Black', { exact: true }).click();
+    await sizeGroup.getByText('XL', { exact: true }).click();
+
+    await expect(page.getByText('Sold out in this option')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add to basket' })).toBeDisabled();
+  });
+
+  test('a product sold out in every size says so and cannot be bought', async ({ page }) => {
+    await page.goto('/products?search=Heavyweight');
+    await page.getByRole('link', { name: /Heavyweight Hoodie/ }).click();
+
+    // Wait for the page before counting. `count()` does not auto-wait - it returns whatever matches
+    // at that instant - so without this it counts the radios on a page that has not rendered yet.
+    await expect(page.getByRole('heading', { name: 'Heavyweight Hoodie', level: 1 })).toBeVisible();
+
+    // Every size disabled, and the page still renders rather than 404ing or showing an empty picker.
+    const sizes = page.getByRole('group', { name: 'Size' }).getByRole('radio');
+    const count = await sizes.count();
+    expect(count).toBeGreaterThan(0);
+
+    for (let index = 0; index < count; index++) {
+      await expect(sizes.nth(index)).toBeDisabled();
+    }
+
+    await expect(page.getByRole('button', { name: 'Add to basket' })).toBeDisabled();
+  });
+
 });

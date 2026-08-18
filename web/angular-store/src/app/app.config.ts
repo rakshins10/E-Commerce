@@ -12,7 +12,7 @@ import { environment } from '../environments/environment';
  * Composition root for the Angular storefront.
  *
  * The OIDC configuration lives in core/auth-config.ts. The same function exists
- * the React storefront calls — so both apps request identical scopes and
+ * the React storefront calls - so both apps request identical scopes and
  * redirect URIs and cannot drift apart.
  */
 const shared = createOidcConfig({

@@ -4,14 +4,14 @@
 > [Runbook](operations/runbook.md)
 
 Written for a developer on a clean machine with nothing installed. If any step here does not work as written,
-that is a bug — the last phase of this project re-runs this page on a fresh machine specifically to check.
+that is a bug - the last phase of this project re-runs this page on a fresh machine specifically to check.
 
 ---
 
 ## 1. What you actually need
 
-**To run the whole system, you need Docker and nothing else.** Everything — services, databases, Keycloak,
-the broker, the observability stack — builds and runs in containers. The .NET SDK and Node are needed only if
+**To run the whole system, you need Docker and nothing else.** Everything - services, databases, Keycloak,
+the broker, the observability stack - builds and runs in containers. The .NET SDK and Node are needed only if
 you want to run a component *outside* its container while developing it.
 
 | Tool | Version | Needed for | Check |
@@ -24,16 +24,16 @@ you want to run a component *outside* its container while developing it.
 
 ### Docker Desktop resources
 
-**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs ~27 containers. Below
+**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs 31 containers. Below
 8 GB, containers are killed by the OOM reaper mid-startup, which surfaces as services flapping between
-starting and unhealthy rather than as an obvious out-of-memory message — a genuinely confusing failure.
+starting and unhealthy rather than as an obvious out-of-memory message - a genuinely confusing failure.
 
 Disk: allow ~15 GB for images and volumes.
 
 ### Installing the .NET SDK (only if building outside Docker)
 
 ```powershell
-# Windows, machine-wide — needs an elevated terminal
+# Windows, machine-wide - needs an elevated terminal
 winget install Microsoft.DotNet.SDK.10
 ```
 
@@ -46,7 +46,7 @@ Invoke-WebRequest https://dot.net/v1/dotnet-install.ps1 -OutFile dotnet-install.
 
 A per-user install is **not on `PATH` by default**. Either add it, or invoke it by full path. Note that if
 you put a per-user .NET 10 root ahead of a machine-wide .NET 9 on `PATH`, the .NET 9 *runtime* is no longer
-visible to it — so other projects targeting `net9.0` may fail to run. The machine-wide install avoids this.
+visible to it - so other projects targeting `net9.0` may fail to run. The machine-wide install avoids this.
 
 ```bash
 # Linux / macOS
@@ -71,11 +71,11 @@ docker compose up -d --build
 
 | Stage | Time | What is happening |
 |-------|------|-------------------|
-| Image pull | 3–10 min | Postgres, Keycloak, RabbitMQ, Mongo, Redis, Seq, Jaeger, .NET base images |
-| .NET builds | 5–15 min | Twelve services compiled. **First build only** — later builds reuse cached layers |
-| Startup | 60–90 s | Databases initialise, Keycloak imports the realm, services connect |
+| Image pull | 3-10 min | Postgres, Keycloak, RabbitMQ, Redis, Seq, Jaeger, .NET base images |
+| .NET builds | 5-15 min | Twelve services compiled. **First build only** - later builds reuse cached layers |
+| Startup | 60-90 s | Databases initialise, Keycloak imports the realm, services connect |
 
-**Total on a first run: 10–25 minutes.** Subsequent `docker compose up -d` takes about 60 seconds.
+**Total on a first run: 10-25 minutes.** Subsequent `docker compose up -d` takes about 60 seconds.
 
 Wait for health rather than guessing:
 
@@ -84,7 +84,7 @@ docker compose up -d --wait --wait-timeout 600
 ```
 
 `--wait` blocks until every service with a health check reports healthy, and **fails if one starts and then
-crashes** — which a plain `up -d` reports as success.
+crashes** - which a plain `up -d` reports as success.
 
 ---
 
@@ -115,16 +115,16 @@ curl http://localhost:5001/health/ready
 | Admin BFF | http://localhost:6002 | |
 | Mobile BFF | http://localhost:6003 | |
 | **Keycloak admin console** | http://localhost:8080 | `admin` / `dev_only_kc_admin_pw` |
-| **RabbitMQ management** | http://localhost:15672 | `ecom` / `dev_only_rabbit_pw` — watch queue depth and dead letters |
+| **RabbitMQ management** | http://localhost:15672 | `ecom` / `dev_only_rabbit_pw` - watch queue depth and dead letters |
 | **Seq (logs)** | http://localhost:8081 | Filter by `CorrelationId` to follow one request |
 | **Jaeger (traces)** | http://localhost:16686 | Follow one order across every service |
 
-Service HTTP ports are `5001`–`5009`; gRPC is the HTTP port **+100** (`5101`–`5107`). Per-service Postgres
-instances are on `15432`–`15440`. The full allocation is in
+Service HTTP ports are `5001`-`5009`; gRPC is the HTTP port **+100** (`5101`-`5107`). Per-service Postgres
+instances are on `15432`-`15440`. The full allocation is in
 [`deploy/.env.example`](../deploy/.env.example) and [architecture.md §9](architecture.md#9-port-allocation).
 
 > **New to Seq, Jaeger, RabbitMQ or Keycloak?** Read
-> [**operations/tooling-guide.md**](operations/tooling-guide.md) — a hands-on introduction to all four
+> [**operations/tooling-guide.md**](operations/tooling-guide.md) - a hands-on introduction to all four
 > assuming no prior knowledge, with exercises you can run against the stack you just started.
 
 ---
@@ -140,6 +140,19 @@ docker compose down -v                    # stop and DELETE ALL DATA (full reset
 docker compose ps                         # what is running and healthy
 ```
 
+> **`up -d` does not rebuild a web image.** The four front ends are `build:` targets, so a change to
+> React or Angular is invisible until you rebuild them explicitly - and you end up debugging an app that
+> is several commits old:
+>
+> ```bash
+> docker compose build react-store angular-store react-admin angular-admin
+> docker compose up -d --wait
+> ```
+
+> **A schema change needs `down -v`.** Migrations run on startup, but the demo data is seeded only into
+> an empty database - so a new column arrives without the rows that make it interesting. If the catalogue
+> looks wrong after pulling, `docker compose down -v` and start again.
+
 ### Running a service outside Docker
 
 Useful for debugging with a breakpoint. Leave the infrastructure in containers and run just the one service:
@@ -151,7 +164,7 @@ dotnet run
 ```
 
 Because the service now runs on the host, its dependencies are on `localhost` at their *host* ports, not at
-their compose service names. Override them with user-secrets rather than editing `appsettings.json` — that
+their compose service names. Override them with user-secrets rather than editing `appsettings.json` - that
 file is tracked, and a machine-specific connection string in it will be committed by someone eventually:
 
 ```bash
@@ -177,7 +190,7 @@ dotnet ef migrations add <Name> \
 ```
 
 Each service owns its own migration history in its own database. There is no solution-wide migration step, and
-that is the point — see [data sovereignty](architecture.md#7-data-sovereignty-why-services-never-share-a-database).
+that is the point - see [data sovereignty](architecture.md#7-data-sovereignty-why-services-never-share-a-database).
 
 ---
 
@@ -189,7 +202,7 @@ These are the failures that actually happen, not hypothetical ones.
 
 **The single most common problem in this stack.** Inside the compose network Keycloak is
 `http://keycloak:8080`; to your browser it is `http://localhost:8080`. A token minted for a browser carries
-`iss: http://localhost:8080/...`, so a service validating against the internal hostname rejects every token —
+`iss: http://localhost:8080/...`, so a service validating against the internal hostname rejects every token -
 even though both are the same server.
 
 The fix is already in the compose file: `KC_HOSTNAME` pins one public URL, and services validate against
@@ -198,7 +211,7 @@ The fix is already in the compose file: `KC_HOSTNAME` pins one public URL, and s
 
 ### Keycloak is not ready and dependent services fail on startup
 
-Keycloak takes 30–60 seconds to import the realm. Services depend on it with
+Keycloak takes 30-60 seconds to import the realm. Services depend on it with
 `condition: service_healthy` rather than a fixed sleep, so this should self-resolve. If it does not:
 
 ```bash
@@ -211,7 +224,7 @@ A realm import failure is usually malformed `realm-export.json`, and the log nam
 
 ```bash
 docker compose down                       # a previous stack still running?
-netstat -ano | findstr :5001              # Windows — find the process
+netstat -ano | findstr :5001              # Windows - find the process
 lsof -i :5001                             # macOS / Linux
 ```
 
@@ -224,7 +237,7 @@ CATALOG_HTTP_PORT=15001
 ### CORS errors in the browser
 
 The SPAs call their BFF, which is a different origin. CORS is configured on the BFF, and the allowed origins
-come from configuration. If you changed a frontend port in `.env`, the BFF's allowed-origin list must match —
+come from configuration. If you changed a frontend port in `.env`, the BFF's allowed-origin list must match -
 mismatched ports are the usual cause, not a missing header.
 
 ### A service is `unhealthy` and the logs mention a connection refused
@@ -238,13 +251,13 @@ docker compose down -v && docker compose up -d --wait   # deletes all data
 
 ### Containers are killed during startup, or repeatedly restart
 
-Docker Desktop memory. See §1 — raise it to 8 GB. The symptom is services flapping rather than an explicit
+Docker Desktop memory. See §1 - raise it to 8 GB. The symptom is services flapping rather than an explicit
 out-of-memory error, which makes this much harder to spot than it should be.
 
 ### `dotnet build` fails with an SDK version error
 
 `global.json` pins the SDK feature band. Either install .NET 10 (§1), or check that the `dotnet` on your
-`PATH` is the one you think it is — a per-user install does not shadow a machine-wide one unless you put it
+`PATH` is the one you think it is - a per-user install does not shadow a machine-wide one unless you put it
 on `PATH` first.
 
 ### Docker build fails pulling a base image (TLS handshake timeout)
@@ -259,5 +272,5 @@ it already has.
 ```bash
 cd deploy
 docker compose down -v          # containers and volumes
-docker system prune -af         # images and build cache — frees a lot, costs a slow next build
+docker system prune -af         # images and build cache - frees a lot, costs a slow next build
 ```

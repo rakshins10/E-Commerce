@@ -13,13 +13,13 @@ import { environment } from '../../environments/environment';
  *
  * React's `ApiClient` takes a token *getter* and each caller constructs a client
  * with it. Angular uses an interceptor, which applies to every `HttpClient`
- * request automatically — more ceremony to set up, but impossible to forget on
+ * request automatically - more ceremony to set up, but impossible to forget on
  * a new call site. A genuine point for Angular's DI model.
  *
  * ---
  * **Only our own BFF gets the token.** Attaching a bearer token to every
- * outbound request would leak it to any third-party URL the app ever calls —
- * an analytics endpoint, an image CDN — which is a real and easily-made
+ * outbound request would leak it to any third-party URL the app ever calls -
+ * an analytics endpoint, an image CDN - which is a real and easily-made
  * credential leak.
  *
  * Unlike the storefront, EVERY call here needs a token - there is no anonymous back-office page.

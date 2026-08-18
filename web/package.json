@@ -16,7 +16,8 @@
     "test": "npm run test --workspaces --if-present",
     "check:tokens": "node ../scripts/check-design-tokens.mjs",
     "dev:react": "npm run dev --workspace @ecommerce/react-store",
-    "dev:angular": "npm run start --workspace @ecommerce/angular-store"
+    "dev:angular": "npm run start --workspace @ecommerce/angular-store",
+    "sync:assets": "node scripts/sync-assets.mjs"
   },
   "engines": {
     "node": ">=22"

@@ -4,12 +4,12 @@
  *
  * This is not fussiness. If React uses `Intl.NumberFormat` and Angular uses its
  * `CurrencyPipe`, the two produce subtly different output ("£1,234.50" vs
- * "£1,234.50" — until a locale where they diverge on the space before the
+ * "£1,234.50" - until a locale where they diverge on the space before the
  * symbol). The shared Playwright suite asserts on visible text, so any such
  * difference fails the parity run. One implementation makes that impossible.
  */
 
-/** Money as the API sends it. Never a bare number — see below. */
+/** Money as the API sends it. Never a bare number - see below. */
 export interface Money {
   readonly amount: number;
   readonly currency: string;
@@ -33,13 +33,13 @@ export function formatNumber(value: number, locale = 'en-GB'): string {
   return new Intl.NumberFormat(locale).format(value);
 }
 
-/** A date, without a time — for order dates and similar. */
+/** A date, without a time - for order dates and similar. */
 export function formatDate(value: string | Date, locale = 'en-GB'): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date);
 }
 
-/** Date and time — for audit entries and status timelines. */
+/** Date and time - for audit entries and status timelines. */
 export function formatDateTime(value: string | Date, locale = 'en-GB'): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   return new Intl.DateTimeFormat(locale, {

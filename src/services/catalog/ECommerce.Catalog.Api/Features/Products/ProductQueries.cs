@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using System.Text;
 using Dapper;
 using ECommerce.Common.Pagination;
@@ -17,22 +18,54 @@ public sealed record ProductSummaryDto(
     string BrandName,
     string BrandSlug,
     string? ImageUrl,
-    int StockOnHand);
+    int StockOnHand,
+    string Audience);
 
-/// <summary>The full product, for a detail page.</summary>
-public sealed record ProductDetailDto(
-    Guid Id,
-    string Sku,
-    string Name,
-    string Description,
-    decimal Price,
-    string Currency,
-    string CategoryName,
-    string CategorySlug,
-    string BrandName,
-    string BrandSlug,
-    string? ImageUrl,
-    int StockOnHand);
+/// <summary>
+/// The full product, for a detail page.
+/// </summary>
+/// <remarks>
+/// Init-only properties, not a positional record - and <see cref="Variants"/> is why.
+///
+/// Dapper materialises by finding a constructor whose parameters match the columns returned. A positional
+/// record's constructor includes <c>Variants</c>, which the first result set does not select (the variants
+/// arrive in a second one), so it fails with "a parameterless default constructor or one matching signature
+/// … is required". Init-only properties have a parameterless constructor and are set by name, so a column
+/// that is not returned simply stays at its default.
+///
+/// This is the same trap as the case-sensitivity one in the gotcha table - both are Dapper's constructor
+/// matching, and both are solved by not having a constructor to match.
+/// </remarks>
+public sealed record ProductDetailDto
+{
+    public Guid Id { get; init; }
+
+    public string Sku { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    public string Description { get; init; } = string.Empty;
+
+    public decimal Price { get; init; }
+
+    public string Currency { get; init; } = "GBP";
+
+    public string CategoryName { get; init; } = string.Empty;
+
+    public string CategorySlug { get; init; } = string.Empty;
+
+    public string BrandName { get; init; } = string.Empty;
+
+    public string BrandSlug { get; init; } = string.Empty;
+
+    public string? ImageUrl { get; init; }
+
+    public int StockOnHand { get; init; }
+
+    public string Audience { get; init; } = "Unisex";
+
+    public IReadOnlyList<ProductVariantDto> Variants { get; init; } = [];
+}
 
 /// <summary>
 /// What a product costs right now, for checkout.
@@ -50,7 +83,39 @@ public sealed record ProductPriceDto(
     string Currency,
     bool IsAvailable);
 
-public sealed record CategoryDto(Guid Id, string Name, string Slug, string? ParentSlug, int ProductCount);
+/// <summary>
+/// A category, with the sizes products in it are sold in.
+/// </summary>
+/// <remarks>
+/// <c>SizeScaleName</c> and <c>Sizes</c> are the category's own scale OR its parent's - the resolution
+/// happens in SQL so every caller sees the same answer. Both are null/empty for a category that is not
+/// sized, which is what tells the back office not to offer a size when creating a product there
+/// ([ADR-0021](../../../../docs/adr/0021-category-defined-options-and-contextual-facets.md)).
+/// </remarks>
+public sealed record CategoryDto
+{
+    public Guid Id { get; init; }
+
+    public string Name { get; init; } = string.Empty;
+
+    public string Slug { get; init; } = string.Empty;
+
+    public string? ParentSlug { get; init; }
+
+    public int ProductCount { get; init; }
+
+    /// <summary>"UK clothing", or null when the category is not sized.</summary>
+    public string? SizeScaleName { get; init; }
+
+    /// <summary>
+    /// The sizes, already in the scale's declared order.
+    /// </summary>
+    /// <remarks>
+    /// Comes back from PostgreSQL as a text array, which Dapper maps to <c>string[]</c> directly. Ordered
+    /// in SQL by `position`, so no caller has to know that S comes before M.
+    /// </remarks>
+    public string[] Sizes { get; init; } = [];
+}
 
 public sealed record BrandDto(Guid Id, string Name, string Slug, int ProductCount);
 
@@ -65,14 +130,76 @@ public sealed record ProductQuery(
     string? SortBy = null,
     bool SortDescending = false,
     int Page = 1,
-    int PageSize = 12);
+    int PageSize = 12,
+    string? Audience = null,
+    string? Size = null,
+    string? Colour = null);
+
+/// <summary>
+/// One sellable size-and-colour of a product.
+/// </summary>
+/// <remarks>
+/// Init-only properties, not a positional record. Dapper matches constructor parameters
+/// <b>case-sensitively</b> and PostgreSQL lower-cases unquoted aliases, so a positional record fails with
+/// "no matching signature" - see the gotcha table in CLAUDE.md.
+/// </remarks>
+public sealed record ProductVariantDto
+{
+    public Guid Id { get; init; }
+
+    public Guid ProductId { get; init; }
+
+    public string Sku { get; init; } = string.Empty;
+
+    public string? Size { get; init; }
+
+    public string? ColourName { get; init; }
+
+    public string? ColourHex { get; init; }
+
+    public int StockOnHand { get; init; }
+}
+
+/// <summary>One value a shopper can filter by, and how many products carry it.</summary>
+public sealed record FacetValueDto
+{
+    public string Value { get; init; } = string.Empty;
+
+    /// <summary>The swatch, for colours. Null for everything else.</summary>
+    public string? Hex { get; init; }
+
+    public int ProductCount { get; init; }
+}
+
+/// <summary>
+/// One filterable axis, so a facet count can leave its own filter out.
+/// </summary>
+internal enum FacetAxis
+{
+    None = 0,
+    Audience = 1,
+    Size = 2,
+    Colour = 3,
+}
+
+/// <summary>
+/// The axes a shopper can filter the catalogue by, with counts.
+/// </summary>
+/// <remarks>
+/// Fetched once and cached by the client alongside categories and brands, because the taxonomy of a
+/// catalogue changes far more slowly than its stock does.
+/// </remarks>
+public sealed record FacetsDto(
+    IReadOnlyList<FacetValueDto> Audiences,
+    IReadOnlyList<FacetValueDto> Sizes,
+    IReadOnlyList<FacetValueDto> Colours);
 
 /// <summary>
 /// The CQRS <b>read side</b> for Catalog.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Pattern:</b> CQRS — separate read and write paths.
+/// <b>Pattern:</b> CQRS - separate read and write paths.
 /// See <c>docs/adr/0012-cqrs-with-mediatr.md</c>.
 /// </para>
 /// <para>
@@ -83,7 +210,7 @@ public sealed record ProductQuery(
 /// </para>
 /// <para>
 /// It is also a <b>hard boundary</b>. <c>AsNoTracking()</c> would remove the tracking cost but keep you in
-/// the entity's shape, which quietly invites navigation properties added <i>for reads</i> — and those
+/// the entity's shape, which quietly invites navigation properties added <i>for reads</i> - and those
 /// corrupt the write model. Returning DTOs from hand-written SQL makes it impossible for a query to touch a
 /// domain type.
 /// </para>
@@ -107,18 +234,31 @@ public sealed class ProductQueries(IDbConnection connection)
                 b.name          AS BrandName,
                 b.slug          AS BrandSlug,
                 p.image_url    AS ImageUrl,
-                p.stock_on_hand AS StockOnHand
+                p.stock_on_hand AS StockOnHand,
+                p.audience      AS Audience
         FROM products p
         JOIN categories c ON c.id = p.category_id
         JOIN brands     b ON b.id = p.brand_id
         """;
 
-    public async Task<PagedResult<ProductSummaryDto>> SearchAsync(
+    /// <summary>
+    /// Builds the WHERE clause every product query shares.
+    /// </summary>
+    /// <param name="query">The filters in force.</param>
+    /// <param name="excluding">
+    /// A facet axis to leave OUT of the predicate. Used when counting that axis's own values, so that
+    /// choosing Medium still lists Small, Large and XL - a facet computed with its own filter applied
+    /// collapses to the one value already chosen, and a shopper can never change their mind.
+    /// </param>
+    /// <remarks>
+    /// Extracted so the product search and the facet counts cannot drift apart. When they disagree the
+    /// symptom is a filter option that promises results and delivers none, which is exactly the bug
+    /// [ADR-0021](../../../../docs/adr/0021-category-defined-options-and-contextual-facets.md) exists to fix.
+    /// </remarks>
+    private static (string Where, DynamicParameters Parameters) BuildFilter(
         ProductQuery query,
-        CancellationToken cancellationToken = default)
+        FacetAxis excluding = FacetAxis.None)
     {
-        PageRequest page = new PageRequest(query.Page, query.PageSize).Normalise();
-
         var where = new StringBuilder(" WHERE p.is_active = TRUE");
         var parameters = new DynamicParameters();
 
@@ -161,6 +301,63 @@ public sealed class ProductQueries(IDbConnection connection)
         {
             where.Append(" AND p.stock_on_hand > 0");
         }
+
+        if (!string.IsNullOrWhiteSpace(query.Audience) && excluding != FacetAxis.Audience)
+        {
+            where.Append(" AND p.audience = @Audience");
+            parameters.Add("Audience", query.Audience.Trim());
+        }
+
+        // --- The variant filters ----------------------------------------------------------------
+        //
+        // EXISTS, not a JOIN. A product has eight variants; joining to filter on size would return the
+        // product once per matching variant, and every one of `SELECT`, `COUNT(*)` and `LIMIT` would then be
+        // counting variants while claiming to count products. `SELECT DISTINCT` would paper over it and break
+        // the count separately. A semi-join asks the question actually being asked: does this product have
+        // one?
+        //
+        // Both are combined against the SAME variant when both are given, which is the difference between
+        // "sold in Medium and also sold in Navy" and "sold in Medium AND Navy". A shopper filtering for both
+        // means the latter.
+        // Captured rather than re-read, so the null checks below give the compiler the flow analysis it
+        // needs and the excluded axis is dropped in exactly one place.
+        string? size = excluding == FacetAxis.Size ? null : query.Size?.Trim();
+        string? colour = excluding == FacetAxis.Colour ? null : query.Colour?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(size) || !string.IsNullOrWhiteSpace(colour))
+        {
+            var variantWhere = new StringBuilder("v.product_id = p.id AND v.is_active = TRUE");
+
+            if (query.InStockOnly)
+            {
+                variantWhere.Append(" AND v.stock_on_hand > 0");
+            }
+
+            if (!string.IsNullOrWhiteSpace(size))
+            {
+                variantWhere.Append(" AND UPPER(v.size) = @Size");
+                parameters.Add("Size", size.ToUpperInvariant());
+            }
+
+            if (!string.IsNullOrWhiteSpace(colour))
+            {
+                variantWhere.Append(" AND LOWER(v.colour_name) = @Colour");
+                parameters.Add("Colour", colour.ToLowerInvariant());
+            }
+
+            where.Append(CultureInfo.InvariantCulture, $" AND EXISTS (SELECT 1 FROM product_variants v WHERE {variantWhere})");
+        }
+
+        return (where.ToString(), parameters);
+    }
+
+    public async Task<PagedResult<ProductSummaryDto>> SearchAsync(
+        ProductQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        PageRequest page = new PageRequest(query.Page, query.PageSize).Normalise();
+
+        (string where, DynamicParameters parameters) = BuildFilter(query);
 
         string orderBy = BuildOrderBy(query.SortBy, query.SortDescending);
 
@@ -251,7 +448,8 @@ public sealed class ProductQueries(IDbConnection connection)
                     b.name          AS BrandName,
                     b.slug          AS BrandSlug,
                     p.image_url     AS ImageUrl,
-                    p.stock_on_hand AS StockOnHand
+                    p.stock_on_hand AS StockOnHand,
+                    p.audience      AS Audience
             FROM products p
             JOIN categories c ON c.id = p.category_id
             JOIN brands     b ON b.id = p.brand_id
@@ -277,31 +475,219 @@ public sealed class ProductQueries(IDbConnection connection)
                     b.name          AS BrandName,
                     b.slug          AS BrandSlug,
                     p.image_url    AS ImageUrl,
-                    p.stock_on_hand AS StockOnHand
+                    p.stock_on_hand AS StockOnHand,
+                    p.audience      AS Audience
             FROM products p
             JOIN categories c ON c.id = p.category_id
             JOIN brands     b ON b.id = p.brand_id
             WHERE p.id = @Id AND p.is_active = TRUE;
+
+            SELECT  v.id            AS Id,
+                    v.product_id    AS ProductId,
+                    v.sku           AS Sku,
+                    v.size          AS Size,
+                    v.colour_name   AS ColourName,
+                    v.colour_hex    AS ColourHex,
+                    v.stock_on_hand AS StockOnHand
+            FROM product_variants v
+            JOIN products   p ON p.id = v.product_id
+            JOIN categories c ON c.id = p.category_id
+            LEFT JOIN categories parent ON parent.id = c.parent_id
+            LEFT JOIN size_scale_values ssv
+                   ON ssv.value = v.size
+                  AND ssv.size_scale_id = COALESCE(c.size_scale_id, parent.size_scale_id)
+            WHERE v.product_id = @Id AND v.is_active = TRUE
+            -- Sizes in the order a human expects, never alphabetical: alphabetical puts L before M
+            -- before S before XL, which reads as a mistake on every product page in the shop.
+            -- The scale's declared order. NULLS LAST so an unsized variant, or one whose size is not in
+            -- its category's scale, sorts after rather than disappearing.
+            ORDER BY ssv.position NULLS LAST, v.size, v.colour_name;
             """;
 
-        return await connection.QuerySingleOrDefaultAsync<ProductDetailDto>(
+        // Two result sets in ONE round trip. A product page always needs both, and issuing them separately
+        // doubles the latency for nothing - the same reasoning as the page-and-count pair in SearchAsync.
+        await using var multi = await connection.QueryMultipleAsync(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: cancellationToken));
+
+        var product = await multi.ReadSingleOrDefaultAsync<ProductDetailDto>();
+
+        if (product is null)
+        {
+            return null;
+        }
+
+        var variants = (await multi.ReadAsync<ProductVariantDto>()).ToList();
+
+        return product with { Variants = variants };
     }
+
+    /// <summary>
+    /// The filterable axes <b>within the current result set</b>, with product counts.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Contextual, not global</b>
+    /// ([ADR-0021](../../../../docs/adr/0021-category-defined-options-and-contextual-facets.md)).
+    /// This used to answer "every size anywhere in the catalogue", which meant choosing Stationery still
+    /// offered "M (6)" - and choosing it returned nothing. A filter panel is not an inventory of what
+    /// exists; it is a list of what would do something.
+    /// </para>
+    /// <para>
+    /// <b>Each axis is counted with its own filter left out.</b> Otherwise choosing Medium collapses the
+    /// size list to Medium alone and a shopper can never change their mind. Every other filter still
+    /// applies, so the numbers describe what clicking would actually give you.
+    /// </para>
+    /// <para>
+    /// <b>Counts are of PRODUCTS, not variants.</b> "Navy (7)" has to mean seven things you can click
+    /// through to - a count of eleven variants across seven products would be a number that matches
+    /// nothing on the next screen. Hence <c>COUNT(DISTINCT ...)</c>.
+    /// </para>
+    /// <para>
+    /// Three result sets in one round trip, but three <i>different</i> predicates, so the parameters
+    /// cannot be shared and each is prefixed. The sizes query orders by the scale's declared position
+    /// rather than by a SQL literal, which is what lets a category be sold in shoe sizes without a
+    /// deployment.
+    /// </para>
+    /// </remarks>
+    public async Task<FacetsDto> GetFacetsAsync(
+        ProductQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        (string audienceWhere, DynamicParameters audienceParameters) = BuildFilter(query, FacetAxis.Audience);
+        (string sizeWhere, DynamicParameters sizeParameters) = BuildFilter(query, FacetAxis.Size);
+        (string colourWhere, DynamicParameters colourParameters) = BuildFilter(query, FacetAxis.Colour);
+
+        // One command, three predicates. Dapper merges the parameter sets; the names are distinct because
+        // BuildFilter is called three times with different exclusions and could otherwise bind @Size twice
+        // with different values.
+        var parameters = new DynamicParameters();
+        parameters.AddDynamicParams(Prefixed(audienceParameters, "a"));
+        parameters.AddDynamicParams(Prefixed(sizeParameters, "s"));
+        parameters.AddDynamicParams(Prefixed(colourParameters, "c"));
+
+        string sql = $"""
+            SELECT  p.audience      AS Value,
+                    NULL            AS Hex,
+                    COUNT(*)::int   AS ProductCount
+            FROM products p
+            JOIN categories c ON c.id = p.category_id
+            JOIN brands     b ON b.id = p.brand_id
+            {Rename(audienceWhere, "a")}
+            GROUP BY p.audience
+            ORDER BY p.audience;
+
+            SELECT  v.size                            AS Value,
+                    NULL                              AS Hex,
+                    COUNT(DISTINCT v.product_id)::int AS ProductCount
+            FROM product_variants v
+            JOIN products   p ON p.id = v.product_id
+            JOIN categories c ON c.id = p.category_id
+            JOIN brands     b ON b.id = p.brand_id
+            -- The scale's declared order, joined rather than hard-coded. LEFT so a size that is not in
+            -- its category's scale still appears rather than vanishing from the filter panel.
+            LEFT JOIN categories parent ON parent.id = c.parent_id
+            LEFT JOIN size_scale_values ssv
+                   ON ssv.value = v.size
+                  AND ssv.size_scale_id = COALESCE(c.size_scale_id, parent.size_scale_id)
+            {Rename(sizeWhere, "s")}
+              AND v.is_active = TRUE
+              AND v.size IS NOT NULL
+            GROUP BY v.size, ssv.position
+            ORDER BY ssv.position NULLS LAST, v.size;
+
+            SELECT  v.colour_name                     AS Value,
+                    MIN(v.colour_hex)                 AS Hex,
+                    COUNT(DISTINCT v.product_id)::int AS ProductCount
+            FROM product_variants v
+            JOIN products   p ON p.id = v.product_id
+            JOIN categories c ON c.id = p.category_id
+            JOIN brands     b ON b.id = p.brand_id
+            {Rename(colourWhere, "c")}
+              AND v.is_active = TRUE
+              AND v.colour_name IS NOT NULL
+            GROUP BY v.colour_name
+            ORDER BY v.colour_name;
+            """;
+
+        await using var multi = await connection.QueryMultipleAsync(
+            new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
+
+        var audiences = (await multi.ReadAsync<FacetValueDto>()).ToList();
+        var sizes = (await multi.ReadAsync<FacetValueDto>()).ToList();
+        var colours = (await multi.ReadAsync<FacetValueDto>()).ToList();
+
+        return new FacetsDto(audiences, sizes, colours);
+    }
+
+    /// <summary>Prefixes every parameter name, so three predicates can share one command.</summary>
+    private static DynamicParameters Prefixed(DynamicParameters source, string prefix)
+    {
+        var prefixed = new DynamicParameters();
+
+        foreach (string name in source.ParameterNames)
+        {
+            prefixed.Add(prefix + name, source.Get<object>(name));
+        }
+
+        return prefixed;
+    }
+
+    /// <summary>Rewrites the placeholders in a predicate to match <see cref="Prefixed"/>.</summary>
+    private static string Rename(string where, string prefix) =>
+        where
+            .Replace("@Search", "@" + prefix + "Search", StringComparison.Ordinal)
+            .Replace("@Category", "@" + prefix + "Category", StringComparison.Ordinal)
+            .Replace("@Brand", "@" + prefix + "Brand", StringComparison.Ordinal)
+            .Replace("@MinPrice", "@" + prefix + "MinPrice", StringComparison.Ordinal)
+            .Replace("@MaxPrice", "@" + prefix + "MaxPrice", StringComparison.Ordinal)
+            .Replace("@Audience", "@" + prefix + "Audience", StringComparison.Ordinal)
+            .Replace("@Size", "@" + prefix + "Size", StringComparison.Ordinal)
+            .Replace("@Colour", "@" + prefix + "Colour", StringComparison.Ordinal);
 
     public async Task<IReadOnlyList<CategoryDto>> GetCategoriesAsync(CancellationToken cancellationToken = default)
     {
-        // LEFT JOIN so a category with no products still appears, with a count of zero. An INNER JOIN would
-        // make empty categories vanish from the filter list, which looks like a bug to a user.
+        // The count INCLUDES child categories, because filtering does.
+        //
+        // This used to count direct members only, which meant every top-level category advertised
+        // "0 products" while selecting it returned six - Clothing has no products of its own, it has
+        // T-shirts and Hoodies. A count that disagrees with what clicking it returns is worse than no
+        // count at all, and it looked like an empty shop on the storefront's category tiles.
+        //
+        // The subquery mirrors the filter's predicate in BuildWhere EXACTLY - `own OR direct child`.
+        // If one gains a level of nesting the other must, and they should be changed together.
+        //
+        // A category with genuinely no products still appears, with a count of zero. Hiding it would
+        // make the taxonomy look different from the one the back office edits.
         const string sql = """
             SELECT  c.id                       AS Id,
                     c.name                     AS Name,
                     c.slug                     AS Slug,
                     parent.slug                AS ParentSlug,
-                    COUNT(p.id)::int           AS ProductCount
+                    (
+                        SELECT COUNT(*)::int
+                        FROM products p
+                        JOIN categories pc ON pc.id = p.category_id
+                        WHERE p.is_active = TRUE
+                          AND (pc.id = c.id OR pc.parent_id = c.id)
+                    )                          AS ProductCount,
+                    ss.name                    AS SizeScaleName,
+                    -- The scale's values in their declared order, as an array. COALESCE to an empty array
+                    -- rather than NULL so a caller never has to distinguish "not sized" from "no rows".
+                    COALESCE(
+                        (
+                            SELECT array_agg(ssv.value ORDER BY ssv.position)
+                            FROM size_scale_values ssv
+                            WHERE ssv.size_scale_id = ss.id
+                        ),
+                        ARRAY[]::text[]
+                    )                          AS Sizes
             FROM categories c
             LEFT JOIN categories parent ON parent.id = c.parent_id
-            LEFT JOIN products   p      ON p.category_id = c.id AND p.is_active = TRUE
-            GROUP BY c.id, c.name, c.slug, parent.slug
+            -- The category's own scale, or its parent's. Resolved here so every caller sees one answer
+            -- rather than each reimplementing the inheritance.
+            LEFT JOIN size_scales ss ON ss.id = COALESCE(c.size_scale_id, parent.size_scale_id)
             ORDER BY parent.slug NULLS FIRST, c.name;
             """;
 
@@ -331,7 +717,7 @@ public sealed class ProductQueries(IDbConnection connection)
     /// </summary>
     /// <remarks>
     /// <b>An allow-list, never string interpolation.</b> ORDER BY cannot be parameterised, so a caller-supplied
-    /// sort field concatenated into SQL is a direct injection route — one of the few places Dapper's
+    /// sort field concatenated into SQL is a direct injection route - one of the few places Dapper's
     /// parameterisation cannot save you. Anything unrecognised falls back to a safe default rather than
     /// erroring, because a bad sort key is not worth a 400.
     /// </remarks>

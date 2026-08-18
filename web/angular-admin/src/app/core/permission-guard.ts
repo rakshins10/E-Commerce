@@ -10,7 +10,7 @@ import type { Permission } from './permissions';
  * ---
  * **This is user experience, not security.** It stops an order manager clicking into a users page that
  * would only 403 them. It stops nothing at all from someone who opens devtools, copies the token and
- * calls the API directly — which is why the Admin BFF checks the permission at the edge *and* every
+ * calls the API directly - which is why the Admin BFF checks the permission at the edge *and* every
  * service checks it again.
  *
  * Worth being blunt about, because "the button is hidden" is the most common wrong answer to "how is
@@ -22,7 +22,7 @@ import type { Permission } from './permissions';
  *
  * React wraps each element in a `<RequirePermission>` component; Angular attaches a `canActivate`
  * function to the route. Angular's runs **before** the component is created, so a forbidden route never
- * mounts and never fires its data request. React's guard renders, redirects, and only then unmounts —
+ * mounts and never fires its data request. React's guard renders, redirects, and only then unmounts -
  * which is harmless here but means a guarded component's `useQuery` can briefly fire.
  *
  * A real point for Angular's router, and the reason this file is a factory rather than a component.

@@ -188,6 +188,11 @@ namespace ECommerce.Ordering.Infrastructure.Migrations
                                 .HasColumnType("uuid")
                                 .HasColumnName("id");
 
+                            b1.Property<string>("ColourName")
+                                .HasMaxLength(40)
+                                .HasColumnType("character varying(40)")
+                                .HasColumnName("colour_name");
+
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid")
                                 .HasColumnName("order_id");
@@ -205,6 +210,11 @@ namespace ECommerce.Ordering.Infrastructure.Migrations
                             b1.Property<int>("Quantity")
                                 .HasColumnType("integer")
                                 .HasColumnName("quantity");
+
+                            b1.Property<string>("Size")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)")
+                                .HasColumnName("size");
 
                             b1.Property<string>("Sku")
                                 .IsRequired()

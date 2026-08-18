@@ -10,7 +10,7 @@ namespace ECommerce.Architecture.Tests;
 /// <para>
 /// See <c>docs/adr/0008-monorepo.md</c>. With every project visible in one solution, adding a reference from
 /// Ordering into Catalog's internals is one keystroke and nothing stops it. That is the genuine risk of a
-/// monorepo, and the honest mitigation is not "we will be careful" — it is a test that breaks the build.
+/// monorepo, and the honest mitigation is not "we will be careful" - it is a test that breaks the build.
 /// </para>
 /// <para>
 /// These rules operate on the <b>project files</b> rather than on compiled assemblies. That is deliberate:
@@ -178,7 +178,7 @@ public class ProjectReferenceRules
     }
 
     /// <summary>
-    /// The service or gateway a project belongs to — the directory directly beneath <c>services/</c> or
+    /// The service or gateway a project belongs to - the directory directly beneath <c>services/</c> or
     /// <c>gateways/</c>, e.g. <c>ordering</c> for every one of Ordering's four projects.
     /// </summary>
     private static string OwningComponent(string projectPath)

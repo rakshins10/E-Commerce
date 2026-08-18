@@ -23,7 +23,7 @@ namespace ECommerce.Ordering.Domain.Orders;
 /// See <see cref="OrderItem"/>.
 /// </para>
 /// <para>
-/// A value object: two identical addresses are interchangeable, and an address is never edited in place —
+/// A value object: two identical addresses are interchangeable, and an address is never edited in place -
 /// it is replaced wholesale, which is exactly what value semantics express.
 /// </para>
 /// </remarks>

@@ -9,7 +9,7 @@ namespace ECommerce.Common.Pagination;
 /// <param name="SortDescending">Sort direction.</param>
 /// <remarks>
 /// <para>
-/// <b>Server-side paging, sorting, and filtering are mandatory</b> on every list endpoint in this system — the
+/// <b>Server-side paging, sorting, and filtering are mandatory</b> on every list endpoint in this system - the
 /// admin panel's data-dense tables depend on it. Returning everything and paging in the browser works until the
 /// table has 50,000 rows, at which point it fails all at once and in production.
 /// </para>
@@ -22,7 +22,7 @@ namespace ECommerce.Common.Pagination;
 /// <b>Offset paging is used here, and it has a known limit.</b> <c>OFFSET n</c> makes the database walk and
 /// discard <c>n</c> rows, so deep pages get progressively slower, and a row inserted between requests can shift
 /// items across page boundaries. It is the right choice for admin tables, where users jump to specific page
-/// numbers. For an infinite-scroll feed, keyset ("seek") pagination — <c>WHERE id &gt; @last ORDER BY id</c> — is
+/// numbers. For an infinite-scroll feed, keyset ("seek") pagination - <c>WHERE id &gt; @last ORDER BY id</c> - is
 /// the correct pattern: constant time at any depth, and stable under concurrent inserts. Being able to say which
 /// one you would use and why is the point.
 /// </para>
@@ -71,6 +71,6 @@ public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSi
 
     public bool HasNext => Page < TotalPages;
 
-    /// <summary>An empty page — used for a valid query that matched nothing.</summary>
+    /// <summary>An empty page - used for a valid query that matched nothing.</summary>
     public static PagedResult<T> Empty(PageRequest request) => new([], request.Page, request.PageSize, 0);
 }

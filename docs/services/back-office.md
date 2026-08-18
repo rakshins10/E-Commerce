@@ -17,7 +17,7 @@ This is the one place in the repo that crosses a data boundary. It is a delibera
 rather than an oversight, and the honest argument is worth stating in full.
 
 **The alternative was rejected.** Calling each service over HTTP and aggregating means a dashboard fans
-out to five services on every page load — and then the dashboard is down whenever any one of them is.
+out to five services on every page load - and then the dashboard is down whenever any one of them is.
 Reporting is the classic case where the boundary that helps write paths hurts read paths.
 
 **What keeps it honest:**
@@ -25,7 +25,7 @@ Reporting is the classic case where the boundary that helps write paths hurts re
 | Rule | Why |
 |------|-----|
 | **Read-only** | Back-office never writes to another service's tables. |
-| **Aggregates only** | `COUNT` and `SUM`. It never reads a row it would then act on — that would be reaching into somebody else's aggregate, and the invariants live there for a reason. |
+| **Aggregates only** | `COUNT` and `SUM`. It never reads a row it would then act on - that would be reaching into somebody else's aggregate, and the invariants live there for a reason. |
 | **Keyed connections** | `[FromKeyedServices("ordering")]`, so a query cannot reach the wrong database by accident. An unkeyed `IDbConnection` with five registrations resolves to whichever was registered last, and inventory figures read out of the ordering database produce *plausible nonsense* rather than an error. |
 
 **What a production system would do instead:** publish figures as events into a reporting store, or use
@@ -72,7 +72,7 @@ accept. So this service authenticates as itself.
 reached. The service account is powerful; the route is what decides who gets to use it. Calling this
 before checking the permission would hand every signed-in user the service account's privileges.
 
-The token is cached and refreshed **30 seconds early** — the classic off-by-one that otherwise produces a
+The token is cached and refreshed **30 seconds early** - the classic off-by-one that otherwise produces a
 401 on one request in a thousand and is miserable to reproduce.
 
 ### Two guards worth noting
@@ -87,7 +87,7 @@ undo it, and somebody has to go into Keycloak directly. Cheap to prevent, tediou
 
 ## 3. The audit log
 
-**Append-only, and that is the entire security property.** There is no update and no delete — not as an
+**Append-only, and that is the entire security property.** There is no update and no delete - not as an
 oversight, but because an audit log somebody can edit is not evidence of anything. If the code cannot
 modify a row, a compromised service cannot cover its tracks.
 
@@ -104,7 +104,7 @@ modify a row, a compromised service cannot cover its tracks.
 **The distinction that matters most: an audit entry records a *human decision*.** An order moving from
 Paid to Shipped because the saga said so is not audited; a manager cancelling somebody's order is.
 
-The actor's **username is copied**, not resolved at read time — for the same reason an order copies its
+The actor's **username is copied**, not resolved at read time - for the same reason an order copies its
 address. The log must still read correctly when somebody changes their username or leaves.
 
 ---
@@ -158,7 +158,7 @@ misdirection that costs an hour.
 | `ConnectionStrings__OrderingReadDb` | Read-only, aggregates only |
 | `ConnectionStrings__SagaReadDb` | Read-only, aggregates only |
 | `ConnectionStrings__InventoryReadDb` | Read-only, aggregates only |
-| `KeycloakAdmin__ClientId` | `back-office-service` — a confidential client with no interactive login |
+| `KeycloakAdmin__ClientId` | `back-office-service` - a confidential client with no interactive login |
 | `KeycloakAdmin__ClientSecret` | From `deploy/.env`; never committed |
 
 ## 7. Health

@@ -20,7 +20,7 @@ namespace ECommerce.EventBus.RabbitMQ;
 /// <list type="bullet">
 ///   <item><description>One durable <b>topic exchange</b>, <c>ecommerce.events</c>.</description></item>
 ///   <item><description><b>Routing key = event name</b>, so a subscriber binds only what it wants.</description></item>
-///   <item><description><b>One durable queue per service per event</b> — each subscriber gets its own copy and
+///   <item><description><b>One durable queue per service per event</b> - each subscriber gets its own copy and
 ///   its own failure handling.</description></item>
 ///   <item><description><b>Competing consumers within a service</b>: instances share a queue, so scaling out
 ///   spreads load with no code change.</description></item>
@@ -59,7 +59,7 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
 
     /// <inheritdoc />
     /// <remarks>
-    /// Called by the outbox dispatcher, not by application code — see <see cref="IEventBus.PublishAsync"/> for
+    /// Called by the outbox dispatcher, not by application code - see <see cref="IEventBus.PublishAsync"/> for
     /// why publishing directly from a handler reintroduces the dual-write problem.
     /// </remarks>
     public async Task PublishAsync(IntegrationEvent @event, CancellationToken cancellationToken = default)

@@ -28,9 +28,9 @@ process and one machine.
 This system has **nine services in nine containers**. One customer clicking "Buy" will touch five of them.
 When it fails:
 
-- *Which service failed?* — nine log streams to check.
-- *Was it slow, or actually broken?* — no single place shows total elapsed time.
-- *Which log lines belong to my request?* — they are interleaved with everyone else's.
+- *Which service failed?* - nine log streams to check.
+- *Was it slow, or actually broken?* - no single place shows total elapsed time.
+- *Which log lines belong to my request?* - they are interleaved with everyone else's.
 
 That is what these tools solve. **This is not optional tooling for a distributed system; it is the
 difference between debuggable and not.** "I'd SSH in and check the logs" is an answer that does not survive
@@ -38,7 +38,7 @@ a follow-up question in an interview.
 
 ---
 
-# 1. Seq — reading the logs
+# 1. Seq - reading the logs
 
 **http://localhost:8081** · no login in development
 
@@ -76,7 +76,7 @@ In our code this comes from **Serilog**, and it is why log calls look like this:
 _logger.LogWarning("Order {OrderId} rejected for {CustomerId}: {Reason}", orderId, customerId, reason);
 ```
 
-Those `{OrderId}` placeholders are not string formatting — each becomes a **searchable field**. This is why
+Those `{OrderId}` placeholders are not string formatting - each becomes a **searchable field**. This is why
 you should never write `$"Order {orderId} rejected"` with string interpolation: it produces the same text
 but throws the structure away, and Seq can no longer search it.
 
@@ -98,7 +98,7 @@ here.
 CorrelationId = 'my-first-test'
 ```
 
-Two events — one from catalog, one from ordering. **You just found every log line belonging to one request,
+Two events - one from catalog, one from ordering. **You just found every log line belonging to one request,
 across two separate services.** That is the thing that is hard without this.
 
 **4. Click an event to expand it.** You will see the fields attached: `ServiceName`, `CorrelationId`,
@@ -124,9 +124,9 @@ code attached.
 
 ## Things worth clicking
 
-- **The time range selector** (top right) — default is last hour.
+- **The time range selector** (top right) - default is last hour.
 - **Any field value in an expanded event** → *"Find similar"*. Fastest way to build a query without typing.
-- **Signals** (left sidebar) — a saved query. Make one for `@Level = 'Error'` and it becomes a one-click
+- **Signals** (left sidebar) - a saved query. Make one for `@Level = 'Error'` and it becomes a one-click
   filter.
 
 ## What you'll use it for later
@@ -136,7 +136,7 @@ five services involved, in order, as one list.
 
 ---
 
-# 2. Jaeger — following a request across services
+# 2. Jaeger - following a request across services
 
 **http://localhost:16686** · no login
 
@@ -146,7 +146,7 @@ Seq tells you **what the code said**. Jaeger tells you **where the time went**.
 
 Two words to learn:
 
-- A **span** is one unit of work with a start and end time — "Inventory reserved stock, 240ms".
+- A **span** is one unit of work with a start and end time - "Inventory reserved stock, 240ms".
 - A **trace** is all the spans belonging to one user action, linked into a tree.
 
 A trace for placing an order will eventually look like this:
@@ -162,7 +162,7 @@ POST /orders                                    [============================] 1
 ```
 
 At a glance: the request took 1.24 seconds and **the payment gateway is 55% of it**. No amount of log
-reading gives you that shape — you would be manually subtracting timestamps across five services.
+reading gives you that shape - you would be manually subtracting timestamps across five services.
 
 ## Try it now
 
@@ -178,7 +178,7 @@ curl http://localhost:5003/
 **3. In the left panel:** choose `catalog` from the **Service** dropdown → click **Find Traces**.
 
 **4. Click any trace.** You will see a waterfall. Right now each is a single short span, because Phase 1
-services only answer for themselves — there is nothing to fan out to yet. The structure is what matters;
+services only answer for themselves - there is nothing to fan out to yet. The structure is what matters;
 Phase 7 fills it in.
 
 **5. Click the span** to expand its **tags**: HTTP method, route, status code, and the service that produced
@@ -187,7 +187,7 @@ it.
 ## Reading a waterfall
 
 - **Bar length = duration.** The longest bar is your problem.
-- **Bar position = when it started.** Bars side by side ran in parallel; staircased bars ran sequentially —
+- **Bar position = when it started.** Bars side by side ran in parallel; staircased bars ran sequentially -
   and a long staircase is often work that *could* have been parallel.
 - **Nesting = causation.** A child span was caused by its parent.
 - **A red span** threw an exception. Click it for the stack trace.
@@ -195,7 +195,7 @@ it.
 ## The hard part this solves
 
 A message broker normally **breaks** a trace. When Ordering publishes an event and Inventory picks it up
-later, they are separate processes with no shared call stack — automatic instrumentation sees two unrelated
+later, they are separate processes with no shared call stack - automatic instrumentation sees two unrelated
 operations.
 
 We fix that by carrying the `traceparent` on the message itself, so the consumer's span re-attaches to the
@@ -206,9 +206,9 @@ is for, and it is why a single trace will span asynchronous hops from Phase 7.
 
 This is the actual workflow, and the reason both exist:
 
-1. Jaeger: *"the payment span took 3 seconds"* — you know **where**.
+1. Jaeger: *"the payment span took 3 seconds"* - you know **where**.
 2. Copy the `TraceId` from that span.
-3. Seq: `TraceId = '<paste>'` — you know **why**, from what the code logged.
+3. Seq: `TraceId = '<paste>'` - you know **why**, from what the code logged.
 
 That pivot works because Serilog stamps `TraceId` onto every log line. The `Enrich.WithSpan()` line in
 [`ObservabilityExtensions.cs`](../../src/building-blocks/Observability/ObservabilityExtensions.cs) exists
@@ -216,7 +216,7 @@ solely to make it possible.
 
 ---
 
-# 3. RabbitMQ — the message broker
+# 3. RabbitMQ - the message broker
 
 **http://localhost:15672** · `ecom` / `dev_only_rabbit_pw`
 
@@ -225,25 +225,25 @@ solely to make it possible.
 If Ordering **calls** Inventory directly over HTTP, then Ordering only works when Inventory works. Chain a
 few of those together and one service being down takes the whole system with it.
 
-With a broker, Ordering **publishes a message** and carries on. Inventory picks it up whenever it is ready —
+With a broker, Ordering **publishes a message** and carries on. Inventory picks it up whenever it is ready -
 now, or in ten minutes after a restart. Nothing is lost and nobody waits.
 
 Three words:
 
-- **Exchange** — where publishers send. Ours is `ecommerce.events`.
-- **Queue** — where messages wait for a consumer.
-- **Binding** — a rule connecting an exchange to a queue ("send me anything named `OrderStarted`").
+- **Exchange** - where publishers send. Ours is `ecommerce.events`.
+- **Queue** - where messages wait for a consumer.
+- **Binding** - a rule connecting an exchange to a queue ("send me anything named `OrderStarted`").
 
 Publishers know nothing about subscribers. Adding a fifth service that reacts to orders requires **no change
-to Ordering** — it just binds a new queue.
+to Ordering** - it just binds a new queue.
 
 ## Try it now
 
 Open http://localhost:15672 and log in.
 
-- **Overview** — message rates. Flat, because nothing publishes until Phase 6.
-- **Exchanges** — `ecommerce.events` appears once a service declares it.
-- **Queues** — empty for now. This becomes the most useful tab in the system.
+- **Overview** - message rates. Flat, because nothing publishes until Phase 6.
+- **Exchanges** - `ecommerce.events` appears once a service declares it.
+- **Queues** - empty for now. This becomes the most useful tab in the system.
 
 ## What this tab will show you later
 
@@ -256,12 +256,12 @@ From Phase 6, the *Queues* tab is genuinely the best demo in the repository:
 
 That is fault tolerance you can see, and it is the concrete answer to *"what happens if a service is down?"*
 
-Also watch for queues ending **`.dlq`** — the *dead-letter queue*. A message that fails repeatedly lands
+Also watch for queues ending **`.dlq`** - the *dead-letter queue*. A message that fails repeatedly lands
 there instead of being retried forever. Anything in a DLQ is a message that needs a human.
 
 ---
 
-# 4. Keycloak — logins, users and permissions
+# 4. Keycloak - logins, users and permissions
 
 **http://localhost:8080** · `admin` / `dev_only_kc_admin_pw`
 
@@ -272,7 +272,7 @@ never see a password.** When you log into the storefront, the browser redirects 
 password *there*, and Keycloak hands back a signed token.
 
 Why not build it ourselves? Because you would own password hashing, brute-force protection, account
-recovery, token signing and rotation — forever, correctly, with no competitive advantage. And "we wrote our
+recovery, token signing and rotation - forever, correctly, with no competitive advantage. And "we wrote our
 own auth" is a finding in every security review. Full argument:
 [ADR-0005](../adr/0005-keycloak-as-identity-provider.md).
 
@@ -281,15 +281,15 @@ own auth" is a finding in every security review. Full argument:
 | Term | Meaning |
 |------|---------|
 | **Realm** | An isolated world of users, roles and apps. Ours will be `ecommerce`. |
-| **Client** | One application that can request tokens. We will have one per app — `storefront-react`, `admin-angular`, and so on. |
+| **Client** | One application that can request tokens. We will have one per app - `storefront-react`, `admin-angular`, and so on. |
 | **Realm role** | A coarse identity: `customer`, `admin`, `catalog-manager`. |
 | **Client role** | A fine-grained permission: `catalog:write`, `order:refund`. |
-| **Composite role** | A role that grants other roles — how `catalog-manager` acquires `catalog:write`. |
+| **Composite role** | A role that grants other roles - how `catalog-manager` acquires `catalog:write`. |
 | **Token (JWT)** | A signed piece of JSON proving who you are and what you may do. Sent on every API call. |
 
 ## Try it now
 
-Log in and click **Manage realms** (top left). Only `master` exists — that is Keycloak's own admin realm.
+Log in and click **Manage realms** (top left). Only `master` exists - that is Keycloak's own admin realm.
 The `ecommerce` realm arrives in **Phase 2**, imported automatically from a JSON file committed to this repo
 (no clicking through the console to set it up).
 
@@ -299,13 +299,13 @@ Meanwhile you can see the machinery is live:
 curl http://localhost:8080/realms/master/.well-known/openid-configuration
 ```
 
-That is the **OIDC discovery document** — the standard endpoint every OAuth2 client reads to learn where to
+That is the **OIDC discovery document** - the standard endpoint every OAuth2 client reads to learn where to
 send users to log in, and where to fetch the public keys for verifying token signatures. Our services read
 it at startup so they can validate tokens offline, with no call to Keycloak per request.
 
 ## What Phase 2 adds
 
-The `ecommerce` realm, the full role and permission model, and **seed users you can actually log in as** —
+The `ecommerce` realm, the full role and permission model, and **seed users you can actually log in as** -
 a customer, a catalog manager, an order manager, a support agent, and an admin, with their passwords listed
 in the README.
 
@@ -315,13 +315,13 @@ in the README.
 
 | I want to… | Go to |
 |------------|-------|
-| See what the code logged | **Seq** — http://localhost:8081 |
-| Find every log line for one request | **Seq** — `CorrelationId = '...'` |
-| Find out why something was slow | **Jaeger** — http://localhost:16686 |
+| See what the code logged | **Seq** - http://localhost:8081 |
+| Find every log line for one request | **Seq** - `CorrelationId = '...'` |
+| Find out why something was slow | **Jaeger** - http://localhost:16686 |
 | See which service failed in a chain | **Jaeger**, then the red span |
-| Check whether messages are flowing | **RabbitMQ** — *Queues* tab |
-| Find messages that failed repeatedly | **RabbitMQ** — queues ending `.dlq` |
-| Manage users, roles or permissions | **Keycloak** — http://localhost:8080 |
+| Check whether messages are flowing | **RabbitMQ** - *Queues* tab |
+| Find messages that failed repeatedly | **RabbitMQ** - queues ending `.dlq` |
+| Manage users, roles or permissions | **Keycloak** - http://localhost:8080 |
 | Check a service is alive | `curl http://localhost:5001/health/live` |
 | Check its dependencies are reachable | `curl http://localhost:5001/health/ready` |
 
@@ -330,22 +330,22 @@ in the README.
 That is expected at Phase 1, not a fault:
 
 - **Seq empty?** Nothing has been called. `curl http://localhost:5001/` then refresh.
-- **Jaeger has no services?** Same — traces appear after the first request.
+- **Jaeger has no services?** Same - traces appear after the first request.
 - **RabbitMQ has no queues?** They are declared when a service subscribes, so they appear once the stack
   has finished booting. Place an order and you will see `ordering`, `inventory`, `payment`,
   `notification` and `ordering-saga` queues bound to the `ecommerce.events` exchange, each with its own
   `.dlq`.
 - **Keycloak has only `master`?** The `ecommerce` realm is imported on Keycloak's FIRST start only. If it
   is missing, the container has an old volume: `docker compose rm -sf keycloak keycloak-db`,
-  `docker volume rm ecommerce_keycloak-db-data`, then bring it up again — and restart the services
+  `docker volume rm ecommerce_keycloak-db-data`, then bring it up again - and restart the services
   afterwards, because a re-imported realm has new signing keys.
 
 ## Are we locked into these?
 
-No, and that is deliberate. Our services emit **standard formats** — OpenTelemetry (OTLP) for traces and
+No, and that is deliberate. Our services emit **standard formats** - OpenTelemetry (OTLP) for traces and
 metrics, Serilog for logs. Jaeger and Seq simply happen to be what is listening. Changing one URL in
 configuration sends the same data to Grafana Tempo, Azure Application Insights, Datadog, or Elastic, with
 **no code change**.
 
-These two were chosen because they run offline in a container with no account, no API key, and no cost —
+These two were chosen because they run offline in a container with no account, no API key, and no cost -
 which matters for a repository anyone should be able to clone and run.

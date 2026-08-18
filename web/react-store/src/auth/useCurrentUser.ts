@@ -21,7 +21,7 @@ export interface CurrentUserState {
   /**
    * Whether the signed-in user holds a permission.
    *
-   * UI convenience only — it decides what to *render*. The server enforces the
+   * UI convenience only - it decides what to *render*. The server enforces the
    * same rule independently on every request, because anyone can copy the token
    * out of devtools and call the API directly.
    */

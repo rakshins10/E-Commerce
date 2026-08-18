@@ -21,7 +21,7 @@ namespace ECommerce.Observability;
 /// the name suggests.
 /// </para>
 /// <para>
-/// <b>Why this exists.</b> A broken business rule is not a server fault — it is the server correctly
+/// <b>Why this exists.</b> A broken business rule is not a server fault - it is the server correctly
 /// refusing. Without translation, ASP.NET Core returns a 500 with the exception type and stack trace in
 /// the body, which is wrong twice over: the status code lies about whose fault it is, and the body leaks
 /// the internal structure of the application to whoever asked.
@@ -30,7 +30,7 @@ namespace ECommerce.Observability;
 /// The message itself is deliberately passed through, because domain messages are written for the person
 /// who triggered them: <i>"SKU 'AUR-HP-001' is already in use"</i>, <i>"An order may not contain more
 /// than 50 distinct items"</i>. That is only safe because <see cref="DomainException"/> is thrown by the
-/// domain, never wrapped around an infrastructure failure — a rule this handler quietly depends on.
+/// domain, never wrapped around an infrastructure failure - a rule this handler quietly depends on.
 /// </para>
 /// <para>
 /// <b>Everything else stays a 500.</b> A <c>NullReferenceException</c> is a bug and should look like one:

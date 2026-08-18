@@ -37,12 +37,12 @@ It stops being elegant the moment somebody asks:
 > **"Where is order 12345 stuck?"**
 
 The answer is spread across four services' logs and exists **nowhere as a single fact**. Worse, to
-compensate a failed payment you need to know whether stock was reserved — and no individual service
+compensate a failed payment you need to know whether stock was reserved - and no individual service
 holds that knowledge.
 
 ### Orchestration
 
-One service owns the process. It sends commands, listens for outcomes, and decides what happens next —
+One service owns the process. It sends commands, listens for outcomes, and decides what happens next -
 including what to undo.
 
 **This repo uses orchestration**, and the reason is the query above. One row per order says which step it
@@ -53,7 +53,7 @@ SELECT order_number, state, stock_reserved FROM order_sagas WHERE completed_at I
 ```
 
 The cost is real and worth naming: a service that knows about all the others. That is coupling. It is
-accepted deliberately, because it is **confined to one place** rather than smeared across four — and
+accepted deliberately, because it is **confined to one place** rather than smeared across four - and
 because the alternative makes the most important operational question unanswerable.
 
 ---
@@ -119,14 +119,14 @@ Verified, ordering the £5,200 item. Stock went `reserved=0 → 1 → 0` across 
 
 The order ended `Cancelled` with reason `PaymentDeclined`, and the customer received an email saying so.
 
-### Out of stock — no compensation
+### Out of stock - no compensation
 
 ```
 StockRejected ──► Cancel(OutOfStock)
 ```
 
 **No `ReleaseStockCommand`, and that is the point.** Nothing was reserved, so releasing would *add*
-stock that never left — a corruption in the opposite direction from the failure, and one nobody notices
+stock that never left - a corruption in the opposite direction from the failure, and one nobody notices
 until a stock take disagrees with the system.
 
 ---
@@ -138,7 +138,7 @@ Treating them as the same thing causes bugs. The differences matter:
 | Rollback | Compensating action |
 |----------|--------------------|
 | Cannot fail | **Can fail**, and then needs retrying |
-| Instantaneous | Happens **later** — the world has moved on |
+| Instantaneous | Happens **later** - the world has moved on |
 | Leaves no trace | Is a **real event** others can see |
 | Restores the exact prior state | Achieves a *similar* state |
 
@@ -152,13 +152,13 @@ cannot rewind the world; you can only do something that makes it approximately r
 
 1. **Idempotent.** It will be retried. `StockItem.Release` clamps at zero for exactly this reason.
 2. **Safe when the step never happened.** Guarded by the saga's own `stock_reserved` flag.
-3. **Semantically honest.** It does not claim to have undone anything — it did something new.
+3. **Semantically honest.** It does not claim to have undone anything - it did something new.
 
 ---
 
 ## 4. Why every handler is idempotent
 
-Delivery is **at-least-once**. These messages *will* arrive twice — the publisher can crash after the
+Delivery is **at-least-once**. These messages *will* arrive twice - the publisher can crash after the
 broker accepts a message but before recording success; a consumer can crash after doing the work but
 before acknowledging. None of this is exotic; it is ordinary Tuesday.
 
@@ -182,17 +182,17 @@ rather than starting a second saga that reserves the stock again.
 
 | Event | Command |
 |-------|---------|
-| "This happened" — past tense | "Do this" — imperative |
+| "This happened" - past tense | "Do this" - imperative |
 | Broadcast; zero or many listeners | Addressed to exactly one service |
 | Publisher does not care who reacts | Sender expects an outcome and waits for it |
-| Cannot be rejected — it already happened | **Can fail**, and the failure is meaningful |
+| Cannot be rejected - it already happened | **Can fail**, and the failure is meaningful |
 
 The saga sends `ReserveStockCommand` and `RequestPaymentCommand`; it receives `StockReserved` and
 `PaymentFailed`. Blurring the two produces services that publish "OrderShouldBePaid" and consumers
 unsure whether they are allowed to say no.
 
 Both travel over the same RabbitMQ exchange and use the same `IntegrationEvent` base class. The
-distinction is **semantic, not technical** — and it is worth keeping precisely because nothing enforces
+distinction is **semantic, not technical** - and it is worth keeping precisely because nothing enforces
 it.
 
 ---
@@ -203,7 +203,7 @@ Every command the saga sends is written to its own outbox, **in the same transac
 that decided to send it**.
 
 Without that, a crash between "record that we asked for stock" and "actually ask" leaves a saga waiting
-forever for a reply to a question nobody heard — and, because the saga's own record says it asked, no
+forever for a reply to a question nobody heard - and, because the saga's own record says it asked, no
 retry would ever happen. The outbox is what makes the saga's state and its outgoing messages agree.
 
 ---
@@ -219,7 +219,7 @@ outbox.Add(new AdvanceOrderCommand { OrderId = …, Transition = "MarkPaid" });
 Ordering's handler calls `Order.MarkAsPaid`, and the **aggregate** refuses if the order is not awaiting
 payment. The saga cannot talk an order into an illegal state.
 
-The alternative — an orchestrator that sets the status directly — puts the rules in two places and lets
+The alternative - an orchestrator that sets the status directly - puts the rules in two places and lets
 the saga produce states the aggregate would never allow. **Sagas are hard enough without the
 participants being unable to defend themselves.**
 
@@ -229,7 +229,7 @@ participants being unable to defend themselves.**
 
 Read-only, deliberately. **There is no endpoint that changes a saga**: it advances only in response to
 what really happened, and an endpoint that let someone push it forward by hand would let its record
-disagree with reality — the one thing it exists to prevent.
+disagree with reality - the one thing it exists to prevent.
 
 | Method | Route | Permission | Purpose |
 |--------|-------|-----------|---------|

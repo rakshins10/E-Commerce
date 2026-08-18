@@ -11,7 +11,7 @@ namespace ECommerce.Outbox;
 /// <para>
 /// The publisher stores a name, not an assembly-qualified type name, and this is why. An
 /// assembly-qualified name in the database ties every stored row to the exact assembly, namespace and
-/// version that wrote it — rename the namespace and last night's unpublished messages become
+/// version that wrote it - rename the namespace and last night's unpublished messages become
 /// undeserialisable. Worse, deserialising a type named by untrusted input is a well-known remote code
 /// execution vector.
 /// </para>

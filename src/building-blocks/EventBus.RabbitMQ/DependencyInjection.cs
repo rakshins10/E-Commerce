@@ -10,7 +10,7 @@ namespace ECommerce.EventBus.RabbitMQ;
 /// <b>This is the only place a service is allowed to know RabbitMQ exists.</b> Everything else depends on
 /// <see cref="IEventBus"/> from the transport-agnostic <c>ECommerce.EventBus</c> package. An architecture test
 /// asserts that no service project references <c>RabbitMQ.Client</c> directly
-/// (<c>docs/adr/0008-monorepo.md</c>) — which is what makes the swap in
+/// (<c>docs/adr/0008-monorepo.md</c>) - which is what makes the swap in
 /// <c>docs/adr/0016-rabbitmq-behind-ieventbus.md</c> a real option rather than an aspiration.
 /// </remarks>
 public static class DependencyInjection
@@ -23,7 +23,7 @@ public static class DependencyInjection
     /// <see cref="RabbitMqOptions"/>.</param>
     /// <param name="subscriptionClientName">This service's name, used to prefix its queues. Passed explicitly
     /// rather than read from configuration because getting it wrong silently makes two services share a queue
-    /// and steal each other's messages — a failure that looks like "events randomly go missing".</param>
+    /// and steal each other's messages - a failure that looks like "events randomly go missing".</param>
     public static IServiceCollection AddRabbitMqEventBus(
         this IServiceCollection services,
         IConfiguration configuration,
@@ -53,8 +53,8 @@ public static class DependencyInjection
     /// Registers an integration event handler so the bus can resolve it per message.
     /// </summary>
     /// <remarks>
-    /// <b>Scoped, deliberately.</b> Handlers take scoped dependencies — a <c>DbContext</c>, the ambient
-    /// transaction — and a singleton handler capturing a <c>DbContext</c> would share one change tracker across
+    /// <b>Scoped, deliberately.</b> Handlers take scoped dependencies - a <c>DbContext</c>, the ambient
+    /// transaction - and a singleton handler capturing a <c>DbContext</c> would share one change tracker across
     /// every message in the process. That is a genuinely nasty bug: it works under light load and corrupts data
     /// under concurrency.
     /// </remarks>

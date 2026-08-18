@@ -9,14 +9,14 @@ namespace ECommerce.Common.SeedWork;
 /// <b>Pattern:</b> Entity (DDD tactical). See <c>docs/concept-map.md</c>.
 /// </para>
 /// <para>
-/// <b>Entity vs value object</b> — the distinction that decides which base class to use:
+/// <b>Entity vs value object</b> - the distinction that decides which base class to use:
 /// two entities with identical attributes are still <i>different things</i> if their ids differ. An order
 /// whose every field matches another order is not that order. By contrast a
 /// <see cref="ValueObject"/> has no identity: two <c>Money(10, "GBP")</c> instances are interchangeable.
 /// The test: <i>if I change every attribute, is it still the same thing?</i> Yes → entity. No → value object.
 /// </para>
 /// <para>
-/// Equality here is therefore <b>identity equality</b>, not structural equality — which is exactly why an
+/// Equality here is therefore <b>identity equality</b>, not structural equality - which is exactly why an
 /// entity must not be a C# <c>record</c>: records give value-based equality, which is precisely wrong for an
 /// entity and produces subtle bugs when entities land in sets or dictionaries.
 /// </para>
@@ -41,7 +41,7 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
     /// </para>
     /// <para>
     /// <b>Why collect rather than publish immediately?</b> Publishing inside the aggregate would mean a handler
-    /// running before the change is committed — and if the transaction then rolls back, the handler has acted on
+    /// running before the change is committed - and if the transaction then rolls back, the handler has acted on
     /// something that never happened. Collecting lets the infrastructure dispatch them at the right moment:
     /// after <c>SaveChanges</c> has staged the changes but inside the same transaction. It also keeps the
     /// aggregate ignorant of dispatching, which is what allows it to be unit-tested with no infrastructure.
@@ -61,7 +61,7 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
     public void ClearDomainEvents() => _domainEvents.Clear();
 
     /// <summary>
-    /// True when this entity has never been persisted — its identity is still the type's default.
+    /// True when this entity has never been persisted - its identity is still the type's default.
     /// </summary>
     public bool IsTransient() => EqualityComparer<TId>.Default.Equals(Id, default!);
 
@@ -78,7 +78,7 @@ public abstract class Entity<TId> : IEquatable<Entity<TId>>
         }
 
         // Different concrete types are never equal even if their ids collide, and two transient entities are
-        // equal only by reference — they have no identity yet to compare.
+        // equal only by reference - they have no identity yet to compare.
         if (GetType() != other.GetType() || IsTransient() || other.IsTransient())
         {
             return false;

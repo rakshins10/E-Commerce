@@ -7,7 +7,7 @@ const STORAGE_KEY = 'ecommerce.theme';
 /**
  * Light / dark / follow-the-system theme switch.
  *
- * Behaviourally identical to the React `ThemeToggle` — same three states, same
+ * Behaviourally identical to the React `ThemeToggle` - same three states, same
  * `data-theme` attribute, same accessible names, so the shared Playwright specs
  * pass against both.
  *
@@ -15,7 +15,7 @@ const STORAGE_KEY = 'ecommerce.theme';
  * **React/Angular divergence** (docs/react-vs-angular.md):
  *
  * React uses `useState` + `useEffect` with a dependency array. Angular uses a
- * `signal` + `effect`, where the effect tracks its dependencies automatically —
+ * `signal` + `effect`, where the effect tracks its dependencies automatically -
  * there is no array to get wrong, which removes an entire class of stale-closure
  * bug. The trade is that what the effect depends on is implicit rather than
  * written down.

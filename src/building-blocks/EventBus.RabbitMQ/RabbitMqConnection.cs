@@ -19,7 +19,7 @@ namespace ECommerce.EventBus.RabbitMQ;
 /// <para>
 /// <b>One connection, many channels.</b> An AMQP connection is a TCP connection and is expensive to create;
 /// channels are cheap, multiplexed logical sessions over it. Opening a connection per publish is the classic
-/// RabbitMQ performance mistake — it exhausts sockets and adds a full TCP plus AMQP handshake to every message.
+/// RabbitMQ performance mistake - it exhausts sockets and adds a full TCP plus AMQP handshake to every message.
 /// So: one connection per process, one channel per publisher or consumer. <b>Channels are not thread-safe</b>,
 /// which is why they are never shared across concurrent operations.
 /// </para>

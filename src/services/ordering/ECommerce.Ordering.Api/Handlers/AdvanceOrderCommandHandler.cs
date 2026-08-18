@@ -11,7 +11,7 @@ namespace ECommerce.Ordering.Api.Handlers;
 /// <remarks>
 /// <para>
 /// <b>The saga decides <i>when</i>; the aggregate decides <i>whether</i>.</b> That division is what keeps
-/// this safe. The saga sequences steps and knows nothing about what makes a transition legal — it cannot
+/// this safe. The saga sequences steps and knows nothing about what makes a transition legal - it cannot
 /// talk the order into being paid before its stock is confirmed, because
 /// <see cref="Order.MarkAsPaid"/> refuses.
 /// </para>
@@ -23,7 +23,7 @@ namespace ECommerce.Ordering.Api.Handlers;
 /// <para>
 /// Idempotency comes from the aggregate too: <c>MarkAsPaid</c> on an already-paid order returns quietly,
 /// so a redelivered command is a no-op rather than a duplicate event. Nothing here needs a
-/// <c>ProcessedMessage</c> row, because the operations are naturally idempotent — which is always
+/// <c>ProcessedMessage</c> row, because the operations are naturally idempotent - which is always
 /// preferable to bookkeeping that can itself be got wrong.
 /// </para>
 /// </remarks>
@@ -96,7 +96,7 @@ public sealed class AdvanceOrderCommandHandler(
 
     /// <remarks>
     /// The reason travels as a string so that a new one does not break a consumer that has not been
-    /// redeployed. An unrecognised value falls back rather than throwing — see ADR-0019.
+    /// redeployed. An unrecognised value falls back rather than throwing - see ADR-0019.
     /// </remarks>
     private static OrderCancellationReason ParseReason(string? reason) =>
         Enum.TryParse(reason, out OrderCancellationReason parsed)

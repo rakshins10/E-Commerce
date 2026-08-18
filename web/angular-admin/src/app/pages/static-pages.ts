@@ -26,7 +26,7 @@ import type { AuditEntry } from '../core/admin-types';
         <h1 class="page-title">Audit log</h1>
 
         <p class="muted small">
-          Append-only. Entries record human decisions — an order the saga cancelled is not audited, an
+          Append-only. Entries record human decisions - an order the saga cancelled is not audited, an
           order a manager cancelled is.
         </p>
 
@@ -52,7 +52,7 @@ import type { AuditEntry } from '../core/admin-types';
                     <td>{{ entry.actorName }}</td>
                     <td>{{ entry.action }}</td>
                     <td>{{ entry.target }}</td>
-                    <td>{{ entry.detail ?? '—' }}</td>
+                    <td>{{ entry.detail ?? '-' }}</td>
                   </tr>
                 }
               </tbody>
@@ -94,7 +94,7 @@ export class AuditPage {
  * Where a permission guard sends you.
  *
  * A distinct page rather than an inline message, because a distinct URL is linkable and appears in
- * analytics — "twelve people a day hit /forbidden on /users" is a fact somebody can act on.
+ * analytics - "twelve people a day hit /forbidden on /users" is a fact somebody can act on.
  */
 @Component({
   selector: 'app-forbidden-page',
