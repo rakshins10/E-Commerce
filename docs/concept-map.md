@@ -391,6 +391,28 @@ Phase 1, completed in Phase 12
 
 ---
 
+## Resilience
+
+### Giving up well: rate limits, retry budgets, timeouts
+
+**What:** three budgets on persistence. A rate limit bounds how often a client may ask (1000/10s per IP at
+the gateways, 429 + Retry-After beyond it). A retry budget bounds how long the system keeps trying (the
+outbox parks a message after 25 failed publishes, keeping the row and its last_error). A timeout bounds how
+long a saga may wait (a sweeper compensates any checkout stuck past a threshold, and a payment that
+succeeds after the sweep is refunded rather than kept).
+
+**Why here:** infinite patience is not reliability - a system that never gives up cannot tell anyone it is
+failing. Each budget converts a silent failure mode into a visible, recoverable one: a 429 teaches the
+client, a parked message demands a human, a swept saga returns the stock and the money.
+
+**Where:** [`EdgeHardening.cs`](../src/building-blocks/Observability/EdgeHardening.cs) ·
+[`StuckSagaSweeper.cs`](../src/services/ordering-saga/ECommerce.OrderingSaga.Api/Infrastructure/StuckSagaSweeper.cs) ·
+[ADR-0022](adr/0022-edge-hardening-defaults.md) · Phase 10
+
+**Interview question:** *"Your saga's payment step never replies. What happens?"* - the best answer covers
+the sweep, the compensation being identical to failure, AND the refund when the reply finally arrives after
+cancellation.
+
 ## Security
 
 ### External identity provider

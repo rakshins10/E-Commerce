@@ -385,7 +385,7 @@ logic, never DTOs shared between two services' APIs.
 | `Common` | Result types, domain-event base types, guard clauses, pagination primitives, `ProblemDetails` error contract | Language-level utilities. No domain meaning. |
 | `EventBus` | `IEventBus`, `IntegrationEvent`, `IIntegrationEventHandler<T>`, subscription manager | Abstraction only, zero transport dependency - this is what makes RabbitMQ swappable for Azure Service Bus. |
 | `EventBus.RabbitMQ` | The RabbitMQ implementation: connection management, publisher confirms, consumer wiring, retry/DLQ | One implementation of the above. Referenced only in composition roots. |
-| `Observability` | Serilog + OpenTelemetry setup, correlation-ID propagation, health-check conventions | Pure infrastructure. Ensures every service is observable identically. |
+| `Observability` | Serilog + OpenTelemetry setup, correlation-ID propagation, health-check conventions, and the edge hardening (rate limiting + security headers) the BFFs apply | Pure infrastructure. Ensures every service is observable - and every gateway defended - identically. |
 | `Auth` | JWT validation, permission policies, `IAuthorizationRequirement`/handlers, resource-based authorization, `ICurrentUser` | Security must be uniform. Reimplementing token validation per service is how services drift and holes appear. |
 
 **What deliberately is *not* here:** integration event *contracts*. It is tempting to put every event class
