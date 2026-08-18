@@ -70,7 +70,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
 | 9 | Catalogue CRUD in **both** admin panels | ✅ 25 admin e2e specs green on both |
 | 9.5 | Product variants + category-defined size scales - ADR-0020, ADR-0021 | ✅ 64 storefront + 26 admin specs green on both |
-| 10 | Resiliency, observability and security hardening | ⬜ **next** |
+| 10 | Resiliency, observability and security hardening | ✅ ADR-0022; sweep-and-refund proven live |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
 | 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ⬜ |
@@ -78,8 +78,8 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 Mobile (React Native) and Kubernetes are explicitly **deferred** - the user asked to finish everything
 else first. That is now true.
 
-**Phase 10 starts here:** everything functional is built. What remains is hardening - the resiliency,
-observability and security pass. Known gaps are listed at the end of each service page and in
+**Phases 1-10 are complete.** What remains: mobile (11) and Kubernetes (12), both deferred by request,
+and the Phase 13 final pass. Remaining declared non-goals live at the end of each service page and in
 `docs/events/event-catalogue.md`.
 
 ---
@@ -176,6 +176,7 @@ run against two independent implementations.
 | **An unanchored positional selector depends on document order** | `getByRole('heading', { level: 3 }).first()` meant "the first product" until the products page gained a category rail whose department names are also h3. It then clicked "Accessories" and failed two assertions later on a missing button | Give the container an `aria-label` and scope to it: `getByRole('list', { name: 'Products' })` |
 | **A form field is empty for a moment after navigation** | `inputValue()` reads the initial empty state, because it does not retry. Both apps render fields first and populate them when the query resolves | `await expect(page.getByLabel('Name')).toHaveValue(…)` first - `toHaveValue` retries |
 | **There is no Prettier config in this repo** | Running `npx prettier --write` reformats a file to Prettier's defaults - double quotes throughout - and the diff buries the actual change | Do not run it. `.editorconfig` and `dotnet format` cover .NET; the web apps are formatted by hand |
+| **Angular's build defers CSS with an inline event handler** | With `script-src 'self'`, the `<link media="print" onload="this.media='all'">` trick from `inlineCritical` is blocked - the stylesheet stays print-only and the whole app renders UNSTYLED, while most role-based specs still pass against the bare DOM | `optimization.styles.inlineCritical: false` in both angular.json files. Two CSP console violations plus an unstyled screenshot is this bug's signature |
 | **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments |
 | **Playwright `count()` and `allTextContents()` do not auto-wait** | Both return whatever matches at that instant, so they read 0 / `[]` on a page that has not finished rendering - and the assertion then fails with no clue why | `await expect(locator).toHaveCount(n)` FIRST, then read. Only `expect(locator)` retries |
 | **A visually hidden radio cannot be clicked** | `.option__input` is 1px and `pointer-events: none`, so `click()` on it hangs until the timeout | Click the `<label>` - which is what a person clicks. The input stays for the accessibility tree and keyboard navigation |
@@ -235,7 +236,7 @@ invalidates it.
 | [`docs/architecture.md`](docs/architecture.md) | C4 model, service catalogue, sync/async rules |
 | [`docs/domain/bounded-contexts.md`](docs/domain/bounded-contexts.md) | Why each boundary sits where it does |
 | [`docs/authorization-model.md`](docs/authorization-model.md) | Role/permission matrix |
-| [`docs/adr/`](docs/adr/) | 21 ADRs. **Immutable once merged** - supersede, never edit |
+| [`docs/adr/`](docs/adr/) | 22 ADRs. **Immutable once merged** - supersede, never edit |
 | [`web/parity-checklist.md`](web/parity-checklist.md) | React/Angular parity tracking |
 | [`identity/keycloak/realm-export.json`](identity/keycloak/realm-export.json) | The realm, imported on startup |
 | [`Directory.Packages.props`](Directory.Packages.props) | One version per package, solution-wide |

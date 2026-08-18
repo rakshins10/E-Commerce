@@ -113,6 +113,12 @@
          not mocks. A mocked database proves your code calls the mock the way you
          told the mock to expect; it cannot catch a migration that will not apply
          or a token whose audience is wrong. See tests/README.md. -->
+    <!-- Not referenced directly by anything. Testcontainers 4.13.0 pulls SSH.NET <= 2025.1.0, which
+         carries GHSA-q939-rpr3-3284 (high) - and the NuGet audit rightly fails the build on it.
+         Transitive pinning forces the patched version solution-wide; the auth integration tests are
+         what prove Testcontainers still works with it. Remove once Testcontainers ships a release
+         referencing SSH.NET >= 2026.0.0. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <PackageVersion Include="Testcontainers" Version="4.13.0" />
     <PackageVersion Include="Testcontainers.Keycloak" Version="4.13.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />

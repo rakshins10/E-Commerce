@@ -22,12 +22,22 @@ builder.AddObservability("mobile-bff");
 // blip never causes the orchestrator to restart healthy processes.
 builder.Services.AddDefaultHealthChecks();
 
+// The request budget for this edge. The services behind the gateway are not limited individually -
+// they accept traffic only from the internal network, and one policy at the boundary beats eleven
+// copies of it. See EdgeHardening and ADR-0022.
+builder.Services.AddEdgeRateLimiting(builder.Configuration);
+
 WebApplication app = builder.Build();
 
 // Correlation must be first: a request that fails inside exception handling
 // should still be correlated. Request logging follows so its completion event
 // carries the correlation id.
 app.UseObservability();
+
+// Rate limiting before auth on purpose: rejecting an abusive client must not cost a token
+// validation first. Security headers on the way out for everything that survives.
+app.UseRateLimiter();
+app.UseSecurityHeaders();
 
 app.MapDefaultHealthChecks();
 

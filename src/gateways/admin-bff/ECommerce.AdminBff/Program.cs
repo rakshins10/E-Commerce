@@ -37,11 +37,21 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
     .WithExposedHeaders("X-Correlation-Id")));
 
 builder.Services.AddDefaultHealthChecks();
+
+// The request budget for this edge. The services behind the gateway are not limited individually -
+// they accept traffic only from the internal network, and one policy at the boundary beats eleven
+// copies of it. See EdgeHardening and ADR-0022.
+builder.Services.AddEdgeRateLimiting(builder.Configuration);
 builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
 app.UseObservability();
+
+// Rate limiting before auth on purpose: rejecting an abusive client must not cost a token
+// validation first. Security headers on the way out for everything that survives.
+app.UseRateLimiter();
+app.UseSecurityHeaders();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

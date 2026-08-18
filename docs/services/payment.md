@@ -80,14 +80,17 @@ A `reference` is generated even for a decline, so support has something to quote
 
 ---
 
-## Refund is written but never sent
+## Refund: declared in Phase 7, earned in Phase 10
 
-`RefundPaymentCommand` and its handler exist and are not reached by the current flow, because payment is
-the last step that can fail.
+`RefundPaymentCommand` and its handler were written in Phase 7 and not reached by any flow, because
+payment was the last step that could fail. They were written anyway, on the argument that **the shape of
+a saga is what makes adding a step afterwards safe**.
 
-They are written anyway, because **the shape of a saga is what makes adding a step afterwards safe**. If
-a shipping-label step were added tomorrow, this is what would undo the charge - and having it now means
-the compensation story is complete rather than aspirational.
+Phase 10 collected on that argument. The stuck-saga sweeper
+([ADR-0022](../adr/0022-edge-hardening-defaults.md)) can cancel an order whose payment is merely slow -
+and when that slow payment then *succeeds*, money has been taken for an order that no longer exists. The
+saga answers with `RefundPaymentCommand`, and this handler refunds. The command's first production use
+was a failure mode that did not exist when it was written, which is precisely what it was declared for.
 
 It refuses to refund a declined or already-refunded payment, which would create money. Silently, not as
 an error: a retried compensation reaching an already-refunded payment is the expected case, not an

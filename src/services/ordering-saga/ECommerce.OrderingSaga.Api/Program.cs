@@ -54,6 +54,11 @@ builder.Services.AddScoped<PaymentFailedHandler>();
 builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(connectionString));
 builder.Services.AddScoped<SagaQueries>();
 
+// The timeout half of the saga. Without it, a service dying mid-conversation leaves an order stuck in
+// AwaitingPayment forever with the customer's stock still reserved. See StuckSagaSweeper.
+builder.Services.Configure<SagaSweepOptions>(builder.Configuration.GetSection(SagaSweepOptions.SectionName));
+builder.Services.AddHostedService<StuckSagaSweeper>();
+
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddPermissionPolicies();
 
