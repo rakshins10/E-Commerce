@@ -94,8 +94,11 @@ public sealed class OutboxPublisher<TContext>(
         IEventBus bus = scope.ServiceProvider.GetRequiredService<IEventBus>();
         IOutboxEventResolver resolver = scope.ServiceProvider.GetRequiredService<IOutboxEventResolver>();
 
+        // `Attempts < MaxAttempts` is the retry budget: a message that keeps failing is parked rather
+        // than retried every second forever. It stays in the table with its last_error for diagnosis -
+        // parking is a predicate, not a delete. See OutboxOptions.MaxAttempts and the runbook.
         List<OutboxMessage> pending = await db.OutboxMessages
-            .Where(message => message.PublishedAt == null)
+            .Where(message => message.PublishedAt == null && message.Attempts < _options.MaxAttempts)
             .OrderBy(message => message.OccurredAt)
             .Take(_options.BatchSize)
             .ToListAsync(cancellationToken)
@@ -176,12 +179,29 @@ public sealed class OutboxPublisher<TContext>(
             message.MarkFailed(ex.ToString());
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 
-            logger.LogWarning(
-                ex,
-                "Failed to publish outbox message {MessageId} ({EventName}), attempt {Attempts}.",
-                message.Id,
-                message.EventName,
-                message.Attempts);
+            if (message.Attempts >= _options.MaxAttempts)
+            {
+                // The attempt that crosses the budget logs at ERROR, once, because it is the last log
+                // line this message will ever produce - the fetch predicate excludes it from now on.
+                // Anything quieter and a parked message is invisible until an order goes missing.
+                logger.LogError(
+                    ex,
+                    "Outbox message {MessageId} ({EventName}) PARKED after {Attempts} attempts. " +
+                    "It will not be retried. Fix the cause, then reset its attempts to requeue - see the runbook.",
+                    message.Id,
+                    message.EventName,
+                    message.Attempts);
+            }
+            else
+            {
+                logger.LogWarning(
+                    ex,
+                    "Failed to publish outbox message {MessageId} ({EventName}), attempt {Attempts} of {MaxAttempts}.",
+                    message.Id,
+                    message.EventName,
+                    message.Attempts,
+                    _options.MaxAttempts);
+            }
         }
     }
 }

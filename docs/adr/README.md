@@ -38,6 +38,7 @@ Use [`0000-template.md`](0000-template.md) for new records.
 | [0019](0019-shared-integration-event-contracts.md) | Integration event contracts live in one shared project | Accepted | 6 |
 | [0020](0020-product-variants.md) | A product is a style; a variant is what you buy | Accepted | 9.5 |
 | [0021](0021-category-defined-options-and-contextual-facets.md) | The category defines which options exist; facets follow the current filter | Accepted | 9.5 |
+| [0022](0022-edge-hardening-defaults.md) | Hardening defaults: rate limits at the edge, retry budgets everywhere | Accepted | 10 |
 
 Planned for later phases: read-model projection strategy for Catalog if browse volume justifies a
 separate store (currently one database, two code paths), and resilience policy defaults (Phase 12).

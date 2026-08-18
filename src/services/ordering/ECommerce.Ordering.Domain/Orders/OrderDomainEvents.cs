@@ -120,4 +120,15 @@ public enum OrderCancellationReason
 
     /// <summary>Stock could not be reserved. Nothing to compensate.</summary>
     OutOfStock = 4,
+
+    /// <summary>
+    /// The checkout saga stopped moving and the stuck-saga sweeper cancelled it.
+    /// </summary>
+    /// <remarks>
+    /// Found the hard way: the sweeper sent "TimedOut" as its reason and the fallback in ParseReason
+    /// quietly turned it into <see cref="CancelledByStaff"/> - so a customer whose checkout timed out
+    /// was told a member of staff cancelled their order, which is both wrong and alarming. The fallback
+    /// is correct behaviour for an UNKNOWN reason (ADR-0019); the bug was the reason being unknown.
+    /// </remarks>
+    TimedOut = 5,
 }

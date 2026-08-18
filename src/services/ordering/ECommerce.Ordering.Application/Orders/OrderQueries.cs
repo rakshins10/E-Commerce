@@ -373,6 +373,7 @@ public static class OrderStatusNames
         2 => "CancelledByStaff",
         3 => "PaymentDeclined",
         4 => "OutOfStock",
+        5 => "TimedOut",
         _ => null,
     };
 }

@@ -81,9 +81,9 @@ link to a justification)
 | X14 | Facet filtering - audience tabs, size and colour | ✅ | ✅ | `sizesOf`, `coloursOf`, `findVariant`, `sizeHasStock`, `colourHasStock` duplicated per ADR-0018 |
 | X15 | Basket and order lines keyed by variant SKU and labelled with the option | ✅ | ✅ | Two sizes of one shirt are two lines, and every control on a line names its own variant |
 | X4 | WCAG 2.2 AA - keyboard, focus order, contrast, labels | ✅ | ✅ | Live-region result counts, text-not-colour stock, contrast guarded by script |
-| X5 | Correlation id sent on every request | ⬜ | ⬜ | |
-| X6 | `hasPermission()` from the shared layer, never a local copy | ⬜ | ⬜ | |
-| X7 | Server remains the only real enforcement point | ⬜ | ⬜ | UI hiding is UX, not security |
+| X5 | Correlation id sent on every request | ✅ | ✅ | Every api client mints `X-Correlation-Id` per request; the BFF echoes it and CORS exposes it, so a user can quote it to support |
+| X6 | `hasPermission()` identical in every app | ✅ | ✅ | Reworded: there is no shared layer since [ADR-0018](../docs/adr/0018-self-contained-frontends.md) - each app owns a copy, and the identical unit suites are the drift guard |
+| X7 | Server remains the only real enforcement point | ✅ | ✅ | Proven by the e2e specs where support cannot check out and an order manager cannot reach the catalogue editor - the UI hides, the server 403s |
 
 ---
 

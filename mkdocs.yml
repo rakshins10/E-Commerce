@@ -145,4 +145,5 @@ nav:
       - 0019 Shared event contracts: adr/0019-shared-integration-event-contracts.md
       - 0020 Product variants: adr/0020-product-variants.md
       - 0021 Category options & facets: adr/0021-category-defined-options-and-contextual-facets.md
+      - 0022 Edge hardening defaults: adr/0022-edge-hardening-defaults.md
       - Template: adr/0000-template.md
