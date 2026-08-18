@@ -21,7 +21,7 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 ## Hard rules - these block a merge
 
 1. **`main` must always be a state where `docker compose up` works.** CI enforces this with a job that boots
-   all 31 containers and waits for health.
+   all 30 containers and waits for health.
 2. **Documentation ships in the same PR as the code it describes.** A code-only PR is incomplete. See the
    table in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 3. **React and Angular move in lockstep.** Every UI feature lands in *both* frameworks in the *same* PR,
@@ -64,16 +64,16 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 2 | Keycloak realm, `Auth` building block, authorization model | ✅ merged |
 | 3 | **Both** storefront shells with OIDC login; self-contained frontends (ADR-0018) | ✅ merged |
 | 4 | Catalog + Storefront BFF + browse/search/detail - **both frameworks** | ✅ merged |
-| 5 | User Profile + My Account (profile, addresses, preferences) - **both** | ✅ 34 e2e specs green on both |
-| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout - **both** | ✅ 49 e2e specs green on both |
-| 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
-| 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
-| 9 | Catalogue CRUD in **both** admin panels | ✅ 25 admin e2e specs green on both |
-| 9.5 | Product variants + category-defined size scales - ADR-0020, ADR-0021 | ✅ 64 storefront + 26 admin specs green on both |
-| 10 | Resiliency, observability and security hardening | ✅ ADR-0022; sweep-and-refund proven live |
+| 5 | User Profile + My Account (profile, addresses, preferences) - **both** | ✅ merged |
+| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout - **both** | ✅ merged |
+| 7 | Payment + Inventory + Notification + Saga with compensation | ✅ merged |
+| 8 | Back-office + Admin BFF + **both** admin shells | ✅ merged |
+| 9 | Catalogue CRUD in **both** admin panels | ✅ merged |
+| 9.5 | Product variants + category-defined size scales - ADR-0020, ADR-0021 | ✅ merged |
+| 10 | Resiliency, observability and security hardening | ✅ merged (PR #11 - see the merge-race note below) |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
-| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ⬜ |
+| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | 🔶 in progress - docs audit done 2026-08-10 |
 
 Mobile (React Native) and Kubernetes are explicitly **deferred** - the user asked to finish everything
 else first. That is now true.
@@ -176,6 +176,7 @@ run against two independent implementations.
 | **An unanchored positional selector depends on document order** | `getByRole('heading', { level: 3 }).first()` meant "the first product" until the products page gained a category rail whose department names are also h3. It then clicked "Accessories" and failed two assertions later on a missing button | Give the container an `aria-label` and scope to it: `getByRole('list', { name: 'Products' })` |
 | **A form field is empty for a moment after navigation** | `inputValue()` reads the initial empty state, because it does not retry. Both apps render fields first and populate them when the query resolves | `await expect(page.getByLabel('Name')).toHaveValue(…)` first - `toHaveValue` retries |
 | **There is no Prettier config in this repo** | Running `npx prettier --write` reformats a file to Prettier's defaults - double quotes throughout - and the diff buries the actual change | Do not run it. `.editorconfig` and `dotnet format` cover .NET; the web apps are formatted by hand |
+| **Stacked PRs merge in the wrong order silently** | PR #9 (feature into main) was merged BEFORE PR #10 (phase into feature), so main shipped without Phase 10 and nobody was warned - GitHub happily retargets and merges in any order | Merge inner PRs first (deepest branch into its base, then outward). After any merge race, verify with `git merge-base --is-ancestor <commit> origin/main` |
 | **Angular's build defers CSS with an inline event handler** | With `script-src 'self'`, the `<link media="print" onload="this.media='all'">` trick from `inlineCritical` is blocked - the stylesheet stays print-only and the whole app renders UNSTYLED, while most role-based specs still pass against the bare DOM | `optimization.styles.inlineCritical: false` in both angular.json files. Two CSP console violations plus an unstyled screenshot is this bug's signature |
 | **A backtick inside an Angular inline template ends the string** | `NG1010: template must be a string` plus a cascade of `TS2304: Cannot find name 'optgroup'`, all pointing at the decorator rather than at the character | An inline template IS a TypeScript template literal. No backticks in template comments |
 | **Playwright `count()` and `allTextContents()` do not auto-wait** | Both return whatever matches at that instant, so they read 0 / `[]` on a page that has not finished rendering - and the assertion then fails with no clue why | `await expect(locator).toHaveCount(n)` FIRST, then read. Only `expect(locator)` retries |

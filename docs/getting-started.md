@@ -24,7 +24,7 @@ you want to run a component *outside* its container while developing it.
 
 ### Docker Desktop resources
 
-**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs 31 containers. Below
+**Allocate at least 8 GB of RAM and 4 CPUs**, in Settings → Resources. The stack runs 30 containers. Below
 8 GB, containers are killed by the OOM reaper mid-startup, which surfaces as services flapping between
 starting and unhealthy rather than as an obvious out-of-memory message - a genuinely confusing failure.
 
@@ -233,6 +233,19 @@ Every port is an environment variable. Change it in `.env` rather than editing `
 ```dotenv
 CATALOG_HTTP_PORT=15001
 ```
+
+**If another project owns the port**, remapping is not always enough. This stack and any other Docker
+project that runs Keycloak, RabbitMQ or Redis will fight over the same well-known ports (8080, 5672,
+6379) - and **Keycloak's 8080 cannot simply be remapped**, because the issuer URL and both web apps are
+built against it; changing it means changing `KEYCLOAK_ISSUER` and rebuilding the web images. In
+practice: stop the other project while you run this one.
+
+```bash
+docker ps --format '{{.Names}}\t{{.Ports}}' | grep -v '^ecom-'   # who else is running?
+```
+
+This is also why the unused MongoDB container was removed in Phase 13: it collided with another
+project's Mongo on 27017 and killed the entire boot, despite no service here ever connecting to it.
 
 ### CORS errors in the browser
 

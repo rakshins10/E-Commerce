@@ -364,9 +364,11 @@ consequence of sovereignty, not a goal in itself.**
 
 > [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md) anticipated a MongoDB projection for
 > Catalog's read side. It has **not been built**: the read model is a different *shape* served by different
-> *technology* (Dapper, purpose-built DTOs), but it lives in the same database. The `mongo` container is
-> provisioned and unused. The decision stands; the implementation has not caught up, and an architecture
-> document that claimed otherwise would be describing a system nobody can run.
+> *technology* (Dapper, purpose-built DTOs), but it lives in the same database. The `mongo` container
+> sat provisioned-and-unused until the Phase 13 fresh-machine walkthrough, when it collided with another
+> project's MongoDB on port 27017 and killed the entire boot - an unused container is not free, it is a
+> failure mode waiting for a port. It is removed. The decision stands as a decision; reviving it is one
+> compose block plus a projection consumer.
 
 See [ADR-0003](adr/0003-postgresql-and-polyglot-persistence.md).
 
@@ -383,7 +385,7 @@ logic, never DTOs shared between two services' APIs.
 | `Common` | Result types, domain-event base types, guard clauses, pagination primitives, `ProblemDetails` error contract | Language-level utilities. No domain meaning. |
 | `EventBus` | `IEventBus`, `IntegrationEvent`, `IIntegrationEventHandler<T>`, subscription manager | Abstraction only, zero transport dependency - this is what makes RabbitMQ swappable for Azure Service Bus. |
 | `EventBus.RabbitMQ` | The RabbitMQ implementation: connection management, publisher confirms, consumer wiring, retry/DLQ | One implementation of the above. Referenced only in composition roots. |
-| `Observability` | Serilog + OpenTelemetry setup, correlation-ID propagation, health-check conventions | Pure infrastructure. Ensures every service is observable identically. |
+| `Observability` | Serilog + OpenTelemetry setup, correlation-ID propagation, health-check conventions, and the edge hardening (rate limiting + security headers) the BFFs apply | Pure infrastructure. Ensures every service is observable - and every gateway defended - identically. |
 | `Auth` | JWT validation, permission policies, `IAuthorizationRequirement`/handlers, resource-based authorization, `ICurrentUser` | Security must be uniform. Reimplementing token validation per service is how services drift and holes appear. |
 
 **What deliberately is *not* here:** integration event *contracts*. It is tempting to put every event class

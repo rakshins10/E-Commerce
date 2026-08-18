@@ -61,7 +61,12 @@ Worth knowing where to look:
 
 ## Handle a poisoned message
 
-_Detailed in Phase 7, once there are real consumers._ The shape:
+Poison has two homes now, one per direction:
+
+- **Outbound** - a message that cannot be *published* parks in its service's `outbox_messages` table
+  after 25 attempts. See "Requeue a parked outbox message" above.
+- **Inbound** - a message that cannot be *consumed* dead-letters to its queue's `.dlq` after the
+  consumer's retry budget. That is this section.
 
 1. Find it in the `.dlq` queue and read the payload and the `x-death` header for the failure count.
 2. Decide whether the bug is in the message or the handler.

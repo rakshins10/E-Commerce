@@ -25,10 +25,10 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 | 8 | Back-office + Admin BFF + **both** admin panels, permission-gated | ✅ done |
 | 9 | Catalogue CRUD in **both** admin panels | ✅ done |
 | 9.5 | Product variants - size, colour, audience, per-variant stock, category-defined size scales ([ADR-0020](docs/adr/0020-product-variants.md), [ADR-0021](docs/adr/0021-category-defined-options-and-contextual-facets.md)) | ✅ done |
-| 10 | Resiliency, observability and security hardening | ⬜ next |
+| 10 | Resiliency, observability and security hardening ([ADR-0022](docs/adr/0022-edge-hardening-defaults.md)) | ✅ done |
 | 11 | React Native (Expo) app + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
-| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ⬜ |
+| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | 🔶 in progress |
 
 ### What runs today
 
@@ -36,8 +36,8 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 cd deploy && docker compose up -d --wait
 ```
 
-Thirty-one containers: nine services, three gateways, four web applications, Keycloak, RabbitMQ, Redis,
-seven databases, and the observability stack.
+Thirty containers: nine services, three gateways, four web applications, Keycloak and its database,
+RabbitMQ, Redis, eight service databases, and the observability pair (Seq and Jaeger).
 
 | Surface | URL |
 |---------|-----|
@@ -142,7 +142,7 @@ cp .env.example .env          # dev-only values; see the warning below
 docker compose up -d
 ```
 
-This brings up **31 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
+This brings up **30 containers**. First run takes 10-25 minutes (image pulls plus twelve .NET builds);
 afterwards it is about 60 seconds. Use `docker compose up -d --wait` to block until everything reports
 healthy - it also fails if a service starts and then crashes, which a plain `up -d` reports as success.
 

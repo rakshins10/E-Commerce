@@ -140,6 +140,23 @@ Production origins come from configuration, not code. See [deployment](../operat
 
 ---
 
+## The edge budget: rate limiting and security headers
+
+This gateway is where the internet arrives, so it is where Phase 10 put the request budget
+([ADR-0022](../adr/0022-edge-hardening-defaults.md)): a fixed window of **1000 requests per 10 seconds
+per client IP** (`RateLimiting__PermitLimit` / `RateLimiting__WindowSeconds` to change), rejected with
+`429` and a `Retry-After` header. Health endpoints are exempt - an orchestrator polling `/health` is
+load the platform generates, and throttling it would make the limiter kill its own container.
+
+The limiter runs **before authentication**, on purpose: rejecting an abusive client must not cost a token
+validation first. Everything that survives leaves with `nosniff`, `X-Frame-Options: DENY` and
+`Referrer-Policy: no-referrer` - the short list an API response actually needs; the page-level
+Content-Security-Policy lives in the web apps' nginx, where the pages are.
+
+**Deliberately not repeated at the services behind this gateway.** They accept traffic only from the
+internal network, and one comprehensible budget at the boundary beats eleven copies of a policy that
+somebody eventually hits two hops deep with no idea why.
+
 ## Configuration
 
 | Key | Default (compose) | Notes |
