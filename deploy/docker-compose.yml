@@ -525,6 +525,12 @@ services:
     environment:
       <<: *dotnet-env
       ConnectionStrings__SagaDb: Host=saga-db;Database=saga;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      # Dev-fast timeout values, so the stuck-saga sweep can be DEMONSTRATED: stop payment-api, place an
+      # order, and within ~3 minutes the saga compensates and the order cancels. The code default is 15
+      # minutes, which is what production would want - the happy path takes seconds, so even 2 minutes
+      # is a wide margin against a false sweep of a merely-slow payment.
+      Saga__Sweep__IntervalSeconds: "30"
+      Saga__Sweep__StuckAfterSeconds: "120"
     ports: ["${SAGA_HTTP_PORT:-5009}:8080"]
     depends_on:
       saga-db: { condition: service_healthy }

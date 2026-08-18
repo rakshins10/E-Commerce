@@ -149,6 +149,7 @@ export const ORDER_CANCELLATION_LABELS: Record<string, string> = {
   CancelledByStaff: 'Cancelled by our team',
   PaymentDeclined: 'Payment was declined',
   OutOfStock: 'An item went out of stock',
+  TimedOut: 'The order timed out before it could complete',
 };
 
 /** One entry in an order's saga timeline. */
@@ -187,6 +188,8 @@ export const SAGA_STEP_LABELS: Record<string, string> = {
   CompensatingReleaseStock: 'Releasing the reserved stock',
   NoCompensationNeeded: 'Nothing to release',
   SagaCompleted: 'Order confirmed',
+  TimedOut: 'The order timed out',
+  RefundRequested: 'Refunding your payment',
   SagaCompensated: 'Order cancelled and stock returned',
 };
 

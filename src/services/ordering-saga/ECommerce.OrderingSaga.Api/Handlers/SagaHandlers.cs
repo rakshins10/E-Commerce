@@ -225,11 +225,54 @@ public sealed class PaymentSucceededHandler(
             .Include(s => s.Steps)
             .FirstOrDefaultAsync(s => s.OrderId == @event.OrderId, cancellationToken);
 
-        if (saga is null || saga.IsFinished)
+        if (saga is null)
         {
-            // A duplicate arriving after completion must not send a second AdvanceOrderCommand. The
-            // Order aggregate would ignore it - MarkAsPaid is idempotent too - but relying on the far
-            // end to catch your duplicates is how one missing guard becomes two confirmation emails.
+            return;
+        }
+
+        if (saga.State == SagaState.Compensated)
+        {
+            // Payment succeeded AFTER the saga was compensated - the stuck-saga sweeper cancelled the
+            // order, and then the slow success arrived. Money has been taken for an order that no
+            // longer exists, which is the one state this system must never leave a customer in.
+            //
+            // This is the moment RefundPaymentCommand was declared for. It existed unsent from Phase 7,
+            // because the shape of the saga is what makes adding a timeout safe - and this is the shape
+            // paying off.
+            //
+            // Guarded by the saga's own step record, because THIS handler's duplicates would otherwise
+            // refund twice - and a double refund is a gift card with extra steps.
+            if (saga.Steps.Any(step => step.Name == "RefundRequested"))
+            {
+                return;
+            }
+
+            saga.Record(
+                "RefundRequested",
+                $"Payment {@event.PaymentReference} succeeded after the order was cancelled; refunding.");
+
+            outbox.Add(new RefundPaymentCommand
+            {
+                OrderId = saga.OrderId,
+                OrderNumber = saga.OrderNumber,
+                PaymentReference = @event.PaymentReference,
+            });
+
+            await db.SaveChangesAsync(cancellationToken);
+
+            logger.LogWarning(
+                "Saga {OrderNumber}: payment {Reference} succeeded after compensation. Refund requested.",
+                saga.OrderNumber,
+                @event.PaymentReference);
+
+            return;
+        }
+
+        if (saga.IsFinished)
+        {
+            // Completed: a plain duplicate. It must not send a second AdvanceOrderCommand - the Order
+            // aggregate would ignore it, MarkAsPaid is idempotent too, but relying on the far end to
+            // catch your duplicates is how one missing guard becomes two confirmation emails.
             return;
         }
 
