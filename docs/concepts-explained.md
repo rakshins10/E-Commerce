@@ -47,6 +47,7 @@ and [What is a saga](#12-what-is-a-saga).
 20. [Health checks](#20-health-checks)
 21. [Logging, tracing, correlation IDs](#21-logging-tracing-correlation-ids)
 22. [Docker and Docker Compose](#22-docker-and-docker-compose)
+23. [Rate limiting and retry budgets - giving up well](#23-rate-limiting-and-retry-budgets---giving-up-well)
 
 ---
 
@@ -828,6 +829,40 @@ image, many containers.
   password-protected - **there is no route**. Only the BFFs bridge both sides.
 
 📄 [`docs/getting-started.md`](getting-started.md) · [deployment topology](diagrams/deployment.md)
+
+---
+
+## 23. Rate limiting and retry budgets - giving up well
+
+Section 19 covered retrying: what to do when something fails and might succeed if asked again. This is
+the other half - **when to stop asking**, and when to refuse to be asked.
+
+**Rate limiting** is a budget on how often a client may call you. This system gives every client IP
+1,000 requests per 10 seconds at the gateways; request 1,001 gets HTTP `429 Too Many Requests` and a
+`Retry-After` header saying when to come back. Two details matter more than the numbers:
+
+- **It lives at the edge, and only there.** The gateways face the internet; the services behind them
+  accept traffic only from the internal network. One budget at the boundary is comprehensible and
+  measurable. Eleven copies of it, one per service, is a debugging session for whoever hits an internal
+  429 two hops deep.
+- **Health probes are exempt.** The platform polling `/health` is load the platform itself generates -
+  throttle it and the rate limiter kills its own container.
+
+**A retry budget** is the same idea pointed inward. At-least-once delivery means messages are retried -
+but *forever* is not a number. A message that can never publish (say, a payload that stopped
+deserialising after a bad deploy) would otherwise be retried every second, silently, for the rest of the
+system's life. Here the outbox **parks** a message after 25 failed attempts: it stops retrying, logs one
+ERROR, and leaves the row in the table with its `last_error` so a human can decide. The saga has the
+same discipline with time instead of attempts: a checkout stuck for fifteen minutes is compensated by a
+sweeper rather than trusted to finish someday.
+
+The shared principle: **infinite patience is not reliability.** A system that never gives up cannot tell
+anyone it is failing. Giving up *well* - visibly, recoverably, with the evidence kept - is what turns a
+silent infinite loop into a fixable incident. See
+[ADR-0022](adr/0022-edge-hardening-defaults.md) for the numbers and what they cost.
+
+**In this repo:** `EdgeHardening.cs` (the limiter), `OutboxOptions.MaxAttempts` (the parking budget),
+`StuckSagaSweeper.cs` (the timeout), and the runbook's "Requeue a parked outbox message".
 
 ---
 

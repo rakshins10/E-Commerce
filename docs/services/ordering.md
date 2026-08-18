@@ -28,7 +28,7 @@ application declares. The dependency arrow points **inwards**: `Domain` referenc
 seed-work base classes, which is enforced by a test in
 [`ECommerce.Architecture.Tests`](../../tests/unit/ECommerce.Architecture.Tests/).
 
-The practical payoff: **26 tests covering every business rule run in 177ms with no database, no host and
+The practical payoff: **28 tests covering every business rule run in under 300ms with no database, no host and
 no mocks**, directly against the aggregate. That is only possible because the domain has no infrastructure
 in it.
 
@@ -499,7 +499,7 @@ A 10-second timeout bounds both, because checkout is a request a person is waiti
 
 | Layer | Where | Covers |
 |-------|-------|--------|
-| Domain unit | [`ECommerce.Ordering.Domain.Tests`](../../tests/unit/ECommerce.Ordering.Domain.Tests/) | **26 tests, 177ms**, every invariant, no database |
+| Domain unit | [`ECommerce.Ordering.Domain.Tests`](../../tests/unit/ECommerce.Ordering.Domain.Tests/) | **28 tests, under 300ms**, every invariant, no database |
 | End-to-end | [`shopping.spec.ts`](../../tests/e2e/specs/shopping.spec.ts) | 13 specs against **both** storefronts |
 
 The e2e block for checkout runs **serially**, deliberately: only three seed users hold `order:write`

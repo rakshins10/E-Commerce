@@ -234,6 +234,19 @@ Every port is an environment variable. Change it in `.env` rather than editing `
 CATALOG_HTTP_PORT=15001
 ```
 
+**If another project owns the port**, remapping is not always enough. This stack and any other Docker
+project that runs Keycloak, RabbitMQ or Redis will fight over the same well-known ports (8080, 5672,
+6379) - and **Keycloak's 8080 cannot simply be remapped**, because the issuer URL and both web apps are
+built against it; changing it means changing `KEYCLOAK_ISSUER` and rebuilding the web images. In
+practice: stop the other project while you run this one.
+
+```bash
+docker ps --format '{{.Names}}\t{{.Ports}}' | grep -v '^ecom-'   # who else is running?
+```
+
+This is also why the unused MongoDB container was removed in Phase 13: it collided with another
+project's Mongo on 27017 and killed the entire boot, despite no service here ever connecting to it.
+
 ### CORS errors in the browser
 
 The SPAs call their BFF, which is a different origin. CORS is configured on the BFF, and the allowed origins

@@ -64,11 +64,11 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 2 | Keycloak realm, `Auth` building block, authorization model | ✅ merged |
 | 3 | **Both** storefront shells with OIDC login; self-contained frontends (ADR-0018) | ✅ merged |
 | 4 | Catalog + Storefront BFF + browse/search/detail - **both frameworks** | ✅ merged |
-| 5 | User Profile + My Account (profile, addresses, preferences) - **both** | ✅ 34 e2e specs green on both |
-| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout - **both** | ✅ 49 e2e specs green on both |
-| 7 | Payment + Inventory + Notification + Saga with compensation | ✅ 53 e2e specs green on both |
-| 8 | Back-office + Admin BFF + **both** admin shells | ✅ 15 admin e2e specs green on both |
-| 9 | Catalogue CRUD in **both** admin panels | ✅ 25 admin e2e specs green on both |
+| 5 | User Profile + My Account (profile, addresses, preferences) - **both** | ✅ merged |
+| 6 | Basket + Ordering (DDD/CQRS) + outbox + cart/checkout - **both** | ✅ merged |
+| 7 | Payment + Inventory + Notification + Saga with compensation | ✅ merged |
+| 8 | Back-office + Admin BFF + **both** admin shells | ✅ merged |
+| 9 | Catalogue CRUD in **both** admin panels | ✅ merged |
 | 9.5 | Product variants + category-defined size scales - ADR-0020, ADR-0021 | ✅ merged |
 | 10 | Resiliency, observability and security hardening | ✅ merged (PR #11 - see the merge-race note below) |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |

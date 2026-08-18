@@ -38,6 +38,8 @@ Enforced by the `Order` aggregate. Reaching any of these is a defect.
 | O6 | An order has a complete shipping address - an address is either whole or absent, never half-populated. |
 | O7 | An order has a `BuyerId`. Anonymous orders are out of scope. |
 | O8 | Status transitions follow the state machine. Nothing may set a status directly. |
+| O9 | A line is identified by its **variant SKU** - a Medium and a Large of one shirt are two lines, and two lines for the same variant merge into one ([ADR-0020](../adr/0020-product-variants.md)) |
+| O10 | A line snapshots the size and colour bought as text, like the name and the price - renaming a colour later must not rewrite a dispatch note |
 
 ## Ordering - business rules
 
@@ -98,7 +100,8 @@ These cannot be enforced by any single aggregate, which is precisely why the sag
 | X1 | An order is confirmed only if stock was reserved **and** payment succeeded | Saga orchestration |
 | X2 | If payment fails, reserved stock is released | Compensating action |
 | X3 | If stock is unavailable, the order is cancelled and no payment is attempted | Saga branch |
-| X4 | A step that times out is treated as failed and compensated | Saga timeout - without this a lost reply strands an order forever |
+| X4 | A step that times out is treated as failed and compensated | `StuckSagaSweeper` - the same compensation as a failure, triggered by a clock ([ADR-0022](../adr/0022-edge-hardening-defaults.md)) |
+| X5 | Money is never kept for an order that does not exist | If payment succeeds **after** the sweep cancelled the order, the saga answers with `RefundPaymentCommand` |
 
 Each is stated as *eventually* true. There is a window in which an order is `Submitted` and stock is not yet
 reserved, and the UI shows that honestly rather than pretending it is instant. See
