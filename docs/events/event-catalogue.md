@@ -230,7 +230,7 @@ Commands, not events. Imperative, addressed to one service, and they may fail me
 | `ReserveStockCommand` | Inventory | Reserve the order's lines |
 | `ReleaseStockCommand` | Inventory | **Compensation** - put reserved stock back |
 | `RequestPaymentCommand` | Payment | Take the money |
-| `RefundPaymentCommand` | Payment | **Compensation** - give it back |
+| `RefundPaymentCommand` | Payment | **Compensation** - give it back. Sent when payment succeeds AFTER the stuck-saga sweep cancelled the order ([ADR-0022](../adr/0022-edge-hardening-defaults.md)) |
 | `AdvanceOrderCommand` | Ordering | Apply a state transition (`ConfirmStock`, `MarkPaid`, `Cancel`) |
 
 **`AdvanceOrderCommand` carries a discriminator rather than being four separate commands.** The saga's job

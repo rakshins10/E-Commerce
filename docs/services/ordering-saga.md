@@ -257,17 +257,28 @@ is worse than no timeline.
 
 ---
 
-## 10. What a production system would add
+## 10. Timeouts, budgets and the refund - the Phase 10 half
 
-Named rather than left as gaps a reader has to notice:
+This section used to list three things a production system would add. Phase 10 built them
+([ADR-0022](../adr/0022-edge-hardening-defaults.md)), and each landed exactly where the earlier design
+said it would - which is the real test of the design.
 
-**Timeouts.** If Inventory never replies, this saga waits forever. Production needs a scheduled check
-that finds sagas stuck past a threshold and compensates them. The `/stuck` endpoint is the query that
-would drive it; the scheduler is not built.
+**Timeouts: the stuck-saga sweeper.** `StuckSagaSweeper` compensates any saga still unfinished past a
+threshold (default 15 minutes; dev compose sets 2 so the runbook demo fits in a coffee break). The
+compensation is *identical* to the payment-failure path, deliberately - a timeout is not a special kind
+of failure, it is a failure whose notification never came, so it takes the same exit: release stock only
+if this saga's own record says it was reserved, cancel the order with reason `TimedOut`, everything
+through the outbox in one transaction. Replicas can race safely because every effect is idempotent -
+correctness by idempotent effects rather than leader election.
 
-**A retry budget.** A compensating action that keeps failing needs to stop and raise an alert rather than
-retry indefinitely.
+**A retry budget.** The outbox parks any message - including a compensating command - after 25 failed
+publishes, with an ERROR log as it crosses the line and a one-UPDATE requeue in the runbook. A
+compensation that keeps failing now stops and demands a human, instead of pretending persistence is
+progress.
 
-**Refund on a later failure.** `RefundPaymentCommand` and its handler exist but are never sent, because
-payment is currently the last step that can fail. They are written so that adding a shipping-label step
-tomorrow has a complete compensation story rather than an aspirational one.
+**The refund, no longer aspirational.** The sweep created the race the refund was declared for in Phase
+7: payment can succeed *after* the sweep cancelled the order. `PaymentSucceededHandler` detects a
+success arriving on a compensated saga and sends `RefundPaymentCommand` - guarded by the saga's own
+step record so a duplicate success cannot refund twice. Money is never kept for an order that does not
+exist. The runbook has the three-command demo, and it is worth running once: stopping payment mid-saga
+and watching the system cancel, refund and reconcile itself is the whole phase in ninety seconds.
