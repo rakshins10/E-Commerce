@@ -107,13 +107,13 @@ curl http://localhost:5001/health/ready
 
 | Surface | URL | Notes |
 |---------|-----|-------|
-| React storefront | http://localhost:3000 | Phase 3 |
-| React admin | http://localhost:3001 | Phase 8 |
-| Angular storefront | http://localhost:4200 | Phase 3 |
-| Angular admin | http://localhost:4201 | Phase 8 |
-| Storefront BFF | http://localhost:6001 | |
-| Admin BFF | http://localhost:6002 | |
-| Mobile BFF | http://localhost:6003 | |
+| React storefront | http://localhost:3000 | Sign in as `customer` to shop |
+| React admin | http://localhost:3001 | Sign in as `administrator`, `catalogmgr`, `ordermgr` or `support` |
+| Angular storefront | http://localhost:4200 | Functionally identical to the React one - the point of ADR-0014 |
+| Angular admin | http://localhost:4201 | Functionally identical to the React one |
+| Storefront BFF | http://localhost:6001 | Rate-limited edge; what both storefronts call |
+| Admin BFF | http://localhost:6002 | Rate-limited edge; what both admin panels call |
+| Mobile BFF | http://localhost:6003 | Boots and is hardened; its client is Phase 11, deferred |
 | **Keycloak admin console** | http://localhost:8080 | `admin` / `dev_only_kc_admin_pw` |
 | **RabbitMQ management** | http://localhost:15672 | `ecom` / `dev_only_rabbit_pw` - watch queue depth and dead letters |
 | **Seq (logs)** | http://localhost:8081 | Filter by `CorrelationId` to follow one request |
