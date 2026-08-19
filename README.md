@@ -28,7 +28,7 @@ plus the full-stack and system-design topics a senior .NET engineer is expected 
 | 10 | Resiliency, observability and security hardening ([ADR-0022](docs/adr/0022-edge-hardening-defaults.md)) | ✅ done |
 | 11 | React Native (Expo) app + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
-| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | 🔶 in progress |
+| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ✅ done |
 
 ### What runs today
 

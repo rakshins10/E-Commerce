@@ -8,9 +8,13 @@ operating.
 
 ## Reset everything
 
+> Use `--remove-orphans`. A service deleted from the compose file leaves its container behind in the
+> project otherwise, and `down -v` alone does not reclaim it.
+
+
 ```bash
 cd deploy
-docker compose down -v          # containers AND volumes - all data gone
+docker compose down --remove-orphans -v   # containers, orphans AND volumes - all data gone
 docker compose up -d --wait
 ```
 
