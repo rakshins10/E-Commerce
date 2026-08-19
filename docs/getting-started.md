@@ -127,6 +127,27 @@ instances are on `15432`-`15440`. The full allocation is in
 > [**operations/tooling-guide.md**](operations/tooling-guide.md) - a hands-on introduction to all four
 > assuming no prior knowledge, with exercises you can run against the stack you just started.
 
+### The fresh-machine proof
+
+The claim "`main` always works from a clean `docker compose up`" is only worth anything if somebody
+checks it from nothing. That check is the Phase 13 walkthrough, and it is repeatable - it is exactly
+what CI's `docker compose up` job runs on every push, plus the full e2e suite:
+
+```bash
+cd deploy
+docker compose down --remove-orphans -v           # empty volumes, no leftover containers
+docker compose build                              # every image from the current tree
+docker compose up -d --wait --wait-timeout 600    # all 30 containers healthy, or it fails
+cd ../tests/e2e
+npm run test:react && npm run test:angular        # 64 storefront specs, twice
+npm run test:react:admin && npm run test:angular:admin   # 26 back-office specs, twice
+```
+
+Run the e2e block **twice**. A spec that passes on a clean database and fails on the second run is a spec
+that assumed its starting state, and several did once.
+
+Last performed from scratch: **2026-08-19**, 30 containers healthy, 180 specs green on both passes.
+
 ---
 
 ## 4. Everyday commands

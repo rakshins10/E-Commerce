@@ -281,11 +281,17 @@ services:
       - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     volumes: [rabbitmq-data:/var/lib/rabbitmq]
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
-      interval: 10s
+      # check_port_connectivity, not check_running. check_running answers "is the Erlang node up", which
+      # is true several seconds BEFORE the AMQP listener opens - so dependents were released into a
+      # broker that refused their first connection, and on a cold machine the gap outran the retries and
+      # compose declared the whole stack failed at 14 of 30 containers. check_port_connectivity asks the
+      # question the dependents actually care about: can I open 5672 yet. The longer start_period covers a
+      # cold image start (~9s here) without spending retries on it.
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
       timeout: 10s
-      retries: 12
-      start_period: 20s
+      retries: 24
+      start_period: 40s
     networks: [backend]
 
   # ===========================================================================

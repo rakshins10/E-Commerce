@@ -73,13 +73,13 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 10 | Resiliency, observability and security hardening | ✅ merged (PR #11 - see the merge-race note below) |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
 | 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
-| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | 🔶 in progress - docs audit done 2026-08-10 |
+| 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ✅ walkthrough 2026-08-19: 30 containers from empty volumes, 180 specs x2 |
 
 Mobile (React Native) and Kubernetes are explicitly **deferred** - the user asked to finish everything
 else first. That is now true.
 
-**Phases 1-10 are complete.** What remains: mobile (11) and Kubernetes (12), both deferred by request,
-and the Phase 13 final pass. Remaining declared non-goals live at the end of each service page and in
+**Phases 1-10 and 13 are complete.** What remains is mobile (11) and Kubernetes (12), both deferred by
+request. Remaining declared non-goals live at the end of each service page and in
 `docs/events/event-catalogue.md`.
 
 ---
@@ -110,7 +110,7 @@ cd deploy
 docker compose up -d --wait --wait-timeout 420   # --wait fails if a service crashes after starting
 docker compose ps
 docker compose logs -f catalog-api
-docker compose down -v                            # DELETES all data
+docker compose down --remove-orphans -v           # DELETES all data; --remove-orphans reclaims deleted services
 ```
 
 ### Web
@@ -153,6 +153,8 @@ run against two independent implementations.
 
 | Gotcha | What happens | Fix |
 |---|---|---|
+| **RabbitMQ `check_running` reports healthy before AMQP listens** | On a cold machine, `rabbitmq-diagnostics check_running` passes while 5672 is still closed; dependents are released into a broker that refuses them, compose marks rabbitmq unhealthy on the retries, and the stack dies at 14 of 30 containers - while a second `up` sails through, because by then the listener is open | `check_port_connectivity`, which asks the question dependents care about. Found by the Phase 13 walkthrough; a warm machine never shows it |
+| **`docker compose down -v` leaves orphans** | A service removed from the compose file keeps its old container in the project; it showed as `mongo  Created` in `ps -a` for days after the removal | `docker compose down --remove-orphans -v` whenever a service is deleted |
 | **PowerShell 5.1 mangles UTF-8** | `Get-Content -Raw` + `Set-Content` on a UTF-8 file without BOM turns em-dashes into `â€"` | Use `[System.IO.File]::ReadAllText/WriteAllText` with `UTF8Encoding($false)`, or the Edit tool |
 | **PowerShell here-strings break on `"`** | `git commit -m @'...'@` containing a double quote splits the message into pathspecs | Write the message to a file and use `git commit -F` |
 | **`Set-Content -Encoding utf8` adds a BOM** | `dotnet format` fails with `error CHARSET` | Strip BOMs, or write via the Write tool |
