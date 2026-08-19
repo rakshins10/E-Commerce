@@ -28,6 +28,11 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
+  # NOTE: github.repository is "rakshins10/E-Commerce" - capital E. An OCI image reference must be
+  # lowercase. docker/metadata-action lowercases it silently when PUBLISHING, so the images exist as
+  # e-commerce-*, but any step that builds the reference by hand (the scan, the attestation) gets
+  # "could not parse reference" unless it lowercases too. Every job therefore derives IMAGE_NAME below
+  # and uses that; this raw value is for human-facing text only.
   IMAGE_PREFIX: ${{ github.repository }}
 
 jobs:
@@ -69,6 +74,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Lowercase once, use everywhere. See the IMAGE_PREFIX note at the top.
+      - name: Derive the image name
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Buildx
         # Needed for multi-architecture builds and for the GitHub Actions layer
         # cache below.
@@ -87,7 +97,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}-${{ matrix.service }}
           # Several tags per image, each for a different consumer:
           #   sha-<commit>  immutable, and the only one safe to deploy
           #   1.2.3 / 1.2   semantic versions, from a v* tag
@@ -133,7 +143,7 @@ jobs:
       - name: Attest provenance
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          subject-name: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}-${{ matrix.service }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
@@ -162,6 +172,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Lowercase once, use everywhere. See the IMAGE_PREFIX note at the top.
+      - name: Derive the image name
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
       # The scan pulls the image back from GHCR, so it needs the same login the publish used -
       # packages default to private even on a public repository.
       - name: Log in to GHCR
@@ -176,7 +191,7 @@ jobs:
       - name: Trivy scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:sha-${{ github.sha }}
+          image-ref: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}-${{ matrix.service }}:sha-${{ github.sha }}
           format: sarif
           output: trivy-${{ matrix.service }}.sarif
           severity: CRITICAL,HIGH
@@ -202,16 +217,17 @@ jobs:
     steps:
       - name: Write the job summary
         run: |
+          IMAGE="${GITHUB_REPOSITORY,,}"   # lowercase - see the IMAGE_PREFIX note at the top
           {
             echo "## Images published"
             echo
-            echo "Registry: \`${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-<service>\`"
+            echo "Registry: \`${{ env.REGISTRY }}/${IMAGE}-<service>\`"
             echo
             echo "Immutable tag for this build: \`sha-${{ github.sha }}\`"
             echo
             echo "Pull one with:"
             echo '```bash'
-            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-catalog-api:sha-${{ github.sha }}"
+            echo "docker pull ${{ env.REGISTRY }}/${IMAGE}-catalog-api:sha-${{ github.sha }}"
             echo '```'
             echo
             echo "Deploy the \`sha-\` tag or the digest, never \`latest\` - see docs/operations/deployment.md."
