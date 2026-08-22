@@ -50,7 +50,17 @@ FROM nginx:1.27-alpine AS final
 
 ARG APP_DIST
 COPY --from=build /app/${APP_DIST} /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Runtime configuration (docs/adr/0023). The image is built ONCE and told where the BFF and Keycloak
+# live when it starts, so the artifact that passed staging is the artifact that reaches production.
+# Both the app's config.js and the nginx CSP are substituted from the same two variables.
+#
+# envsubst comes from gettext, which the nginx alpine image does not ship. There is no default.conf in
+# conf.d until the entrypoint writes one - deliberately: an unconfigured container must not serve.
+RUN apk add --no-cache gettext
+COPY nginx.conf.template /etc/nginx/ecommerce/default.conf.template
+COPY config.js.template /usr/share/nginx/html/config.js.template
+COPY 10-ecommerce-runtime-config.sh /docker-entrypoint.d/10-ecommerce-runtime-config.sh
+RUN chmod +x /docker-entrypoint.d/10-ecommerce-runtime-config.sh
 
 EXPOSE 8080
 
@@ -61,4 +71,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=5 \
   CMD wget -qO- http://127.0.0.1:8080/healthz || exit 1
 
+# No ENTRYPOINT override: the nginx image's own entrypoint runs /docker-entrypoint.d/* and then execs
+# nginx as PID 1, so SIGTERM reaches nginx directly. That is what lets Kubernetes drain connections
+# gracefully during a rolling update instead of killing them (docs/kubernetes/rolling-updates.md).
 CMD ["nginx", "-g", "daemon off;"]

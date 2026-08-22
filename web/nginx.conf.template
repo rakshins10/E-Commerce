@@ -1,4 +1,11 @@
-# Serves a single-page application.
+# Serves a single-page application. THIS IS A TEMPLATE.
+#
+# ${BFF_ORIGIN} and ${KEYCLOAK_ORIGIN} are substituted by
+# /docker-entrypoint.d/10-ecommerce-runtime-config.sh when the container starts,
+# from the same two variables that produce config.js. They MUST agree: config.js
+# says where the app sends requests, the CSP says where the browser is allowed to
+# send them, and a mismatch shows up only as "Refused to connect" in a console
+# nobody is watching. One source, substituted twice, is why they cannot drift.
 #
 # The one line that matters is `try_files ... /index.html`: a SPA owns its own
 # routing, so a browser refresh on /products asks nginx for a file that does not
@@ -31,18 +38,19 @@ server {
 
     # Content-Security-Policy - what the page may load and talk to.
     #
-    #   connect-src   the two BFFs and Keycloak, because every API call and the OIDC token endpoint are
-    #                 cross-origin from the app. One shared conf serves all four apps, so both BFFs are
-    #                 listed; each app only ever uses one.
+    #   connect-src   this app's BFF and Keycloak, because every API call and the OIDC token endpoint are
+    #                 cross-origin from the app. One shared template serves all four apps, but each
+    #                 CONTAINER is substituted with only its own BFF - the storefront images cannot
+    #                 reach the admin gateway even if a bug tried to.
     #   frame-src     Keycloak plus 'self': OIDC silent renew runs the authorize round-trip in a hidden
     #                 iframe, which loads Keycloak and then the app's own callback page.
     #   style-src     'unsafe-inline' because Angular injects component styles as inline <style> tags at
     #                 runtime. Dropping it is possible with nonces and is not worth the build complexity
     #                 here; scripts stay locked to 'self', which is where the real risk lives.
     #
-    # Origins are the DEV values, matching what the apps themselves are built with. A production build
-    # would substitute real origins here the same way it substitutes them into the app config.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:6001 http://localhost:6002; frame-src 'self' http://localhost:8080; base-uri 'self'; object-src 'none'" always;
+    # Origins arrive at container start, so the same image serves localhost, a local cluster and Azure
+    # without a rebuild (docs/adr/0023).
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ${BFF_ORIGIN} ${KEYCLOAK_ORIGIN}; frame-src 'self' ${KEYCLOAK_ORIGIN}; base-uri 'self'; object-src 'none'" always;
 
     # --- Caching ------------------------------------------------------------
     # Hashed assets (app-A1B2C3.js) are immutable: the filename changes whenever
@@ -67,8 +75,18 @@ server {
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
-        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8080 http://localhost:6001 http://localhost:6002; frame-src 'self' http://localhost:8080; base-uri 'self'; object-src 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ${BFF_ORIGIN} ${KEYCLOAK_ORIGIN}; frame-src 'self' ${KEYCLOAK_ORIGIN}; base-uri 'self'; object-src 'none'" always;
         expires 0;
+    }
+
+    # config.js must NEVER be cached, for the same reason index.html must not: it is the file that says
+    # where this deployment's API lives, and a stale copy points a new pod at the old environment.
+    location = /config.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        # Restated - see the inheritance trap above.
+        add_header X-Content-Type-Options "nosniff" always;
+        expires 0;
+        try_files $uri =404;
     }
 
     location = /healthz {
