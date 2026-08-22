@@ -72,7 +72,7 @@ docker compose up -d --build
 | Stage | Time | What is happening |
 |-------|------|-------------------|
 | Image pull | 3-10 min | Postgres, Keycloak, RabbitMQ, Redis, Seq, Jaeger, .NET base images |
-| .NET builds | 5-15 min | Twelve services compiled. **First build only** - later builds reuse cached layers |
+| .NET builds | 5-15 min | Nine services and three gateways compiled. **First build only** - later builds reuse cached layers |
 | Startup | 60-90 s | Databases initialise, Keycloak imports the realm, services connect |
 
 **Total on a first run: 10-25 minutes.** Subsequent `docker compose up -d` takes about 60 seconds.
