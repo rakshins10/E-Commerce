@@ -276,11 +276,26 @@ Every port is an environment variable. Change it in `.env` rather than editing `
 CATALOG_HTTP_PORT=15001
 ```
 
-**If another project owns the port**, remapping is not always enough. This stack and any other Docker
-project that runs Keycloak, RabbitMQ or Redis will fight over the same well-known ports (8080, 5672,
-6379) - and **Keycloak's 8080 cannot simply be remapped**, because the issuer URL and both web apps are
-built against it; changing it means changing `KEYCLOAK_ISSUER` and rebuilding the web images. In
-practice: stop the other project while you run this one.
+**If another project owns the port**, remap it. This stack and any other Docker project running
+Keycloak, RabbitMQ or Redis will fight over the same well-known ports (8080, 5672, 6379).
+
+Keycloak used to be the awkward one: its port was baked into both web bundles, so moving it meant
+rebuilding the images. Since [ADR-0023](adr/0023-runtime-configuration-for-single-page-apps.md) the web
+apps are told where Keycloak lives when their container starts, so **two lines in `.env` are now enough**:
+
+```dotenv
+KEYCLOAK_PORT=18080
+KEYCLOAK_ISSUER=http://localhost:18080/realms/ecommerce
+```
+
+`docker compose up -d --wait` and everything follows, including the Content-Security-Policy. Verified:
+30 containers and all 180 e2e specs green with Keycloak on 18080.
+
+> **One thing does not follow automatically.** The admin e2e specs fetch a token directly from Keycloak
+> and default to `http://localhost:8080`, so they must be told too:
+> `$env:E2E_KEYCLOAK="http://localhost:18080"`. Miss it and they request a token from whatever *else*
+> is on 8080, get a response with no body, and fail with `SyntaxError: Unexpected end of JSON input`
+> in a cleanup hook - which points at the last test that ran rather than at anything to do with ports.
 
 ```bash
 docker ps --format '{{.Names}}\t{{.Ports}}' | grep -v '^ecom-'   # who else is running?
