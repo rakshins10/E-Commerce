@@ -290,14 +290,16 @@
       "rootUrl": "http://localhost:3000",
       "baseUrl": "/",
       "redirectUris": [
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "http://shop.localtest.me/*"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://shop.localtest.me"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:3000/*"
+        "post.logout.redirect.uris": "http://localhost:3000/*##http://shop.localtest.me/*"
       },
       "protocolMappers": [
         {
@@ -336,14 +338,16 @@
       "rootUrl": "http://localhost:4200",
       "baseUrl": "/",
       "redirectUris": [
-        "http://localhost:4200/*"
+        "http://localhost:4200/*",
+        "http://shop-ng.localtest.me/*"
       ],
       "webOrigins": [
-        "http://localhost:4200"
+        "http://localhost:4200",
+        "http://shop-ng.localtest.me"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:4200/*"
+        "post.logout.redirect.uris": "http://localhost:4200/*##http://shop-ng.localtest.me/*"
       },
       "protocolMappers": [
         {
@@ -382,14 +386,16 @@
       "rootUrl": "http://localhost:3001",
       "baseUrl": "/",
       "redirectUris": [
-        "http://localhost:3001/*"
+        "http://localhost:3001/*",
+        "http://admin.localtest.me/*"
       ],
       "webOrigins": [
-        "http://localhost:3001"
+        "http://localhost:3001",
+        "http://admin.localtest.me"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:3001/*"
+        "post.logout.redirect.uris": "http://localhost:3001/*##http://admin.localtest.me/*"
       },
       "protocolMappers": [
         {
@@ -428,14 +434,16 @@
       "rootUrl": "http://localhost:4201",
       "baseUrl": "/",
       "redirectUris": [
-        "http://localhost:4201/*"
+        "http://localhost:4201/*",
+        "http://admin-ng.localtest.me/*"
       ],
       "webOrigins": [
-        "http://localhost:4201"
+        "http://localhost:4201",
+        "http://admin-ng.localtest.me"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "http://localhost:4201/*"
+        "post.logout.redirect.uris": "http://localhost:4201/*##http://admin-ng.localtest.me/*"
       },
       "protocolMappers": [
         {

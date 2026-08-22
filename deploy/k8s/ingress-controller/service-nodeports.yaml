@@ -1,0 +1,40 @@
+# Pin the node ports.
+#
+# The upstream Service is type NodePort with the ports left unset, so Kubernetes allocates three
+# random ones from 30000-32767. That is fine on a cloud provider, where a LoadBalancer sits in front
+# and nobody ever types the number - and useless on a local cluster, where the port mapping from the
+# host was fixed when the cluster was created.
+#
+# 30080 -> host 80, 30443 -> host 443, 31024 -> host 1024. Those three lines are in the kind cluster
+# config (docs/kubernetes/running-locally.md). Change one here and the browser stops reaching the
+# cluster, with no error anywhere to explain why.
+#
+# On Docker Desktop's Kubernetes none of this is needed - it publishes a LoadBalancer Service straight
+# onto localhost. The overlay is written for both, so the node ports are simply ignored there.
+apiVersion: v1
+kind: Service
+metadata:
+  name: haproxy-kubernetes-ingress
+  namespace: haproxy-controller
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+      nodePort: 30080
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 8443
+      nodePort: 30443
+    - name: stat
+      # The stats page. Deliberately a separate port from the traffic ports, which is what lets you
+      # expose it to yourself without exposing it to the internet: in a real deployment this port is
+      # reachable only from inside the cluster, and you reach it with
+      #   kubectl -n haproxy-controller port-forward svc/haproxy-kubernetes-ingress 1024:1024
+      port: 1024
+      protocol: TCP
+      targetPort: 1024
+      nodePort: 31024

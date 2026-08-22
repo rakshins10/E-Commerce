@@ -1,0 +1,107 @@
+# The managed services, as Kubernetes objects.
+#
+# ---------------------------------------------------------------------------------------------------
+#  Why an ExternalName Service rather than just putting the FQDN in the connection string
+# ---------------------------------------------------------------------------------------------------
+#  Because then `catalog-db` means the same thing in both overlays. Locally it is a StatefulSet; here
+#  it is a CNAME to an Azure Flexible Server. The connection string in the Secret is identical, the
+#  application is identical, and moving a database becomes a DNS change rather than a redeploy.
+#
+#  It also means `kubectl get svc` still shows the full dependency list, including the parts that do
+#  not run here. A dependency you cannot see in the cluster is one somebody will forget when they plan
+#  a migration.
+#
+#  What it does NOT do: ExternalName is DNS and nothing else. No load balancing, no health checking, no
+#  port remapping - the target must listen on the port the caller uses. It is also invisible to
+#  NetworkPolicy, which matches pod selectors and cannot match a name that resolves outside the
+#  cluster; private endpoints and firewall rules do that job instead.
+#
+#  The names below are placeholders. Real ones come from the Terraform or Bicep that provisions them.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-catalog.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ordering-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-ordering.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userprofile-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-userprofile.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-inventory.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-payment.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-notification.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backoffice-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-backoffice.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: saga-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-saga.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+spec:
+  type: ExternalName
+  externalName: ecommerce-keycloak.postgres.database.azure.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  type: ExternalName
+  externalName: ecommerce.redis.cache.windows.net
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+spec:
+  type: ExternalName
+  externalName: ecommerce-rabbit.privatelink.servicebus.windows.net

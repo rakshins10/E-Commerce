@@ -1,0 +1,157 @@
+# Real hostnames and TLS.
+#
+# A strategic-merge patch cannot rewrite one element of a list in place the way it can a map key:
+# `rules` is a list, and merging replaces it wholesale. So each Ingress is restated in full here
+# rather than patched field by field - more verbose, and honest about what is actually applied.
+#
+# The terser alternative is a JSON-6902 patch addressing /spec/rules/0/host, which breaks silently the
+# day somebody reorders the list in the base.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storefront
+  annotations:
+    # cert-manager watches for this, provisions a certificate from Let's Encrypt, and renews it. The
+    # local overlay has no TLS at all (ADR-0024): a self-signed certificate on a laptop teaches people
+    # to click through browser warnings, which is a worse habit than plain http locally.
+    cert-manager.io/cluster-issuer: letsencrypt-production
+spec:
+  ingressClassName: haproxy
+  tls:
+    - hosts:
+        - shop.ecommerce.example.com
+        - shop-ng.ecommerce.example.com
+      secretName: storefront-tls
+  rules:
+    - host: shop.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react-store
+                port:
+                  name: http
+    - host: shop-ng.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: angular-store
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: back-office
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    # The back office is staff-only, so it is IP-restricted at the edge as well. Defence in depth: the
+    # permission checks in the API are the real control, this only means a stranger never gets to try.
+    haproxy.org/whitelist: "10.0.0.0/8,192.168.0.0/16"
+spec:
+  ingressClassName: haproxy
+  tls:
+    - hosts:
+        - admin.ecommerce.example.com
+        - admin-ng.ecommerce.example.com
+      secretName: back-office-tls
+  rules:
+    - host: admin.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react-admin
+                port:
+                  name: http
+    - host: admin-ng.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: angular-admin
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateways
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    haproxy.org/timeout-server: "60s"
+spec:
+  ingressClassName: haproxy
+  tls:
+    - hosts:
+        - api.ecommerce.example.com
+        - admin-api.ecommerce.example.com
+      secretName: gateways-tls
+  rules:
+    - host: api.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: storefront-bff
+                port:
+                  name: http
+    - host: admin-api.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-bff
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: identity
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    haproxy.org/timeout-server: "120s"
+spec:
+  ingressClassName: haproxy
+  tls:
+    - hosts:
+        - auth.ecommerce.example.com
+      secretName: identity-tls
+  rules:
+    - host: auth.ecommerce.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  name: http
+---
+# Seq and Jaeger are NOT exposed here. Locally they are on logs. and traces.localtest.me because a
+# reader who cannot open them cannot learn what they are for. In production, with no authentication
+# configured on either, that route would show a stranger every log line and every trace in the system.
+#
+# Deleting a route the base defines takes an explicit directive, because silently dropping a rule
+# would otherwise be far too easy to do by accident.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: observability
+$patch: delete

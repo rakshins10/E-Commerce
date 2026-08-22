@@ -1,0 +1,24 @@
+# The stateful backing services: nine PostgreSQL instances, RabbitMQ and Redis.
+#
+# This layer exists to be LEFT OUT. The local overlay includes it; the Azure overlay does not, because
+# there the same role is played by Azure Database for PostgreSQL, a managed broker and Azure Cache for
+# Redis. That substitution costs a connection string and nothing else, which is the whole promise of
+# ADR-0017 (no service references a cloud SDK; every dependency is a configuration value).
+#
+# Being able to delete a directory and have the system still make sense is a decent test of whether a
+# boundary is real.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ecommerce
+
+resources:
+  - secrets.yaml
+  - databases.yaml
+  - messaging.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: ecommerce
+      app.kubernetes.io/managed-by: kustomize

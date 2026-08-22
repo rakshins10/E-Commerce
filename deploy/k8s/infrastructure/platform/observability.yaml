@@ -1,0 +1,164 @@
+# Seq (logs) and Jaeger (traces).
+#
+# Both are single-replica by nature: they are where telemetry is COLLECTED, so a second copy would
+# simply split the data in half and make every query wrong. If either becomes a bottleneck the answer
+# is a managed backend (Azure Monitor, Grafana Tempo), which the Azure overlay points at by changing
+# one endpoint - see ADR-0017.
+#
+# Note what is NOT here: nothing depends on these. A service whose logging sink is down keeps serving
+# requests. That is deliberate - observability that can take production down with it is a liability, so
+# the Serilog and OTLP exporters are fire-and-forget with local buffering.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seq
+  labels:
+    app.kubernetes.io/name: seq
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: seq
+  ports:
+    - name: ui
+      port: 80
+      targetPort: ui
+    - name: ingest
+      # Two ports, two audiences: 5341 is where services SHIP logs, 80 is where a human READS them.
+      # Only the second is exposed through the Ingress.
+      port: 5341
+      targetPort: ingest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seq
+  labels:
+    app.kubernetes.io/name: seq
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seq
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seq
+        app.kubernetes.io/component: observability
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      containers:
+        - name: seq
+          image: datalust/seq:latest
+          ports:
+            - name: ui
+              containerPort: 80
+            - name: ingest
+              containerPort: 5341
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            # Seq refuses to start without an EXPLICIT authentication decision - it will not silently
+            # default to open, and the container crash-loops with a message that is easy to miss. Local
+            # development opts out so the UI needs no login. Anything reachable beyond a laptop must set
+            # SEQ_FIRSTRUN_ADMINPASSWORDHASH instead:
+            #   docker run --rm datalust/seq config hash <password>
+            - name: SEQ_FIRSTRUN_NOAUTHENTICATION
+              value: "true"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: ui
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 768Mi
+      volumes:
+        - name: data
+          # emptyDir, not a PersistentVolumeClaim: local log history is disposable, and a claim that
+          # outlives the cluster is one more thing to clean up. Deliberately different from the
+          # databases, where the whole point is that the data survives.
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  labels:
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: jaeger
+  ports:
+    - name: ui
+      port: 16686
+      targetPort: ui
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  labels:
+    app.kubernetes.io/name: jaeger
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jaeger
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: jaeger
+        app.kubernetes.io/component: observability
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:latest
+          ports:
+            - name: ui
+              containerPort: 16686
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: ui
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              # all-in-one keeps traces in memory. This limit is what bounds that, and hitting it means
+              # an OOMKill that silently loses trace history - which is why production uses a real
+              # storage backend rather than all-in-one.
+              memory: 768Mi

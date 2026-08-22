@@ -1,0 +1,994 @@
+# Nine PostgreSQL instances, one per service.
+#
+# This is a PEDAGOGICAL choice, exactly as it is in Compose: it makes database-per-service (ADR-0003)
+# impossible to miss. Production would use one managed cluster with a database and a dedicated login
+# per service, which preserves data sovereignty at a fraction of the cost - and that is precisely what
+# the Azure overlay does, by deleting every one of these and changing a connection string.
+#
+# ---------------------------------------------------------------------------------------------------
+#  StatefulSet, not Deployment
+# ---------------------------------------------------------------------------------------------------
+#  A Deployment treats its pods as interchangeable: any one can be replaced by a fresh one and nothing
+#  notices. That is true of a stateless API and false of a database. A StatefulSet gives three things a
+#  Deployment cannot:
+#
+#    1. A STABLE NAME. Pods are catalog-db-0, catalog-db-1 - not catalog-db-7d4f9c-x2k1p. Restart one
+#       and it comes back with the same name.
+#    2. STABLE STORAGE. Each pod keeps its own PersistentVolumeClaim across restarts and rescheduling.
+#       A Deployment with a volume would hand the same disk to whichever pod happened to start.
+#    3. ORDERED operations. Pod 0 is ready before pod 1 starts, and shutdown runs in reverse. That is
+#       what a replicated database needs to elect a primary sanely.
+#
+#  Only replicas: 1 here, so points 2 and 3 are what earn it.
+---
+# Keycloak's own store: users, sessions, realm configuration.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-db
+  labels:
+    app.kubernetes.io/name: keycloak-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: keycloak-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak-db
+  labels:
+    app.kubernetes.io/name: keycloak-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: keycloak-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: keycloak
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Products, variants, categories and size scales.
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-db
+  labels:
+    app.kubernetes.io/name: catalog-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: catalog-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: catalog-db
+  labels:
+    app.kubernetes.io/name: catalog-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: catalog-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: catalog-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: catalog-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: catalog
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Orders, order lines and the ordering outbox.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ordering-db
+  labels:
+    app.kubernetes.io/name: ordering-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: ordering-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ordering-db
+  labels:
+    app.kubernetes.io/name: ordering-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: ordering-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ordering-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ordering-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: ordering
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Profiles, addresses and notification preferences.
+apiVersion: v1
+kind: Service
+metadata:
+  name: userprofile-db
+  labels:
+    app.kubernetes.io/name: userprofile-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: userprofile-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: userprofile-db
+  labels:
+    app.kubernetes.io/name: userprofile-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: userprofile-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: userprofile-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: userprofile-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: userprofile
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Stock levels and reservations.
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-db
+  labels:
+    app.kubernetes.io/name: inventory-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: inventory-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: inventory-db
+  labels:
+    app.kubernetes.io/name: inventory-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: inventory-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inventory-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: inventory-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: inventory
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Payment attempts, authorisations and refunds.
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-db
+  labels:
+    app.kubernetes.io/name: payment-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: payment-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: payment-db
+  labels:
+    app.kubernetes.io/name: payment-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: payment-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: payment-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: payment
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Sent notifications and the consumer inbox.
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-db
+  labels:
+    app.kubernetes.io/name: notification-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: notification-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: notification-db
+  labels:
+    app.kubernetes.io/name: notification-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: notification-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: notification-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: notification
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Audit entries written by the back office.
+apiVersion: v1
+kind: Service
+metadata:
+  name: backoffice-db
+  labels:
+    app.kubernetes.io/name: backoffice-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: backoffice-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: backoffice-db
+  labels:
+    app.kubernetes.io/name: backoffice-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: backoffice-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backoffice-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backoffice-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: backoffice
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Checkout saga state, one row per in-flight order.
+apiVersion: v1
+kind: Service
+metadata:
+  name: saga-db
+  labels:
+    app.kubernetes.io/name: saga-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  # clusterIP: None makes this a HEADLESS Service: DNS returns the pod's own IP instead of a virtual
+  # one, and no load balancing happens. That is what you want for a database - "spread my queries over
+  # the replicas" is exactly wrong when only one of them accepts writes. It is also what gives each
+  # StatefulSet pod its stable DNS name.
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: saga-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: saga-db
+  labels:
+    app.kubernetes.io/name: saga-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: saga-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: saga-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: saga-db
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # Postgres in the official image runs as uid 999. fsGroup makes the mounted volume group-owned by
+      # it, otherwise initdb fails with a permissions error on an empty disk - a first-boot-only failure
+      # that looks like corruption.
+      securityContext:
+        fsGroup: 999
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: saga
+            # Deterministic collation. Without it the collation follows the node's locale, and index
+            # ordering then differs between a developer's machine and CI - test failures that reproduce
+            # nowhere.
+            - name: POSTGRES_INITDB_ARGS
+              value: "--locale=C --encoding=UTF8"
+          envFrom:
+            - secretRef:
+                name: postgres-credentials
+          volumeMounts:
+            # POSTGRES 18 CHANGED THIS PATH. The mount is /var/lib/postgresql, NOT
+            # /var/lib/postgresql/data as it was for 17 and earlier: the image now places data in a
+            # major-version subdirectory beneath it. Mount the old path and the container refuses to
+            # start with a message that reads like data corruption.
+            - name: data
+              mountPath: /var/lib/postgresql
+          readinessProbe:
+            # pg_isready, not a TCP check. Postgres accepts connections for several seconds before it
+            # can actually serve a query, so a port check reports ready too early and the first
+            # dependent query fails.
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "ecom"]
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  # A volumeClaimTemplate is the difference between a StatefulSet and a Deployment that happens to
+  # mount a volume: each pod gets its OWN PersistentVolumeClaim, named after it, and that claim
+  # SURVIVES the pod. Delete the StatefulSet and the data is still there; delete the PVC and it is
+  # gone. `kubectl delete pvc -l app.kubernetes.io/part-of=ecommerce` is this stack's
+  # `docker compose down -v`.
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

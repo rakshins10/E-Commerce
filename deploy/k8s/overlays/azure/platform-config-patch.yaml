@@ -1,0 +1,33 @@
+# Production configuration. A strategic-merge patch: only the keys named here change, the rest of the
+# ConfigMap comes from the base.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+
+  # Information, not Debug. Debug logging in production is expensive twice over - the ingestion bill,
+  # and the signal-to-noise ratio when somebody is trying to read an incident at 3am.
+  Serilog__MinimumLevel__Default: "Information"
+
+  # Azure Monitor speaks OTLP through the OpenTelemetry collector; Application Insights is the other
+  # option and takes a connection string instead. Either way this is the ONLY line that changes -
+  # every service exports OTLP and has never heard of Azure.
+  Observability__OtlpEndpoint: "http://otel-collector.observability.svc.cluster.local:4317"
+
+  # A managed broker. Azure Service Bus is not AMQP 0-9-1, so it needs the EventBus abstraction's
+  # Service Bus implementation rather than the RabbitMQ one - which is exactly the swap that the
+  # EventBus / EventBus.RabbitMQ split exists to make possible (only EventBus.RabbitMQ may reference
+  # RabbitMQ.Client, and the architecture tests break the build if that changes). A managed RabbitMQ
+  # keeps it simpler still, at the cost of running something Azure does not operate for you.
+  EventBus__HostName: "ecommerce-rabbit.privatelink.servicebus.windows.net"
+  EventBus__Port: "5671"
+
+  Auth__Issuer: "https://auth.ecommerce.example.com/realms/ecommerce"
+  Auth__MetadataAddress: "http://keycloak:8080/realms/ecommerce/.well-known/openid-configuration"
+
+  Cors__StorefrontOrigin0: "https://shop.ecommerce.example.com"
+  Cors__StorefrontOrigin1: "https://shop-ng.ecommerce.example.com"
+  Cors__AdminOrigin0: "https://admin.ecommerce.example.com"
+  Cors__AdminOrigin1: "https://admin-ng.ecommerce.example.com"

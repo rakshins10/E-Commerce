@@ -1,0 +1,204 @@
+# How traffic gets in.
+#
+# ---------------------------------------------------------------------------------------------------
+#  What an Ingress actually is
+# ---------------------------------------------------------------------------------------------------
+#  An Ingress object is a ROUTING TABLE, not a load balancer. It says "requests for shop.localtest.me
+#  go to the react-store Service on port 8080" and nothing more. On its own it does absolutely
+#  nothing - if no ingress controller is installed, these objects sit in the cluster inert, and the
+#  symptom is a hostname that does not resolve or a connection that refuses. That is the single most
+#  common "my Ingress does not work" cause.
+#
+#  An INGRESS CONTROLLER is a real program (here, HAProxy) that watches the API for Ingress objects and
+#  reconfigures itself to match. It runs as a pod like anything else, and a Service of type
+#  LoadBalancer in front of it is what actually holds port 80.
+#
+#  Why one entry point instead of publishing ten ports: TLS terminates in one place, rate limits and
+#  headers are applied in one place, and the addresses do not change when a pod moves. Compose's
+#  "3000, 4200, 3001, 4201..." works on a laptop and nowhere else.
+#
+# ---------------------------------------------------------------------------------------------------
+#  Every hostname resolves to 127.0.0.1 with no setup
+# ---------------------------------------------------------------------------------------------------
+#  *.localtest.me is a real public domain whose every subdomain answers 127.0.0.1 (ADR-0024). No hosts
+#  file, no administrator rights, no difference between Windows and Linux. If a hostname stops
+#  resolving, check DNS first - `nslookup shop.localtest.me` - because the failure otherwise looks like
+#  a Kubernetes problem and is not one.
+#
+# ---------------------------------------------------------------------------------------------------
+#  What is deliberately NOT routed
+# ---------------------------------------------------------------------------------------------------
+#  The nine services. There is no Ingress for catalog-api, ordering-api or any of the rest, so nothing
+#  outside the cluster has a route to them at all. That is the BFF pattern enforced by topology rather
+#  than by discipline: the browser can only reach a gateway, and the gateway decides what it exposes.
+#  Compose achieved the same thing with its frontend/backend network split.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storefront
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+  annotations:
+    # Annotations are how an Ingress carries controller-specific behaviour that the Ingress spec has no
+    # field for. These are HAProxy's; ingress-nginx uses different ones for the same ideas, which is
+    # the portability cost ADR-0024 accepted.
+    #
+    # load-balance roundrobin: the default, and the right default for stateless pods. Note what is NOT
+    # set - there is no session affinity ("sticky sessions") anywhere in this file, because no pod
+    # holds session state. The user's session lives in a JWT in their browser and in Keycloak, so any
+    # pod can serve any request. That is what makes a rolling update invisible: a user mid-session
+    # whose pod disappears simply lands on another one and notices nothing.
+    haproxy.org/load-balance: "roundrobin"
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: shop.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react-store
+                port:
+                  name: http
+    - host: shop-ng.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: angular-store
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: back-office
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+  annotations:
+    haproxy.org/load-balance: "roundrobin"
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: admin.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: react-admin
+                port:
+                  name: http
+    - host: admin-ng.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: angular-admin
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateways
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+  annotations:
+    haproxy.org/load-balance: "roundrobin"
+    # CORS is handled by the BFFs themselves (Cors__Origins in platform-config), NOT here. Two layers
+    # both adding Access-Control-Allow-Origin produces a duplicated header, which browsers reject
+    # outright - so the request fails with a CORS error caused by having configured CORS twice. Pick
+    # one layer and leave the other alone.
+    haproxy.org/timeout-server: "60s"
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: api.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: storefront-bff
+                port:
+                  name: http
+    - host: admin-api.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin-bff
+                port:
+                  name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: identity
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+  annotations:
+    # Keycloak needs a longer timeout than an API: an authorization round trip involves a login form,
+    # and a human typing a password is slower than any service call.
+    haproxy.org/timeout-server: "120s"
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: auth.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  name: http
+---
+# The observability UIs. Exposed because they are useless if you cannot open them, and because a
+# reader who cannot see a trace cannot learn what a trace is.
+#
+# NOT exposed in a real deployment without authentication in front of them: Seq here is configured
+# with authentication OFF, and Jaeger's all-in-one has none at all. Both would show a stranger every
+# log line and every trace in the system.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  ingressClassName: haproxy
+  rules:
+    - host: logs.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: seq
+                port:
+                  name: ui
+    - host: traces.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger
+                port:
+                  name: ui

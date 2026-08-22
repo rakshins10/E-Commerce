@@ -1,0 +1,146 @@
+# Keycloak - the identity provider (ADR-0005).
+#
+# ---------------------------------------------------------------------------------------------------
+#  Realm as code
+# ---------------------------------------------------------------------------------------------------
+#  Clients, roles, composite roles, groups and the seed users are imported from
+#  identity/keycloak/realm-export.json, mounted here from a ConfigMap that Kustomize generates from the
+#  same file Compose bind-mounts. One source of truth for both, and no click-ops in either.
+#
+#  THE TRAP THAT COSTS AN AFTERNOON: Keycloak imports a realm only on FIRST start, when the realm does
+#  not yet exist. Editing the JSON and restarting the pod changes nothing at all, silently. To re-import
+#  you must delete the realm's data:
+#
+#      kubectl -n ecommerce delete statefulset keycloak-db
+#      kubectl -n ecommerce delete pvc data-keycloak-db-0
+#      kubectl -n ecommerce rollout restart deployment keycloak
+#
+#  And then the SECOND half of the trap: a re-imported realm has NEW signing keys, so every service
+#  that cached the old JWKS at startup returns 401 for everything. Restart them too. That is exactly
+#  what an identity-provider key rotation looks like in production, which makes it worth doing once
+#  deliberately rather than discovering it under pressure.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/component: identity
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: management
+      # Keycloak 26 moved health and metrics to a separate management port. Probing 8080 for
+      # /health/ready returns 404, which reads as "the app is broken" rather than "wrong port".
+      port: 9000
+      targetPort: management
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app.kubernetes.io/name: keycloak
+    app.kubernetes.io/component: identity
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: keycloak
+  strategy:
+    # Recreate. Clustered Keycloak needs Infinispan configured for a distributed session cache; two
+    # `start-dev` replicas would each hold their own sessions, and a user would be logged in or out
+    # depending on which pod answered. One replica, honestly, beats two that are subtly wrong.
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: keycloak
+        app.kubernetes.io/component: identity
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.4
+          # start-dev is DEVELOPMENT ONLY: it disables HTTPS enforcement and relaxes the hostname
+          # policy. Production uses `start` with a real certificate and KC_HOSTNAME_STRICT=true.
+          args: ["start-dev", "--import-realm"]
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://keycloak-db:5432/keycloak
+            # Pinning the hostname makes the issuer identical whether the token was requested by a
+            # browser or by a service. This value and platform-config's Auth__Issuer must agree
+            # exactly, down to the trailing slash - see the note there.
+            - name: KC_HOSTNAME
+              value: http://auth.localtest.me
+            - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+              value: "true"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+          envFrom:
+            - secretRef:
+                name: keycloak-credentials
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+          startupProbe:
+            # Keycloak on a cold start builds its Quarkus augmentation and runs database migrations.
+            # 60 x 5s = five minutes of grace. Generous on purpose: a startupProbe that expires during
+            # a legitimate migration puts the pod into CrashLoopBackOff, and the restart makes the next
+            # attempt slower still.
+            httpGet:
+              path: /health/started
+              port: management
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: management
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              # 2Gi, and the first value tried was 1536Mi - which OOMKilled Keycloak mid-migration,
+              # every time, with exit code 137 and a log that simply STOPS after "Initializing
+              # database schema". No error, no stack trace: the kernel killed the process, so the
+              # process never got to say anything. Exit 137 (128 + SIGKILL) in a pod that has a
+              # memory limit means this almost every time - check `kubectl describe pod` for
+              # "Last State: Terminated, Reason: OOMKilled" before suspecting the application.
+              #
+              # Keycloak needs the most memory it will EVER need on its first start, running Quarkus
+              # augmentation and Liquibase migrations at the same time. Sizing a limit to
+              # steady-state usage produces a service that works fine until the day it restarts
+              # into a new version.
+              memory: 2Gi
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm
