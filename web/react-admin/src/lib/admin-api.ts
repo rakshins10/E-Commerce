@@ -4,12 +4,14 @@
  * Owned by this application - the Angular admin panel has its own equivalent in `core/admin-api.ts`.
  * See docs/adr/0018-self-contained-frontends.md.
  *
- * Note the base URL: the **admin** BFF on :6002, never the storefront's on :6001. The two gateways are
- * separate on purpose, and pointing this at the wrong one would be a security bug rather than a typo -
- * the storefront BFF does not expose these routes at all.
+ * Note the base URL: the **admin** BFF, never the storefront's. The two gateways are separate on
+ * purpose, and pointing this at the wrong one would be a security bug rather than a typo - the
+ * storefront BFF does not expose these routes at all. Which address that is arrives at container start
+ * (docs/adr/0023); :6002 is only the local fallback.
  */
 
 import { ApiClient } from './api-client';
+import { bffBaseUrl } from '../runtime-config';
 
 export interface DashboardStatusCount {
   readonly status: string;
@@ -192,7 +194,7 @@ export const ASSIGNABLE_ROLES = [
 
 export function createAdminApi(getAccessToken: () => string | null) {
   const client = new ApiClient({
-    baseUrl: import.meta.env.VITE_ADMIN_BFF_URL ?? 'http://localhost:6002',
+    baseUrl: bffBaseUrl,
     getAccessToken,
   });
 

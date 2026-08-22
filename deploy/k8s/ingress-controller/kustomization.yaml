@@ -1,0 +1,47 @@
+# The HAProxy Kubernetes Ingress Controller.
+#
+#     kubectl apply -k deploy/k8s/ingress-controller
+#
+# ---------------------------------------------------------------------------------------------------
+#  Why this is a separate step from the application
+# ---------------------------------------------------------------------------------------------------
+#  An ingress controller is CLUSTER infrastructure, not application infrastructure. One controller
+#  serves every namespace, it is installed once per cluster, and it has cluster-wide RBAC - it watches
+#  Ingress objects everywhere. A managed cluster usually has one already, installed by whoever runs the
+#  cluster, and applying a second one is how you end up with two load balancers fighting over the same
+#  hostnames.
+#
+#  So: this is applied once, deliberately, and the application overlays never mention it.
+#
+# ---------------------------------------------------------------------------------------------------
+#  Why HAProxy rather than the usual ingress-nginx
+# ---------------------------------------------------------------------------------------------------
+#  The stats page (ADR-0024). HAProxy serves a live HTML dashboard on port 1024 listing every backend,
+#  every server in it, its health-check state, and its current and total sessions. During a rolling
+#  update you can watch sessions drain off the old pod and appear on the new one, in a browser, with
+#  nothing else installed.
+#
+#  See docs/kubernetes/watching-traffic.md for what to look at and what each column means.
+resources:
+  # Pinned to a release tag, NOT to `master`. A remote resource that tracks a branch means
+  # `kubectl apply` can install a different controller tomorrow than it did today, and the failure
+  # arrives as "our ingress broke overnight and nobody changed anything".
+  #
+  # This needs network access at apply time. To work offline, vendor the file:
+  #   curl -o upstream.yaml https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/v3.1.9/deploy/haproxy-ingress.yaml
+  - https://raw.githubusercontent.com/haproxytech/kubernetes-ingress/v3.1.9/deploy/haproxy-ingress.yaml
+  - ingress-class.yaml
+
+# Pin the controller image.
+#
+# The upstream manifest names `haproxytech/kubernetes-ingress` with NO TAG, which resolves to
+# `latest` - so the same manifest installs a different controller depending on the day. That is the
+# same class of problem as a floating branch reference above, one layer down, and it is worth fixing
+# even though upstream ships it that way.
+images:
+  - name: haproxytech/kubernetes-ingress
+    newTag: "3.1.9"
+
+patches:
+  - path: service-nodeports.yaml
+  - path: controller-resources.yaml

@@ -1,0 +1,49 @@
+# The application layer: the twelve .NET workloads, the four browser apps, their configuration and the
+# routes into them. No databases, no broker, no identity provider - those are separate layers, because
+# the Azure overlay keeps some and replaces others.
+#
+# ---------------------------------------------------------------------------------------------------
+#  What Kustomize is
+# ---------------------------------------------------------------------------------------------------
+#  A base is plain, valid, applyable Kubernetes YAML. An OVERLAY is a directory that says "take those
+#  bases, and patch these fields". Nothing is templated, so every file can be read literally, and
+#  `kubectl kustomize deploy/k8s/overlays/local` prints exactly what will be applied before anything
+#  is.
+#
+#  Why not Helm: a Helm chart is Go templates that PRODUCE YAML, so a reader has to hold two languages
+#  at once. Helm wins when shipping software to strangers who need knobs; these manifests are teaching
+#  material. ADR-0024 has the argument and what the choice costs.
+#
+# ---------------------------------------------------------------------------------------------------
+#  Do not apply this directly
+# ---------------------------------------------------------------------------------------------------
+#  It has no database to talk to. Use an overlay:
+#      kubectl kustomize deploy/k8s/overlays/local | kubectl apply -f -
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Every object lands here without any of them naming a namespace. That is what lets a second copy of
+# the whole stack run beside this one, from the same files.
+namespace: ecommerce
+
+resources:
+  - namespace.yaml
+  - platform-config.yaml
+  - secrets.yaml
+  - services.yaml
+  - gateways.yaml
+  - web.yaml
+  - ingress.yaml
+
+# Applied to every object. Standard Kubernetes labels, so `kubectl get all -l
+# app.kubernetes.io/part-of=ecommerce` finds the whole platform and nothing else.
+#
+# includeSelectors: false matters more than it looks. If these were added to selectors as well, then
+# changing a label here would change a Deployment's `spec.selector` - which is IMMUTABLE. The apply
+# fails with "field is immutable" and the only fix is to delete the Deployment. Labels for humans,
+# selectors left alone.
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: ecommerce
+      app.kubernetes.io/managed-by: kustomize

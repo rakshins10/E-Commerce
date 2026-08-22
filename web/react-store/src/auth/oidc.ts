@@ -12,9 +12,9 @@
 import { WebStorageStateStore } from 'oidc-client-ts';
 import type { AuthProviderProps } from 'react-oidc-context';
 import { createOidcConfig } from '../lib/auth';
+import { keycloakAuthority } from '../runtime-config';
 
-const authority =
-  import.meta.env.VITE_KEYCLOAK_AUTHORITY ?? 'http://localhost:8080/realms/ecommerce';
+const authority = keycloakAuthority;
 
 const shared = createOidcConfig({
   authority,
@@ -55,5 +55,10 @@ export const oidcConfig: AuthProviderProps = {
   },
 };
 
-/** Where the storefront BFF lives. */
-export const bffBaseUrl = import.meta.env.VITE_BFF_URL ?? 'http://localhost:6001';
+/**
+ * Where the storefront BFF lives.
+ *
+ * Re-exported from the one accessor that resolves it, so importers do not each have to know that the
+ * value can arrive three different ways (docs/adr/0023).
+ */
+export { bffBaseUrl } from '../runtime-config';

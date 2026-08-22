@@ -9,6 +9,7 @@
  */
 
 import { ApiClient } from './api-client';
+import { bffBaseUrl } from '../runtime-config';
 
 export interface Address {
   readonly id: string;
@@ -61,7 +62,7 @@ export interface SaveAddressRequest {
  */
 export function createProfileApi(getAccessToken: () => string | null) {
   const client = new ApiClient({
-    baseUrl: import.meta.env.VITE_BFF_URL ?? 'http://localhost:6001',
+    baseUrl: bffBaseUrl,
     getAccessToken,
   });
 

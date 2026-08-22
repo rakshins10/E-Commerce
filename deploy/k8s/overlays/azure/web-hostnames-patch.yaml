@@ -1,0 +1,69 @@
+# The four browser applications, pointed at production addresses.
+#
+# THIS IS THE PAYOFF OF ADR-0023, and it is worth pausing on: the images here are byte-for-byte the
+# ones that ran locally and passed the e2e suite. Nothing was rebuilt. The container renders these two
+# values into config.js and into the nginx Content-Security-Policy when it starts, so one artifact
+# serves localhost, a local cluster and production.
+#
+# Before ADR-0023 this file could not have existed. Changing the API address meant a new image, and a
+# new image means the thing you tested is not the thing you shipped.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-store
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          env:
+            - name: BFF_BASE_URL
+              value: "https://api.ecommerce.example.com"
+            - name: KEYCLOAK_AUTHORITY
+              value: "https://auth.ecommerce.example.com/realms/ecommerce"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-store
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          env:
+            - name: BFF_BASE_URL
+              value: "https://api.ecommerce.example.com"
+            - name: KEYCLOAK_AUTHORITY
+              value: "https://auth.ecommerce.example.com/realms/ecommerce"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: react-admin
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          env:
+            - name: BFF_BASE_URL
+              value: "https://admin-api.ecommerce.example.com"
+            - name: KEYCLOAK_AUTHORITY
+              value: "https://auth.ecommerce.example.com/realms/ecommerce"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: angular-admin
+spec:
+  template:
+    spec:
+      containers:
+        - name: web
+          env:
+            - name: BFF_BASE_URL
+              value: "https://admin-api.ecommerce.example.com"
+            - name: KEYCLOAK_AUTHORITY
+              value: "https://auth.ecommerce.example.com/realms/ecommerce"

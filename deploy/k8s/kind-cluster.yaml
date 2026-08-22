@@ -1,0 +1,63 @@
+# A local cluster made of Docker containers.
+#
+#     kind create cluster --config deploy/k8s/kind-cluster.yaml
+#
+# ---------------------------------------------------------------------------------------------------
+#  What kind is, and why it is here alongside Docker Desktop
+# ---------------------------------------------------------------------------------------------------
+#  kind = "Kubernetes IN Docker". Every node of the cluster is a Docker container running a full
+#  Kubernetes node inside it. That sounds like a toy and is not: it is what the Kubernetes project
+#  itself uses to test Kubernetes.
+#
+#  Docker Desktop's built-in Kubernetes (a checkbox in Settings) is easier - one click, and it shares
+#  the local image store so `docker compose build` output is immediately runnable. Use that if you have
+#  it. kind is here because it works everywhere Docker does, including Linux and CI, it can be created
+#  and destroyed in a minute without touching Docker Desktop's own settings, and `kind delete cluster`
+#  leaves absolutely nothing behind.
+#
+#  The one cost of kind: its node is a separate container with its OWN image store, so a locally built
+#  image is invisible to it until you copy it in:
+#
+#      kind load docker-image --name ecommerce ecommerce-catalog-api:latest
+#
+#  Forget that and every pod sits in ErrImagePull trying to fetch your image from Docker Hub. See
+#  docs/kubernetes/running-locally.md - scripts/k8s-up.ps1 does it for all sixteen.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ecommerce
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    # ---------------------------------------------------------------------------------------------
+    #  How a browser on your machine reaches a pod inside the cluster
+    # ---------------------------------------------------------------------------------------------
+    #  Four hops, and it is worth being able to name all of them:
+    #
+    #    browser -> host port 80
+    #            -> the kind node container's port 30080   (these extraPortMappings)
+    #            -> the HAProxy Service, type NodePort on 30080
+    #            -> the HAProxy pod, which reads the Host header and picks a backend
+    #            -> the application pod
+    #
+    #  These numbers must match deploy/k8s/ingress-controller/service-nodeports.yaml. Change one and
+    #  the browser gets "connection refused" with nothing in any log to explain it, because nothing
+    #  went wrong anywhere - the request simply never arrived.
+    #
+    #  On Docker Desktop's Kubernetes none of this exists: a LoadBalancer Service is published
+    #  straight onto localhost, so the port mappings are unnecessary and harmless.
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 30443
+        hostPort: 443
+        protocol: TCP
+      # HAProxy's stats page: http://localhost:1024
+      - containerPort: 31024
+        hostPort: 1024
+        protocol: TCP

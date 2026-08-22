@@ -592,6 +592,15 @@ services:
       args:
         APP_WORKSPACE: "@ecommerce/react-store"
         APP_DIST: react-store/dist
+    environment:
+      # Runtime configuration (ADR-0023). The image is built once; these two values tell the container
+      # where to point, and are substituted into BOTH the app's config.js and the nginx CSP at start.
+      # Omit either and the container refuses to boot - a loud failure instead of a silent misroute.
+      #
+      # These are the addresses as the BROWSER sees them, not as the container network does: the code
+      # runs on the user's machine, so "storefront-bff:8080" would be meaningless to it.
+      BFF_BASE_URL: "http://${PUBLIC_HOST:-localhost}:${STOREFRONT_BFF_PORT:-6001}"
+      KEYCLOAK_AUTHORITY: "http://${PUBLIC_HOST:-localhost}:${KEYCLOAK_PORT:-8080}/realms/ecommerce"
     ports: ["${REACT_STORE_PORT:-3000}:8080"]
     networks: [frontend]
     depends_on:
@@ -606,6 +615,15 @@ services:
       args:
         APP_WORKSPACE: "@ecommerce/angular-store"
         APP_DIST: angular-store/dist/angular-store/browser
+    environment:
+      # Runtime configuration (ADR-0023). The image is built once; these two values tell the container
+      # where to point, and are substituted into BOTH the app's config.js and the nginx CSP at start.
+      # Omit either and the container refuses to boot - a loud failure instead of a silent misroute.
+      #
+      # These are the addresses as the BROWSER sees them, not as the container network does: the code
+      # runs on the user's machine, so "storefront-bff:8080" would be meaningless to it.
+      BFF_BASE_URL: "http://${PUBLIC_HOST:-localhost}:${STOREFRONT_BFF_PORT:-6001}"
+      KEYCLOAK_AUTHORITY: "http://${PUBLIC_HOST:-localhost}:${KEYCLOAK_PORT:-8080}/realms/ecommerce"
     ports: ["${ANGULAR_STORE_PORT:-4200}:8080"]
     networks: [frontend]
     depends_on:
@@ -628,6 +646,15 @@ services:
       args:
         APP_WORKSPACE: "@ecommerce/react-admin"
         APP_DIST: react-admin/dist
+    environment:
+      # Runtime configuration (ADR-0023). The image is built once; these two values tell the container
+      # where to point, and are substituted into BOTH the app's config.js and the nginx CSP at start.
+      # Omit either and the container refuses to boot - a loud failure instead of a silent misroute.
+      #
+      # These are the addresses as the BROWSER sees them, not as the container network does: the code
+      # runs on the user's machine, so "admin-bff:8080" would be meaningless to it.
+      BFF_BASE_URL: "http://${PUBLIC_HOST:-localhost}:${ADMIN_BFF_PORT:-6002}"
+      KEYCLOAK_AUTHORITY: "http://${PUBLIC_HOST:-localhost}:${KEYCLOAK_PORT:-8080}/realms/ecommerce"
     ports: ["${REACT_ADMIN_PORT:-3001}:8080"]
     networks: [frontend]
     depends_on:
@@ -642,6 +669,15 @@ services:
       args:
         APP_WORKSPACE: "@ecommerce/angular-admin"
         APP_DIST: angular-admin/dist/angular-admin/browser
+    environment:
+      # Runtime configuration (ADR-0023). The image is built once; these two values tell the container
+      # where to point, and are substituted into BOTH the app's config.js and the nginx CSP at start.
+      # Omit either and the container refuses to boot - a loud failure instead of a silent misroute.
+      #
+      # These are the addresses as the BROWSER sees them, not as the container network does: the code
+      # runs on the user's machine, so "admin-bff:8080" would be meaningless to it.
+      BFF_BASE_URL: "http://${PUBLIC_HOST:-localhost}:${ADMIN_BFF_PORT:-6002}"
+      KEYCLOAK_AUTHORITY: "http://${PUBLIC_HOST:-localhost}:${KEYCLOAK_PORT:-8080}/realms/ecommerce"
     ports: ["${ANGULAR_ADMIN_PORT:-4201}:8080"]
     networks: [frontend]
     depends_on:

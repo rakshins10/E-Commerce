@@ -1,0 +1,16 @@
+# The IngressClass named by every Ingress in this project (`ingressClassName: haproxy`).
+#
+# An IngressClass is the link between "this route" and "the controller that implements it". A cluster
+# can run several controllers at once - an internal one and an internet-facing one, say - and the class
+# is how an Ingress says which it belongs to.
+#
+# The upstream manifest does not ship one, so without this object every Ingress here names a class that
+# does not exist. In practice the controller still picks them up (it matches on the string), but
+# `kubectl describe ingress` shows no class and nothing tells you which controller owns a route. The
+# object costs six lines and makes the ownership explicit.
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: haproxy
+spec:
+  controller: haproxy.org/ingress-controller

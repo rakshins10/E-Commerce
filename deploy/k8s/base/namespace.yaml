@@ -1,0 +1,18 @@
+# One namespace for the whole platform.
+#
+# A namespace is a name scope, not a security boundary on its own. Two things make it worth having:
+# every name inside it (Service, ConfigMap, Secret) is independent of every other namespace's, so a
+# second copy of this stack can run beside it untouched; and `kubectl delete namespace ecommerce`
+# removes all thirty workloads in one command, which is the Kubernetes equivalent of
+# `docker compose down`.
+#
+# DNS inside a namespace is short: a pod in `ecommerce` reaches the catalog Service as `catalog-api`.
+# From another namespace the same Service is `catalog-api.ecommerce.svc.cluster.local`. That is exactly
+# why every internal URL in this project ("http://catalog-api:8080") works unchanged from Compose - the
+# Service names were chosen to match the Compose service names.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+  labels:
+    app.kubernetes.io/part-of: ecommerce

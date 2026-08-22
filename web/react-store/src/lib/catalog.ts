@@ -10,8 +10,9 @@
  */
 
 import { ApiClient } from './api-client';
+import { bffBaseUrl } from '../runtime-config';
 
-const baseUrl = import.meta.env.VITE_BFF_URL ?? 'http://localhost:6001';
+const baseUrl = bffBaseUrl;
 
 /**
  * Browsing is anonymous, so no token is attached.

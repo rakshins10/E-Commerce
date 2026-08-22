@@ -1,0 +1,40 @@
+# Identity and observability: Keycloak, Seq and Jaeger.
+#
+# Kept apart from infrastructure/data because these travel differently. A cloud deployment swaps its
+# databases for managed ones without hesitation, but it usually keeps its identity provider exactly as
+# it is - the realm, the clients and the redirect URIs are application configuration, not
+# infrastructure. So the Azure overlay includes this layer and drops the other one.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ecommerce
+
+resources:
+  - secrets.yaml
+  - identity.yaml
+  - observability.yaml
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: ecommerce
+      app.kubernetes.io/managed-by: kustomize
+
+# The realm, generated from the SAME file Docker Compose bind-mounts. One source of truth: an
+# authorization model that differed between Compose and Kubernetes would be worse than having no realm
+# import at all, because the difference would surface only as a permission failure in one environment.
+#
+# THE HASH SUFFIX IS THE POINT. Kustomize appends a hash of the content to the generated name
+# (keycloak-realm-7f4c2b...) and rewrites every reference to it. So editing the realm changes the
+# ConfigMap NAME, which changes the pod spec, which ROLLS THE POD. Without that, updating a ConfigMap
+# leaves the running pod with its old mounted copy indefinitely - the most common "I changed the
+# config and nothing happened" in Kubernetes.
+#
+# Reading a file from outside this directory is why the documented command is
+# `kubectl kustomize --load-restrictor LoadRestrictionsNone ... | kubectl apply -f -` rather than
+# `kubectl apply -k`. Kustomize refuses by default, deliberately: a kustomization that can read
+# anything on disk is a kustomization whose output depends on where it was run.
+configMapGenerator:
+  - name: keycloak-realm
+    files:
+      - realm-export.json=../../../../identity/keycloak/realm-export.json

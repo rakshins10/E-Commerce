@@ -1,0 +1,172 @@
+# RabbitMQ and Redis.
+#
+# Both are stateful, and they get opposite treatment, which is the interesting part:
+#
+#   RabbitMQ is a StatefulSet with a volume. A message the outbox published and the broker acknowledged
+#   must survive a restart, because the sender has already committed and deleted its copy. Losing it
+#   loses an order confirmation with no error anywhere.
+#
+#   Redis is a Deployment with NO volume, and that is not laziness. Basket data is deliberately
+#   disposable (ADR-0003): an abandoned cart *should* expire. Persistence is switched off in the
+#   command line (`--save ""`), so a restart empties every basket - a cost that was accepted when the
+#   basket was designed, not one discovered here.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: messaging
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: amqp
+    - name: management
+      port: 15672
+      targetPort: management
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  labels:
+    app.kubernetes.io/name: rabbitmq
+    app.kubernetes.io/component: messaging
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  serviceName: rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmq
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rabbitmq
+        app.kubernetes.io/component: messaging
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      securityContext:
+        fsGroup: 100
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:4-management-alpine
+          ports:
+            - name: amqp
+              containerPort: 5672
+            - name: management
+              containerPort: 15672
+          envFrom:
+            - secretRef:
+                name: rabbitmq-credentials
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
+          readinessProbe:
+            # check_port_connectivity, NOT check_running - and this project learned the difference the
+            # hard way on a cold machine. check_running answers "is the Erlang node up", which is true
+            # several seconds BEFORE the AMQP listener opens. Dependents were released into a broker
+            # that refused their first connection, and the stack died at 14 of 30 containers, while a
+            # second attempt sailed through because by then the listener was open.
+            #
+            # In Kubernetes the consequence is different but no better: pods CrashLoopBackOff on
+            # startup and recover a minute later, which looks exactly like a flaky application.
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            exec:
+              command: ["rabbitmq-diagnostics", "-q", "ping"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 4
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  strategy:
+    # Recreate, not RollingUpdate. A rolling update would briefly run two Redis pods, and the Service
+    # would spread connections across both - so half the baskets would come back empty for the duration
+    # and then swap back. With one replica and no replication, "stop the old one first" is the honest
+    # behaviour. Any single-instance datastore behind a Service wants this.
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/component: cache
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          # The password arrives through an env var rather than being written into the command, so it
+          # is not visible in `kubectl describe pod` or in the process list inside the container.
+          command: ["sh", "-c", "exec redis-server --requirepass \"$REDIS_PASSWORD\" --save ''"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          envFrom:
+            - secretRef:
+                name: redis-credentials
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              memory: 256Mi

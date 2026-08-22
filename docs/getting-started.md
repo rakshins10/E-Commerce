@@ -215,6 +215,27 @@ that is the point - see [data sovereignty](architecture.md#7-data-sovereignty-wh
 
 ---
 
+## 4b. Running it on Kubernetes instead
+
+Everything above uses Docker Compose, which is the primary path and the faster loop for day-to-day work.
+The same thirty containers also run on a Kubernetes cluster - with replicas, health probes, rolling updates
+that drop no requests, and a live view of every connection:
+
+```powershell
+kind create cluster --config deploy/k8s/kind-cluster.yaml   # or enable Docker Desktop's Kubernetes
+./scripts/k8s-up.ps1
+```
+
+Then http://shop.localtest.me, with http://localhost:1024 for the traffic view. Those hostnames need no
+setup at all - every subdomain of `localtest.me` resolves to 127.0.0.1 in public DNS, so there is no hosts
+file to edit.
+
+Start at [the Kubernetes guide](kubernetes/index.md). If the word "pod" is new,
+[From Docker to Kubernetes](kubernetes/from-docker-to-kubernetes.md) assumes nothing at all and builds up
+one problem at a time.
+
+---
+
 ## 5. Troubleshooting
 
 These are the failures that actually happen, not hypothetical ones.
@@ -255,11 +276,26 @@ Every port is an environment variable. Change it in `.env` rather than editing `
 CATALOG_HTTP_PORT=15001
 ```
 
-**If another project owns the port**, remapping is not always enough. This stack and any other Docker
-project that runs Keycloak, RabbitMQ or Redis will fight over the same well-known ports (8080, 5672,
-6379) - and **Keycloak's 8080 cannot simply be remapped**, because the issuer URL and both web apps are
-built against it; changing it means changing `KEYCLOAK_ISSUER` and rebuilding the web images. In
-practice: stop the other project while you run this one.
+**If another project owns the port**, remap it. This stack and any other Docker project running
+Keycloak, RabbitMQ or Redis will fight over the same well-known ports (8080, 5672, 6379).
+
+Keycloak used to be the awkward one: its port was baked into both web bundles, so moving it meant
+rebuilding the images. Since [ADR-0023](adr/0023-runtime-configuration-for-single-page-apps.md) the web
+apps are told where Keycloak lives when their container starts, so **two lines in `.env` are now enough**:
+
+```dotenv
+KEYCLOAK_PORT=18080
+KEYCLOAK_ISSUER=http://localhost:18080/realms/ecommerce
+```
+
+`docker compose up -d --wait` and everything follows, including the Content-Security-Policy. Verified:
+30 containers and all 180 e2e specs green with Keycloak on 18080.
+
+> **One thing does not follow automatically.** The admin e2e specs fetch a token directly from Keycloak
+> and default to `http://localhost:8080`, so they must be told too:
+> `$env:E2E_KEYCLOAK="http://localhost:18080"`. Miss it and they request a token from whatever *else*
+> is on 8080, get a response with no body, and fail with `SyntaxError: Unexpected end of JSON input`
+> in a cleanup hook - which points at the last test that ran rather than at anything to do with ports.
 
 ```bash
 docker ps --format '{{.Names}}\t{{.Ports}}' | grep -v '^ecom-'   # who else is running?

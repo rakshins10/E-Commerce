@@ -1,0 +1,38 @@
+# Right-size the controller for a laptop.
+#
+# Upstream requests 2048Mi and limits 2560Mi - a sensible production default, and more memory than this
+# entire stack's application pods put together. On a local cluster the pod just sits in Pending with
+# "insufficient memory": a first failure that reads like a broken install and is really scheduling
+# arithmetic.
+#
+# This is the number to raise if HAProxy ever becomes the bottleneck. It does not, at the traffic a
+# demonstration generates.
+#
+# ---------------------------------------------------------------------------------------------------
+#  NOTE: do NOT add --ingress.class=haproxy here
+# ---------------------------------------------------------------------------------------------------
+#  It looks like the obviously correct flag, given every Ingress in this project sets
+#  `ingressClassName: haproxy`. It is not, and it silently breaks all routing: with the flag set, the
+#  controller matches only the LEGACY `kubernetes.io/ingress.class` annotation, and every Ingress here
+#  is ignored with `ignored: no matching` in its debug log while HAProxy happily answers 404 to
+#  everything.
+#
+#  Left at its default, the controller adopts any Ingress whose ingressClassName resolves to an
+#  IngressClass with `controller: haproxy.org/ingress-controller` - which is exactly what
+#  ingress-class.yaml declares, and is the modern API. Nothing to configure.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: haproxy-kubernetes-ingress
+  namespace: haproxy-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: haproxy-ingress
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi

@@ -427,12 +427,20 @@ Full detail in [getting-started.md](getting-started.md) and [diagrams/deployment
 
 Being explicit about scope is part of the design.
 
+> **Kubernetes moved off this list in Phase 12.** `deploy/k8s/` now holds the full topology - thirty
+> workloads as Kustomize layers, an HAProxy ingress with a live traffic view, a local overlay verified end
+> to end on a real cluster, and an Azure overlay that swaps the databases for managed services by omitting
+> a directory. What is still *not* done there is listed honestly in
+> [docs/kubernetes/index.md](kubernetes/index.md#what-is-deliberately-not-here), and the decisions are in
+> [ADR-0024](adr/0024-kubernetes-topology.md).
+
 | Not built | Why | What production would do |
 |-----------|-----|--------------------------|
-| Kubernetes manifests | Compose demonstrates the same topology with far less ceremony. Services are configured so K8s could be layered on - no hardcoded hosts, config from env, liveness/readiness split already correct. | Helm chart or Kustomize overlays; HPA on Catalog. |
 | Real payment gateway | Requires credentials and a sandbox account. | Stripe/Adyen with idempotency keys, webhook verification, PCI scope reduction via hosted fields. |
 | Real email/push | Same. | SendGrid/FCM with per-provider bounce and delivery-receipt handling. |
-| TLS between containers | Certificate management would dominate the setup instructions. | mTLS via a service mesh, or terminate at ingress with mesh-internal mTLS. |
+| TLS between containers | Certificate management would dominate the setup instructions. A local cluster with a self-signed certificate also teaches people to click through browser warnings, which is a worse habit than plain http locally. | mTLS via a service mesh, or terminate at ingress with mesh-internal mTLS. The Azure overlay uses cert-manager at the edge. |
+| Horizontal pod autoscaling | Needs metrics-server and a load profile worth scaling against; neither exists on a laptop. | HPA on the BFFs and Catalog, driven by CPU or request rate. |
+| PodDisruptionBudgets, NetworkPolicy | The local cluster has one node, so there is nothing to drain to and a PDB would block a drain rather than protect anything. | One PDB per user-facing Deployment; NetworkPolicy replacing Compose's frontend/backend network split. |
 | Multi-region / DR | No value for the concepts being demonstrated. | Active-passive with per-service RPO/RTO targets. |
 | Schema registry | Contract tests cover the same failure mode at this scale. | Confluent Schema Registry or equivalent, with compatibility checks in CI. |
 

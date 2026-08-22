@@ -1,0 +1,44 @@
+# Settings every .NET workload shares. The equivalent of the `x-dotnet-env` anchor in docker-compose.yml.
+#
+# ConfigMap or Secret? The rule used throughout this repo: **if it is a credential, it is a Secret.**
+# Nothing in this file would matter if it appeared in a screenshot. The passwords and connection strings
+# live in secrets.yaml, and each service gets only its own.
+#
+# The double underscore is ASP.NET Core's configuration separator: `Auth__Issuer` becomes the
+# `Auth:Issuer` key, because a colon is not legal in an environment-variable name on every platform.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  labels:
+    app.kubernetes.io/part-of: ecommerce
+data:
+  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_HTTP_PORTS: "8080"
+
+  # Where logs and traces go. Same names as Compose, because these are Kubernetes Service names now.
+  Observability__SeqUrl: "http://seq:5341"
+  Observability__OtlpEndpoint: "http://jaeger:4317"
+
+  EventBus__HostName: "rabbitmq"
+  EventBus__Port: "5672"
+  EventBus__VirtualHost: "/"
+
+  # THE ISSUER TRAP, and it survives the move to Kubernetes unchanged.
+  #
+  # `Auth__Issuer` must be the URL the BROWSER used, because that is what Keycloak writes into the
+  # token's `iss` claim, and a service comparing it against an internal hostname rejects every token.
+  # `Auth__MetadataAddress` must be the INTERNAL URL, because the service fetches signing keys itself,
+  # from inside the cluster, where `auth.localtest.me` would go out to the ingress and back in for no
+  # reason. Two URLs, one server, and mixing them up is the single most common Keycloak failure.
+  Auth__Issuer: "http://auth.localtest.me/realms/ecommerce"
+  Auth__MetadataAddress: "http://keycloak:8080/realms/ecommerce/.well-known/openid-configuration"
+
+  Serilog__MinimumLevel__Default: "Debug"
+
+  # Browser origins allowed to call the gateways. The storefront apps for the storefront BFF, the admin
+  # apps for the admin BFF - a value each workload picks the half it needs from.
+  Cors__StorefrontOrigin0: "http://shop.localtest.me"
+  Cors__StorefrontOrigin1: "http://shop-ng.localtest.me"
+  Cors__AdminOrigin0: "http://admin.localtest.me"
+  Cors__AdminOrigin1: "http://admin-ng.localtest.me"

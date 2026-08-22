@@ -1,0 +1,70 @@
+# Azure Kubernetes Service.
+#
+#     kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/azure | kubectl apply -f -
+#
+# ---------------------------------------------------------------------------------------------------
+#  READ THIS FIRST: what is and is not proven
+# ---------------------------------------------------------------------------------------------------
+#  This overlay is written and renders correctly. It has NOT been run against a real AKS cluster,
+#  because that costs money and this project is free to clone. Treat it as a worked example of the
+#  SHAPE of a cloud deployment - which is genuinely most of the value, because the shape is the part
+#  that shows whether the architecture was portable in the first place - and expect to fix real
+#  details (a resource group name, a private-endpoint DNS zone, an image pull secret) on first
+#  contact.
+#
+#  Saying so is cheaper than letting somebody discover it with a credit card.
+#
+# ---------------------------------------------------------------------------------------------------
+#  What changes from local, and what does not
+# ---------------------------------------------------------------------------------------------------
+#  DOES NOT CHANGE: every Deployment, every Service, every probe, the ingress routing, and - the point
+#  of ADR-0017 - a single line of application code. No service references an Azure SDK. Provider choice
+#  happens in the composition root and in this file.
+#
+#  CHANGES:
+#    - infrastructure/data is NOT included. Nine PostgreSQL StatefulSets, RabbitMQ and Redis are
+#      replaced by Azure Database for PostgreSQL Flexible Server, Azure Service Bus (or a managed
+#      RabbitMQ), and Azure Cache for Redis. See ADR-0024 decision 4 for why a managed database rather
+#      than running one here.
+#    - Real hostnames instead of *.localtest.me, and https instead of http.
+#    - Images come from the registry rather than the local Docker daemon.
+#    - Production configuration: no sensitive-data logging, Information-level logs, more replicas.
+#    - Secrets come from Key Vault through the Secrets Store CSI driver, NOT from a committed file.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ecommerce
+
+resources:
+  - ../../base
+  # infrastructure/platform, but NOT infrastructure/data. Identity and observability stay in the
+  # cluster; the databases and the broker become somebody else's problem.
+  - ../../infrastructure/platform
+  - external-services.yaml
+
+# Pinned by digest in a real deployment, not by tag. `:latest` means "whatever was pushed most
+# recently", so two pods of the same Deployment can be running different code if one restarted after a
+# push - a genuinely hard bug to see. The release workflow tags every image `sha-<commit>`, and that is
+# what belongs here.
+images:
+  - name: ghcr.io/rakshins10/e-commerce-catalog-api
+    newTag: sha-REPLACE_WITH_COMMIT
+  - name: ghcr.io/rakshins10/e-commerce-storefront-bff
+    newTag: sha-REPLACE_WITH_COMMIT
+  - name: ghcr.io/rakshins10/e-commerce-react-store
+    newTag: sha-REPLACE_WITH_COMMIT
+
+replicas:
+  - name: catalog-api
+    count: 3
+  - name: storefront-bff
+    count: 3
+  - name: react-store
+    count: 3
+  - name: angular-store
+    count: 3
+
+patches:
+  - path: platform-config-patch.yaml
+  - path: web-hostnames-patch.yaml
+  - path: ingress-patch.yaml

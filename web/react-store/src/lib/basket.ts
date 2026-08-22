@@ -6,6 +6,7 @@
  */
 
 import { ApiClient } from './api-client';
+import { bffBaseUrl } from '../runtime-config';
 
 export interface BasketItem {
   readonly productId: string;
@@ -192,7 +193,7 @@ export const SAGA_STEP_LABELS: Record<string, string> = {
 
 export function createShopApi(getAccessToken: () => string | null) {
   const client = new ApiClient({
-    baseUrl: import.meta.env.VITE_BFF_URL ?? 'http://localhost:6001',
+    baseUrl: bffBaseUrl,
     getAccessToken,
   });
 

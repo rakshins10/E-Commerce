@@ -1,0 +1,501 @@
+# The three BFFs. Same shape as a service, one crucial difference: these are the only workloads an
+# Ingress routes to from outside the cluster.
+#
+# That is the Backend-for-Frontend pattern enforced by topology rather than by convention. No Ingress
+# names catalog-api, so no browser can reach it - not because it refuses, but because nothing outside
+# the cluster has a route to it at all. The nine services are reachable only from inside, by their
+# Service DNS names. In Compose the equivalent was the two-network split; here it is simply which
+# workloads appear in ingress.yaml.
+---
+# Storefront BFF - the only thing the two storefronts talk to.
+apiVersion: v1
+kind: Service
+metadata:
+  name: storefront-bff
+  labels:
+    app.kubernetes.io/name: storefront-bff
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: storefront-bff
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storefront-bff
+  labels:
+    app.kubernetes.io/name: storefront-bff
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: storefront-bff
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # maxUnavailable: 0 is the setting that makes a deploy invisible to users. It means "never drop
+      # below the desired replica count", so a new pod must be READY before an old one is removed.
+      # maxSurge: 1 allows one extra pod during the roll, which is what pays for that guarantee.
+      #
+      # The default is 25%/25%, which briefly runs at reduced capacity. Fine for a big fleet, wrong
+      # for a two-replica service where 25% rounds to "one of your two is gone".
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: storefront-bff
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # 40s: the 5s preStop pause, plus room for the longest in-flight request to finish. When this
+      # elapses the container is SIGKILLed, so setting it too low turns a graceful shutdown into a
+      # hard one and drops exactly the requests the drain was protecting.
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: ghcr.io/rakshins10/e-commerce-storefront-bff:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: Services__Catalog
+              value: "http://catalog-api:8080"
+            - name: Services__Basket
+              value: "http://basket-api:8080"
+            - name: Services__Ordering
+              value: "http://ordering-api:8080"
+            - name: Services__UserProfile
+              value: "http://user-profile-api:8080"
+            - name: Cors__Origins__0
+              value: "http://shop.localtest.me"
+            - name: Cors__Origins__1
+              value: "http://shop-ng.localtest.me"
+          envFrom:
+            - configMapRef:
+                name: platform-config
+            - secretRef:
+                name: platform-secrets
+            - secretRef:
+                name: storefront-bff-secrets
+          # ---------------------------------------------------------------------------------------
+          # THREE PROBES, THREE DIFFERENT QUESTIONS. Getting them confused is the classic mistake.
+          #
+          #   startupProbe   "has it finished booting?"  - suppresses the other two until it passes.
+          #   readinessProbe "should it get traffic?"    - failing REMOVES the pod from the Service.
+          #   livenessProbe  "is it wedged?"             - failing RESTARTS the container.
+          #
+          # The dangerous confusion is using a deep dependency check (/health/ready, which checks the
+          # database) as the LIVENESS probe. When the database blips, every pod fails liveness, every
+          # pod is killed, and a recoverable outage becomes a cluster-wide restart storm at the exact
+          # moment the database is least able to cope with a reconnection stampede.
+          #
+          # So: liveness asks only "is this process still answering", readiness asks "can it do work".
+          # ---------------------------------------------------------------------------------------
+          startupProbe:
+            # A cold .NET container plus EF migrations can take a while. 30 x 2s = 60s of grace, after
+            # which the pod is genuinely broken rather than slow. Without a startupProbe you would have
+            # to loosen liveness to cover the worst-case boot, and then a wedged pod at hour three
+            # takes just as long to be noticed.
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          lifecycle:
+            preStop:
+              # THE DRAIN PAUSE, and it is the least obvious thing in this file.
+              #
+              # When a pod is deleted, two things happen AT THE SAME TIME and in no guaranteed order:
+              # the kubelet sends SIGTERM to the container, and the endpoints controller removes the
+              # pod from its Service. Removal has to propagate to every kube-proxy and every ingress
+              # controller, which takes a moment - so for a second or so after SIGTERM, new requests
+              # are still being routed to a pod that has started shutting down. Those requests fail,
+              # and this is the actual cause of the "we get a handful of 502s on every deploy" that
+              # teams tend to blame on the application.
+              #
+              # Sleeping in preStop delays the SIGTERM without delaying the endpoint removal, so by the
+              # time the process is told to stop, nothing is being sent to it any more. It does nothing
+              # else; the graceful shutdown itself is ASP.NET Core's, which finishes in-flight requests.
+              exec:
+                command: ["sleep", "5"]
+          securityContext:
+            # The image already runs as the non-root `app` user (src/Dockerfile). Declaring it here
+            # makes the kubelet REFUSE to start the pod if a future image regresses to root - a
+            # guarantee rather than a convention.
+            #
+            # runAsUser IS REQUIRED, not decoration, and leaving it out cost a real debugging session:
+            #     Error: container has runAsNonRoot and image has non-numeric user (app),
+            #            cannot verify user is non-root
+            # The Dockerfile says `USER app`, a NAME. The kubelet resolves nothing inside the image, so
+            # it cannot tell whether "app" is uid 0 or uid 1654, and it refuses rather than guessing.
+            # Giving it the number is what makes the guarantee checkable. 1654 is what the aspnet base
+            # image assigns to `app`; confirm with:
+            #     docker run --rm --entrypoint sh <image> -c id
+            runAsNonRoot: true
+            runAsUser: 1654
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # ASP.NET Core writes to /tmp for DataProtection keys.
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            # requests = what the scheduler reserves and what it uses to pick a node.
+            # limits    = the hard ceiling. Exceed the MEMORY limit and the kernel OOM-kills the
+            #             container (exit code 137, and the pod restarts with no log explaining why).
+            #             Exceed the CPU limit and it is merely throttled - slow, not dead.
+            #
+            # There is deliberately NO cpu limit here. A CPU limit throttles a process that has spare
+            # capacity available to it, which shows up as inexplicable latency spikes under load; the
+            # request alone is enough to protect neighbours, because it is what the scheduler honours.
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+---
+# Admin BFF - the only thing the two back-office panels talk to.
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-bff
+  labels:
+    app.kubernetes.io/name: admin-bff
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: admin-bff
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-bff
+  labels:
+    app.kubernetes.io/name: admin-bff
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: admin-bff
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # maxUnavailable: 0 is the setting that makes a deploy invisible to users. It means "never drop
+      # below the desired replica count", so a new pod must be READY before an old one is removed.
+      # maxSurge: 1 allows one extra pod during the roll, which is what pays for that guarantee.
+      #
+      # The default is 25%/25%, which briefly runs at reduced capacity. Fine for a big fleet, wrong
+      # for a two-replica service where 25% rounds to "one of your two is gone".
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: admin-bff
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # 40s: the 5s preStop pause, plus room for the longest in-flight request to finish. When this
+      # elapses the container is SIGKILLed, so setting it too low turns a graceful shutdown into a
+      # hard one and drops exactly the requests the drain was protecting.
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: ghcr.io/rakshins10/e-commerce-admin-bff:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: Services__BackOffice
+              value: "http://back-office-api:8080"
+            - name: Services__Catalog
+              value: "http://catalog-api:8080"
+            - name: Services__Inventory
+              value: "http://inventory-api:8080"
+            - name: Services__Ordering
+              value: "http://ordering-api:8080"
+            - name: Services__OrderingSaga
+              value: "http://ordering-saga:8080"
+            - name: Cors__Origins__0
+              value: "http://admin.localtest.me"
+            - name: Cors__Origins__1
+              value: "http://admin-ng.localtest.me"
+          envFrom:
+            - configMapRef:
+                name: platform-config
+            - secretRef:
+                name: platform-secrets
+            - secretRef:
+                name: admin-bff-secrets
+          # ---------------------------------------------------------------------------------------
+          # THREE PROBES, THREE DIFFERENT QUESTIONS. Getting them confused is the classic mistake.
+          #
+          #   startupProbe   "has it finished booting?"  - suppresses the other two until it passes.
+          #   readinessProbe "should it get traffic?"    - failing REMOVES the pod from the Service.
+          #   livenessProbe  "is it wedged?"             - failing RESTARTS the container.
+          #
+          # The dangerous confusion is using a deep dependency check (/health/ready, which checks the
+          # database) as the LIVENESS probe. When the database blips, every pod fails liveness, every
+          # pod is killed, and a recoverable outage becomes a cluster-wide restart storm at the exact
+          # moment the database is least able to cope with a reconnection stampede.
+          #
+          # So: liveness asks only "is this process still answering", readiness asks "can it do work".
+          # ---------------------------------------------------------------------------------------
+          startupProbe:
+            # A cold .NET container plus EF migrations can take a while. 30 x 2s = 60s of grace, after
+            # which the pod is genuinely broken rather than slow. Without a startupProbe you would have
+            # to loosen liveness to cover the worst-case boot, and then a wedged pod at hour three
+            # takes just as long to be noticed.
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          lifecycle:
+            preStop:
+              # THE DRAIN PAUSE, and it is the least obvious thing in this file.
+              #
+              # When a pod is deleted, two things happen AT THE SAME TIME and in no guaranteed order:
+              # the kubelet sends SIGTERM to the container, and the endpoints controller removes the
+              # pod from its Service. Removal has to propagate to every kube-proxy and every ingress
+              # controller, which takes a moment - so for a second or so after SIGTERM, new requests
+              # are still being routed to a pod that has started shutting down. Those requests fail,
+              # and this is the actual cause of the "we get a handful of 502s on every deploy" that
+              # teams tend to blame on the application.
+              #
+              # Sleeping in preStop delays the SIGTERM without delaying the endpoint removal, so by the
+              # time the process is told to stop, nothing is being sent to it any more. It does nothing
+              # else; the graceful shutdown itself is ASP.NET Core's, which finishes in-flight requests.
+              exec:
+                command: ["sleep", "5"]
+          securityContext:
+            # The image already runs as the non-root `app` user (src/Dockerfile). Declaring it here
+            # makes the kubelet REFUSE to start the pod if a future image regresses to root - a
+            # guarantee rather than a convention.
+            #
+            # runAsUser IS REQUIRED, not decoration, and leaving it out cost a real debugging session:
+            #     Error: container has runAsNonRoot and image has non-numeric user (app),
+            #            cannot verify user is non-root
+            # The Dockerfile says `USER app`, a NAME. The kubelet resolves nothing inside the image, so
+            # it cannot tell whether "app" is uid 0 or uid 1654, and it refuses rather than guessing.
+            # Giving it the number is what makes the guarantee checkable. 1654 is what the aspnet base
+            # image assigns to `app`; confirm with:
+            #     docker run --rm --entrypoint sh <image> -c id
+            runAsNonRoot: true
+            runAsUser: 1654
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # ASP.NET Core writes to /tmp for DataProtection keys.
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            # requests = what the scheduler reserves and what it uses to pick a node.
+            # limits    = the hard ceiling. Exceed the MEMORY limit and the kernel OOM-kills the
+            #             container (exit code 137, and the pod restarts with no log explaining why).
+            #             Exceed the CPU limit and it is merely throttled - slow, not dead.
+            #
+            # There is deliberately NO cpu limit here. A CPU limit throttles a process that has spare
+            # capacity available to it, which shows up as inexplicable latency spikes under load; the
+            # request alone is enough to protect neighbours, because it is what the scheduler honours.
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+---
+# Mobile BFF - boots and is healthy; its client is Phase 11, which is deferred. One replica, because nothing calls it yet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mobile-bff
+  labels:
+    app.kubernetes.io/name: mobile-bff
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  selector:
+    app.kubernetes.io/name: mobile-bff
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mobile-bff
+  labels:
+    app.kubernetes.io/name: mobile-bff
+    app.kubernetes.io/part-of: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mobile-bff
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # maxUnavailable: 0 is the setting that makes a deploy invisible to users. It means "never drop
+      # below the desired replica count", so a new pod must be READY before an old one is removed.
+      # maxSurge: 1 allows one extra pod during the roll, which is what pays for that guarantee.
+      #
+      # The default is 25%/25%, which briefly runs at reduced capacity. Fine for a big fleet, wrong
+      # for a two-replica service where 25% rounds to "one of your two is gone".
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mobile-bff
+        app.kubernetes.io/part-of: ecommerce
+    spec:
+      # 40s: the 5s preStop pause, plus room for the longest in-flight request to finish. When this
+      # elapses the container is SIGKILLed, so setting it too low turns a graceful shutdown into a
+      # hard one and drops exactly the requests the drain was protecting.
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: ghcr.io/rakshins10/e-commerce-mobile-bff:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: Services__Catalog
+              value: "http://catalog-api:8080"
+            - name: Services__Basket
+              value: "http://basket-api:8080"
+            - name: Services__Ordering
+              value: "http://ordering-api:8080"
+            - name: Services__UserProfile
+              value: "http://user-profile-api:8080"
+          envFrom:
+            - configMapRef:
+                name: platform-config
+            - secretRef:
+                name: platform-secrets
+            - secretRef:
+                name: mobile-bff-secrets
+          # ---------------------------------------------------------------------------------------
+          # THREE PROBES, THREE DIFFERENT QUESTIONS. Getting them confused is the classic mistake.
+          #
+          #   startupProbe   "has it finished booting?"  - suppresses the other two until it passes.
+          #   readinessProbe "should it get traffic?"    - failing REMOVES the pod from the Service.
+          #   livenessProbe  "is it wedged?"             - failing RESTARTS the container.
+          #
+          # The dangerous confusion is using a deep dependency check (/health/ready, which checks the
+          # database) as the LIVENESS probe. When the database blips, every pod fails liveness, every
+          # pod is killed, and a recoverable outage becomes a cluster-wide restart storm at the exact
+          # moment the database is least able to cope with a reconnection stampede.
+          #
+          # So: liveness asks only "is this process still answering", readiness asks "can it do work".
+          # ---------------------------------------------------------------------------------------
+          startupProbe:
+            # A cold .NET container plus EF migrations can take a while. 30 x 2s = 60s of grace, after
+            # which the pod is genuinely broken rather than slow. Without a startupProbe you would have
+            # to loosen liveness to cover the worst-case boot, and then a wedged pod at hour three
+            # takes just as long to be noticed.
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 4
+          lifecycle:
+            preStop:
+              # THE DRAIN PAUSE, and it is the least obvious thing in this file.
+              #
+              # When a pod is deleted, two things happen AT THE SAME TIME and in no guaranteed order:
+              # the kubelet sends SIGTERM to the container, and the endpoints controller removes the
+              # pod from its Service. Removal has to propagate to every kube-proxy and every ingress
+              # controller, which takes a moment - so for a second or so after SIGTERM, new requests
+              # are still being routed to a pod that has started shutting down. Those requests fail,
+              # and this is the actual cause of the "we get a handful of 502s on every deploy" that
+              # teams tend to blame on the application.
+              #
+              # Sleeping in preStop delays the SIGTERM without delaying the endpoint removal, so by the
+              # time the process is told to stop, nothing is being sent to it any more. It does nothing
+              # else; the graceful shutdown itself is ASP.NET Core's, which finishes in-flight requests.
+              exec:
+                command: ["sleep", "5"]
+          securityContext:
+            # The image already runs as the non-root `app` user (src/Dockerfile). Declaring it here
+            # makes the kubelet REFUSE to start the pod if a future image regresses to root - a
+            # guarantee rather than a convention.
+            #
+            # runAsUser IS REQUIRED, not decoration, and leaving it out cost a real debugging session:
+            #     Error: container has runAsNonRoot and image has non-numeric user (app),
+            #            cannot verify user is non-root
+            # The Dockerfile says `USER app`, a NAME. The kubelet resolves nothing inside the image, so
+            # it cannot tell whether "app" is uid 0 or uid 1654, and it refuses rather than guessing.
+            # Giving it the number is what makes the guarantee checkable. 1654 is what the aspnet base
+            # image assigns to `app`; confirm with:
+            #     docker run --rm --entrypoint sh <image> -c id
+            runAsNonRoot: true
+            runAsUser: 1654
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # ASP.NET Core writes to /tmp for DataProtection keys.
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            # requests = what the scheduler reserves and what it uses to pick a node.
+            # limits    = the hard ceiling. Exceed the MEMORY limit and the kernel OOM-kills the
+            #             container (exit code 137, and the pod restarts with no log explaining why).
+            #             Exceed the CPU limit and it is merely throttled - slow, not dead.
+            #
+            # There is deliberately NO cpu limit here. A CPU limit throttles a process that has spare
+            # capacity available to it, which shows up as inexplicable latency spikes under load; the
+            # request alone is enough to protect neighbours, because it is what the scheduler honours.
+            requests:
+              cpu: 50m
+              memory: 192Mi
+            limits:
+              memory: 512Mi

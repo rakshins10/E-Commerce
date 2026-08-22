@@ -1,0 +1,125 @@
+# A local cluster: Docker Desktop's Kubernetes, or kind, or minikube.
+#
+#     kubectl kustomize --load-restrictor LoadRestrictionsNone deploy/k8s/overlays/local | kubectl apply -f -
+#
+# or, easier to remember, the wrapper that does exactly that and waits for health:
+#
+#     ./scripts/k8s-up.ps1
+#
+# ---------------------------------------------------------------------------------------------------
+#  What this overlay changes, and why
+# ---------------------------------------------------------------------------------------------------
+#  1. IMAGES. The base names ghcr.io images, which is right for a real deployment and wrong here: a
+#     local cluster should run the code you just built. These map to the tags `docker compose build`
+#     produces, so the loop is: change code, `docker compose build react-store`, roll the deployment.
+#
+#  2. REPLICAS. Two for anything a user talks to, so a rolling update is observable - you cannot watch
+#     connections move between pods when there is only one pod. One for everything behind it, because
+#     thirty pods on a laptop is a fan speed, not a demonstration.
+#
+#  This is the point of an overlay: the difference between environments is a short, readable file, not
+#  a second copy of the manifests.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ecommerce
+
+resources:
+  - ../../base
+  - ../../infrastructure/data
+  - ../../infrastructure/platform
+
+# Kustomize rewrites every `image:` field that matches `name`. Nothing in the base changes.
+#
+# imagePullPolicy is already IfNotPresent in the base, which is what makes this work: the local image
+# store is checked first, and a tag that exists locally is never pulled. With `Always` (the default for
+# the `latest` tag) every pod would try to pull from ghcr.io and fail with ErrImagePull, which is the
+# most common first failure when moving from Compose to Kubernetes.
+images:
+  - name: ghcr.io/rakshins10/e-commerce-catalog-api
+    newName: ecommerce-catalog-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-basket-api
+    newName: ecommerce-basket-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-ordering-api
+    newName: ecommerce-ordering-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-payment-api
+    newName: ecommerce-payment-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-inventory-api
+    newName: ecommerce-inventory-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-notification-api
+    newName: ecommerce-notification-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-user-profile-api
+    newName: ecommerce-user-profile-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-back-office-api
+    newName: ecommerce-back-office-api
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-ordering-saga
+    newName: ecommerce-ordering-saga
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-storefront-bff
+    newName: ecommerce-storefront-bff
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-admin-bff
+    newName: ecommerce-admin-bff
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-mobile-bff
+    newName: ecommerce-mobile-bff
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-react-store
+    newName: ecommerce-react-store
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-angular-store
+    newName: ecommerce-angular-store
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-react-admin
+    newName: ecommerce-react-admin
+    newTag: latest
+  - name: ghcr.io/rakshins10/e-commerce-angular-admin
+    newName: ecommerce-angular-admin
+    newTag: latest
+
+# One replica for the internal services. `count: 0` is not used anywhere here - a Deployment scaled to
+# zero still exists, which is occasionally useful for pausing a noisy consumer during a demo:
+#   kubectl -n ecommerce scale deployment notification-api --replicas=0
+replicas:
+  - name: catalog-api
+    count: 1
+  - name: basket-api
+    count: 1
+  - name: ordering-api
+    count: 1
+  - name: payment-api
+    count: 1
+  - name: inventory-api
+    count: 1
+  - name: notification-api
+    count: 1
+  - name: user-profile-api
+    count: 1
+  - name: back-office-api
+    count: 1
+  - name: mobile-bff
+    count: 1
+  # Left at 2 on purpose, and these are the ones to watch during a rolling update:
+  #   storefront-bff, admin-bff, react-store, angular-store, react-admin, angular-admin
+  # Two replicas is the minimum at which "maxUnavailable: 0" means anything at all.
+
+patches:
+  # Smaller resource requests. The base asks for what a real node should give a service; a laptop
+  # running thirty pods plus a control plane cannot honour thirty of those, and the symptom is pods
+  # stuck in Pending with "0/1 nodes are available: insufficient cpu" - which reads like a broken
+  # manifest and is really an arithmetic problem.
+  - target:
+      kind: Deployment
+      labelSelector: app.kubernetes.io/part-of=ecommerce
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: 10m

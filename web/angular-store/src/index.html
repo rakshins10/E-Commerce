@@ -6,6 +6,10 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Runtime configuration. MUST load before Angular's bundle, which the build appends to <body>:
+       it defines window.__ECOMMERCE_CONFIG__, read at module scope. Regenerated from environment
+       variables when the container starts, so one image serves every environment (docs/adr/0023). -->
+  <script src="/config.js"></script>
 </head>
 <body>
   <app-root></app-root>
