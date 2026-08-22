@@ -115,6 +115,15 @@ nav:
       - Overview: frontend/README.md
       - React vs Angular: react-vs-angular.md
 
+  - Kubernetes:
+      - Overview: kubernetes/index.md
+      - From Docker to Kubernetes: kubernetes/from-docker-to-kubernetes.md
+      - Running it locally: kubernetes/running-locally.md
+      - Watching traffic: kubernetes/watching-traffic.md
+      - Sessions and upgrades: kubernetes/sessions-and-upgrades.md
+      - Debugging: kubernetes/debugging.md
+      - Interview questions: kubernetes/interview-questions.md
+
   - Operations:
       - Tooling guide: operations/tooling-guide.md
       - Health checks: operations/health-checks.md
@@ -146,4 +155,6 @@ nav:
       - 0020 Product variants: adr/0020-product-variants.md
       - 0021 Category options & facets: adr/0021-category-defined-options-and-contextual-facets.md
       - 0022 Edge hardening defaults: adr/0022-edge-hardening-defaults.md
+      - 0023 SPA runtime configuration: adr/0023-runtime-configuration-for-single-page-apps.md
+      - 0024 Kubernetes topology: adr/0024-kubernetes-topology.md
       - Template: adr/0000-template.md

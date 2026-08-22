@@ -215,6 +215,27 @@ that is the point - see [data sovereignty](architecture.md#7-data-sovereignty-wh
 
 ---
 
+## 4b. Running it on Kubernetes instead
+
+Everything above uses Docker Compose, which is the primary path and the faster loop for day-to-day work.
+The same thirty containers also run on a Kubernetes cluster - with replicas, health probes, rolling updates
+that drop no requests, and a live view of every connection:
+
+```powershell
+kind create cluster --config deploy/k8s/kind-cluster.yaml   # or enable Docker Desktop's Kubernetes
+./scripts/k8s-up.ps1
+```
+
+Then http://shop.localtest.me, with http://localhost:1024 for the traffic view. Those hostnames need no
+setup at all - every subdomain of `localtest.me` resolves to 127.0.0.1 in public DNS, so there is no hosts
+file to edit.
+
+Start at [the Kubernetes guide](kubernetes/index.md). If the word "pod" is new,
+[From Docker to Kubernetes](kubernetes/from-docker-to-kubernetes.md) assumes nothing at all and builds up
+one problem at a time.
+
+---
+
 ## 5. Troubleshooting
 
 These are the failures that actually happen, not hypothetical ones.

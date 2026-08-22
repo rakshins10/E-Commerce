@@ -67,6 +67,27 @@ jobs:
       - name: Documentation links
         run: node scripts/check-doc-links.mjs
 
+      # The Kubernetes manifests are not exercised by any other job - the compose-up job proves the
+      # containers boot, not that the manifests are valid. Rendering both overlays catches a typo, a
+      # missing file, a patch that no longer matches anything, and a broken relative path, in about two
+      # seconds. It does NOT prove they run; only a cluster does that.
+      #
+      # --load-restrictor LoadRestrictionsNone is needed for the same reason it is needed locally: the
+      # Keycloak realm ConfigMap is generated from identity/keycloak/realm-export.json, deliberately
+      # outside the kustomization root so Compose and Kubernetes cannot drift apart.
+      - name: Kubernetes manifests render
+        run: |
+          for overlay in local azure; do
+            echo "--- deploy/k8s/overlays/$overlay"
+            kubectl kustomize --load-restrictor LoadRestrictionsNone "deploy/k8s/overlays/$overlay" > "/tmp/$overlay.yaml"
+            grep -c "^kind:" "/tmp/$overlay.yaml"
+          done
+          # A rendered overlay that lost its workloads would still "succeed" above, so assert a floor.
+          test "$(grep -c "^kind: Deployment" /tmp/local.yaml)" -ge 20
+          test "$(grep -c "^kind: StatefulSet" /tmp/local.yaml)" -ge 10
+          # The Azure overlay must NOT ship in-cluster databases - that is the whole point of the split.
+          test "$(grep -c "^kind: StatefulSet" /tmp/azure.yaml || true)" -eq 0
+
   # ---------------------------------------------------------------------------
   #  .NET - build, style, test
   # ---------------------------------------------------------------------------

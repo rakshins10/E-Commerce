@@ -72,15 +72,12 @@ before the code is written. Do not cut corners with `TODO` stubs on core pattern
 | 9.5 | Product variants + category-defined size scales - ADR-0020, ADR-0021 | ✅ merged |
 | 10 | Resiliency, observability and security hardening | ✅ merged (PR #11 - see the merge-race note below) |
 | 11 | React Native (Expo) + Mobile BFF | ⬜ deferred by request |
-| 12 | Kubernetes manifests and Azure deployment | ⬜ deferred by request |
+| 12 | Kubernetes manifests, HAProxy ingress, Azure overlay - ADR-0023, ADR-0024 | ✅ done |
 | 13 | Final pass - coverage, docs audit, fresh-machine walkthrough | ✅ walkthrough 2026-08-19: 30 containers from empty volumes, 180 specs x2 |
 
-Mobile (React Native) and Kubernetes are explicitly **deferred** - the user asked to finish everything
-else first. That is now true.
-
-**Phases 1-10 and 13 are complete.** What remains is mobile (11) and Kubernetes (12), both deferred by
-request. Remaining declared non-goals live at the end of each service page and in
-`docs/events/event-catalogue.md`.
+**Phases 1-10, 12 and 13 are complete.** The only remaining scope is mobile (11), deferred by request.
+Remaining declared non-goals live at the end of each service page, in `docs/events/event-catalogue.md`,
+and for Kubernetes in `docs/kubernetes/index.md`.
 
 ---
 
@@ -139,6 +136,26 @@ npm run test:angular:admin                        # the SAME 26 against :4201
 
 Both must pass. Specs use roles and accessible names only - never CSS selectors or test ids - because they
 run against two independent implementations.
+
+### Kubernetes (Phase 12)
+
+> `kubectl` ships with Docker Desktop but is **not on `PATH`** either:
+
+```powershell
+$env:PATH="C:\Program Files\Docker\Docker\resources\bin;$env:PATH"
+```
+
+```powershell
+kind create cluster --config deploy/k8s/kind-cluster.yaml   # or enable Docker Desktop Kubernetes
+./scripts/k8s-up.ps1                                        # build, load, ingress, apply, wait
+./scripts/k8s-down.ps1 -DeleteCluster
+```
+
+The apply is `kubectl kustomize --load-restrictor LoadRestrictionsNone ... | kubectl apply -f -`, never
+`kubectl apply -k`: the realm ConfigMap is generated from `identity/keycloak/realm-export.json`, which
+is outside the kustomization root, and `apply -k` has no flag for that.
+
+Hostnames are `*.localtest.me` (real public DNS, all 127.0.0.1). HAProxy stats: http://localhost:1024.
 
 ### Demo helper
 
@@ -203,6 +220,12 @@ run against two independent implementations.
 | **A service and its own namespace segment collide** | `Notification` the entity vs `ECommerce.Notification.Api` the namespace - `CS0118: is a namespace but is used like a type` | Fully qualify (`Model.Notification`) or rename the entity |
 | **Vitest does not type-check** | esbuild strips types, so a test calling a function with the wrong argument shape passes | React's `npm run build` (`tsc -b`) covers specs; Angular's `ng test` type-checks them itself. Run the build, not just the tests |
 | **`ng test` fails when there are zero specs** | `No tests found matching **/*.spec.ts` - a red CI job with nothing wrong | Keep at least one real spec in `angular-store` |
+| **Kubernetes: `capabilities: drop: ["ALL"]` kills nginx** | `chown("/var/cache/nginx/client_temp") failed (Operation not permitted)` - while the container IS root. Root is a set of capabilities, not a flag | Add back `CHOWN`, `SETGID`, `SETUID`. Not `NET_BIND_SERVICE`; the image listens on 8080 |
+| **`runAsNonRoot: true` needs `runAsUser`** | `image has non-numeric user (app), cannot verify user is non-root`. The kubelet does not resolve names inside an image | `runAsUser: 1654`. Confirm with `docker run --rm --entrypoint sh <image> -c id` |
+| **Keycloak OOMKills at 1536Mi on FIRST start** | Exit 137 and a log that simply stops after "Initializing database schema" - the kernel killed it, so it never got to say anything | 2Gi. Peak memory is augmentation + Liquibase together, on first boot, not in steady state |
+| **`--ingress.class=haproxy` silently breaks ALL routing** | Every hostname returns a plain 404 while `kubectl get ingress` looks perfect. The flag switches the controller to matching the LEGACY annotation only | Leave it at the default and let the IngressClass object work. `kubectl logs` on the CONTROLLER says `ignored: no matching` |
+| **An ingress controller only claims Ingresses it observes** | Routes applied before the controller existed stay unclaimed, presenting as 404 from a healthy-looking system | Install the controller FIRST. To recover: `kubectl annotate ingress -n ecommerce --all resync=1 --overwrite` |
+| **A kind node has its OWN image store** | Every pod sits in ErrImagePull trying to fetch your local image from Docker Hub | `kind load docker-image --name ecommerce <image>`. Docker Desktop's Kubernetes shares the store and needs nothing |
 | **CI Node cache needs the workspace lockfile** | `Some specified paths were not resolved, unable to cache dependencies` before anything compiles | `cache-dependency-path: web/package-lock.json` - there is one lockfile, at `web/`, not one per app |
 
 ---

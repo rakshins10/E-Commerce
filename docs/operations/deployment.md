@@ -8,7 +8,7 @@ Three GitHub Actions workflows, each with a distinct job:
 | Workflow | Runs on | What it does |
 |----------|---------|--------------|
 | [`ci.yml`](../../.github/workflows/ci.yml) | Every push and PR | Builds, tests, and proves the stack boots. **Gate - nothing merges without it.** |
-| [`release.yml`](../../.github/workflows/release.yml) | Push to `main`, and `v*` tags | Builds and publishes 12 container images to GitHub's registry |
+| [`release.yml`](../../.github/workflows/release.yml) | Push to `main`, and `v*` tags | Builds and publishes 16 container images to GitHub's registry - twelve .NET, four web |
 | [`docs.yml`](../../.github/workflows/docs.yml) | Docs changes on `main` | Publishes this documentation as a searchable website |
 
 ---
@@ -20,11 +20,23 @@ there is no server to deploy to.
 
 That is a deliberate stopping point, not an omission. Everything up to the artefact is real: images are
 built, tagged immutably, signed with provenance, scanned for vulnerabilities, and published. The final step
-- `kubectl apply` or an Azure Container Apps update - is a five-line addition once a target exists, and it is
-the only part that would need credentials.
+- `kubectl apply` against a real cluster - is a five-line addition once a target exists, and it is the only
+part that would need credentials.
 
 **Why stop there?** Because a deploy step pointing at nothing is theatre, and it needs real cloud secrets in
 a public repository. The valuable, transferable work is everything before it.
+
+**What DOES exist is the thing those artefacts get applied to.** Phase 12 added a full set of Kubernetes
+manifests - thirty workloads, an HAProxy ingress, a local overlay and an Azure overlay - and the local
+overlay has been run end to end on a real cluster. So the missing piece is genuinely only the credentials
+and the target, not the deployment description. See [the Kubernetes guide](../kubernetes/index.md), and
+[ADR-0024](../adr/0024-kubernetes-topology.md) for the topology decisions.
+
+One consequence of Phase 12 is worth calling out here, because it changes what an artefact *is*: the four
+web images used to bake their API addresses in at build time, which would have meant one image per
+environment. They are now configured when the container starts
+([ADR-0023](../adr/0023-runtime-configuration-for-single-page-apps.md)), so the image that passed the tests
+is the image that ships. That is the property this whole page exists to protect.
 
 ---
 

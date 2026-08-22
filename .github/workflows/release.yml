@@ -148,6 +148,107 @@ jobs:
           push-to-registry: true
 
   # ---------------------------------------------------------------------------
+  #  The four browser applications
+  # ---------------------------------------------------------------------------
+  #  A separate job rather than a branch inside the one above, because almost
+  #  nothing is shared: a different Dockerfile, a different context, different
+  #  build arguments. A matrix entry carrying an unused \`project\` field and an
+  #  \`if:\` on every step would be shorter and much harder to read.
+  #
+  #  These images exist because the Kubernetes manifests reference them. Until
+  #  Phase 12 only the twelve .NET images were published, so
+  #  \`deploy/k8s/overlays/azure\` named four images that did not exist anywhere -
+  #  which the local overlay hid, since it rewrites them to locally built tags.
+  # ---------------------------------------------------------------------------
+  publish-web:
+    name: publish ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { app: react-store,   workspace: "@ecommerce/react-store",   dist: react-store/dist }
+          - { app: angular-store, workspace: "@ecommerce/angular-store", dist: angular-store/dist/angular-store/browser }
+          - { app: react-admin,   workspace: "@ecommerce/react-admin",   dist: react-admin/dist }
+          - { app: angular-admin, workspace: "@ecommerce/angular-admin", dist: angular-admin/dist/angular-admin/browser }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Lowercase once, use everywhere. See the IMAGE_PREFIX note at the top.
+      - name: Derive the image name
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}-${{ matrix.app }}
+          tags: |
+            type=sha,format=long,prefix=sha-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.app }}
+            org.opencontainers.image.description=E-Commerce reference platform - ${{ matrix.app }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=MIT
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          # The web/ directory, not the repository root: npm workspaces live
+          # there and the Dockerfile copies the whole workspace to get one
+          # lockfile.
+          context: web
+          file: web/Dockerfile
+          build-args: |
+            APP_WORKSPACE=${{ matrix.workspace }}
+            APP_DIST=${{ matrix.dist }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+          provenance: true
+          sbom: true
+
+      # NOTE: no environment-specific build argument, deliberately. These images
+      # are told where their BFF and Keycloak live when the CONTAINER starts, so
+      # one image serves localhost, a local cluster and production
+      # (docs/adr/0023). If you ever find yourself adding a VITE_* build arg
+      # here, that decision is being reversed - read the ADR first.
+
+      - name: Attest provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}-${{ matrix.app }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  # ---------------------------------------------------------------------------
   #  Scan the published images for known vulnerabilities
   # ---------------------------------------------------------------------------
   #  NuGet audit at build time covers our own dependencies. It says nothing

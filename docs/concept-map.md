@@ -413,6 +413,42 @@ client, a parked message demands a human, a swept saga returns the stock and the
 the sweep, the compensation being identical to failure, AND the refund when the reply finally arrives after
 cancellation.
 
+## Operations
+
+### Orchestration: rolling updates, probes and draining
+
+**What:** the same thirty containers Compose runs, described as Kubernetes objects - Deployments,
+StatefulSets, Services, an Ingress - plus the three settings that make a deploy invisible to users:
+`maxUnavailable: 0`, a readiness probe that means ready, and a `preStop` pause that lets endpoint removal
+propagate before SIGTERM arrives.
+
+**Why here:** Compose answers "how do I run this". Kubernetes answers "how do I keep running this while
+changing it", and the second question is most of what an interviewer means by production experience.
+
+**Where:** [`deploy/k8s/`](../deploy/k8s/) · [ADR-0024](adr/0024-kubernetes-topology.md) ·
+[the guide](kubernetes/index.md) · Phase 12
+
+**Interview question:** *"How do you deploy without dropping requests?"* - a complete answer names all
+three settings and explains why the `preStop` pause is needed at all: SIGTERM and endpoint removal race,
+so without it traffic still arrives at a pod that has begun shutting down.
+
+### Build once, configure at start
+
+**What:** a browser application cannot read environment variables, so the usual answer bakes its API
+addresses into the bundle - one image per environment. Here the container renders `config.js` **and** the
+nginx Content-Security-Policy from two environment variables before nginx serves its first byte.
+
+**Why here:** "the artifact you tested is the artifact you ship" is the property that makes a staging
+environment mean anything, and a per-environment build quietly destroys it.
+
+**Where:** [`web/10-ecommerce-runtime-config.sh`](../web/10-ecommerce-runtime-config.sh) ·
+[`runtime-config.ts`](../web/react-store/src/runtime-config.ts) ·
+[ADR-0023](adr/0023-runtime-configuration-for-single-page-apps.md) · Phase 12
+
+**Interview question:** *"How does a single-page app get environment-specific configuration?"* - the tell
+of a complete answer is remembering the CSP, since configuring only the app produces a correctly
+configured application whose every request is blocked by the browser.
+
 ## Security
 
 ### External identity provider
